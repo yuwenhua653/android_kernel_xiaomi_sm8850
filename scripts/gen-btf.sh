@@ -104,7 +104,10 @@ gen_btf_o()
 
 embed_btf_data()
 {
-	${OBJCOPY} --add-section .BTF=${ELF_FILE}.BTF ${ELF_FILE}
+	# vmlinux changes can regenerate BTF without relinking the module.
+	# Replace old data rather than appending duplicate sections with llvm-objcopy.
+	${OBJCOPY} --remove-section .BTF --remove-section .BTF.base \
+		--add-section .BTF=${ELF_FILE}.BTF ${ELF_FILE}
 
 	# a module might not have a .BTF_ids or .BTF.base section
 	btf_base="${ELF_FILE}.BTF.base"
