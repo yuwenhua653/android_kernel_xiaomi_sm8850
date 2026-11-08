@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 
 obj-$(CONFIG_GUNYAH_HYPERCALLS) += gunyah_hypercall.o
+obj-$(CONFIG_GUNYAH_TIMER) += timer.o
 
 # Qualcomm SM8850 platform modules.
 # Platform drivers reference private in-tree headers by source-root paths.

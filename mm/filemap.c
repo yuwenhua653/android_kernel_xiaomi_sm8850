@@ -60,6 +60,17 @@
 #include <trace/hooks/mm.h>
 
 /*
+ * trace_android_vh_unlock_mmap_bypass is called in mm/internal.h
+ * by including trace/hooks/mm.h directly, which will result in build-err.
+ * So we create func: _trace_android_vh_unlock_mmap_bypass.
+ */
+void _trace_android_vh_unlock_mmap_bypass(struct vm_fault *vmf,
+		struct file *fpin, bool *bypass)
+{
+	trace_android_vh_unlock_mmap_bypass(vmf, fpin, bypass);
+}
+
+/*
  * FIXME: remove all knowledge of the buffer layer from the core VM
  */
 #include <linux/buffer_head.h> /* for try_to_free_buffers */
@@ -3892,15 +3903,20 @@ vm_fault_t filemap_map_pages(struct vm_fault *vmf,
 	pgoff_t orig_start_pgoff = start_pgoff;
 	bool can_map_large;
 
+	/*
+	 * Recalculate end_pgoff based on file_end before calling
+	 * next_uptodate_folio() to avoid races with concurrent
+	 * truncation.
+	 */
+	file_end = DIV_ROUND_UP(i_size_read(mapping->host), PAGE_SIZE) - 1;
+	end_pgoff = min(end_pgoff, file_end);
+
 	rcu_read_lock();
 	folio = next_uptodate_folio(&xas, mapping, end_pgoff);
 	if (!folio)
 		goto out;
 	first_pgoff = xas.xa_index;
 	orig_start_pgoff = xas.xa_index;
-
-	file_end = DIV_ROUND_UP(i_size_read(mapping->host), PAGE_SIZE) - 1;
-	end_pgoff = min(end_pgoff, file_end);
 
 	/*
 	 * Do not allow to map with PTEs beyond i_size and with PMD
@@ -4662,7 +4678,7 @@ static inline bool can_do_cachestat(struct file *f)
 {
 	if (f->f_mode & FMODE_WRITE)
 		return true;
-	if (inode_owner_or_capable(file_mnt_idmap(f), file_inode(f)))
+	if (file_owner_or_capable(f))
 		return true;
 	return file_permission(f, MAY_WRITE) == 0;
 }

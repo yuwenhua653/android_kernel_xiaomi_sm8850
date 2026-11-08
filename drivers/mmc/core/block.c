@@ -48,6 +48,7 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
+#include <trace/hooks/mmc.h>
 
 #include <linux/uaccess.h>
 #include <linux/unaligned.h>
@@ -1104,8 +1105,10 @@ static int mmc_blk_reset(struct mmc_blk_data *md, struct mmc_host *host,
 	 * in that case.
 	 */
 	main_md->part_curr = err ? MMC_BLK_PART_INVALID : main_md->part_type;
-	if (err)
+	if (err) {
+		trace_android_vh_mmc_blk_reset(host, err);
 		return err;
+	}
 	/* Ensure we switch back to the correct partition */
 	if (mmc_blk_part_switch(host->card, md->part_type))
 		/*
@@ -2760,7 +2763,6 @@ static void mmc_blk_rpmb_device_release(struct device *dev)
 {
 	struct mmc_rpmb_data *rpmb = dev_get_drvdata(dev);
 
-	rpmb_dev_unregister(rpmb->rdev);
 	mmc_blk_put(rpmb->md);
 	ida_free(&mmc_rpmb_ida, rpmb->id);
 	kfree(rpmb);
@@ -2981,8 +2983,8 @@ out_put_device:
 }
 
 static void mmc_blk_remove_rpmb_part(struct mmc_rpmb_data *rpmb)
-
 {
+	rpmb_dev_unregister(rpmb->rdev);
 	cdev_device_del(&rpmb->chrdev, &rpmb->dev);
 	put_device(&rpmb->dev);
 }

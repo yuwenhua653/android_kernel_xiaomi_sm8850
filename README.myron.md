@@ -8,7 +8,7 @@ replacement for the working kernel adapter.
 
 The three ordinary repo projects in `android/myron-native/manifest.xml` are:
 
-* `kernel/xiaomi/sm8850`: ACK 6.12.81, Qualcomm platform drivers and native DT rules.
+* `kernel/xiaomi/sm8850`: ACK 6.12.97, Qualcomm platform drivers and native DT rules.
 * `kernel/xiaomi/sm8850-modules`: external drivers with native Canoe Kbuild rules.
 * `kernel/xiaomi/sm8850-devicetrees`: the validated device-tree sources.
 
@@ -38,7 +38,14 @@ LineageOS/Evolution kernel.mk. Absolute M= retains upstream behavior. There is
 no MYRON_DT_MODE, custom jobs/RAM parameter, writable-source allowlist, private
 kernel build wrapper, or replacement build-message echo.
 
-## Verified scope
+## ACK 6.12.97 update
+
+The ACK update provenance and conflict resolutions are recorded in
+`android/myron-native/ack-update.json`. This update requires new build and
+device validation. The older validation reports below describe the 6.12.81
+baseline; they do not certify this update.
+
+## Previously verified 6.12.81 scope
 
 With Debian Clang 19.1.7 and normal host build tools:
 

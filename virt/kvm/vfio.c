@@ -192,13 +192,17 @@ static int kvm_vfio_assign_file(struct file *file)
 {
 	struct device *dev;
 	struct iommu_group *group;
+	int ret;
 
 	dev = kvm_vfio_file_get_device(file);
 	if (dev)
 		return kvm_arch_assign_device(dev);
 	group = kvm_vfio_file_iommu_group(file);
-	if (group)
-		return kvm_arch_assign_group(group);
+	if (group) {
+		ret = kvm_arch_assign_group(group);
+		iommu_group_put(group);
+		return ret;
+	}
 
 	return -ENODEV;
 }
@@ -214,8 +218,10 @@ static void kvm_vfio_reclaim_file(struct file *file)
 		return;
 	}
 	group = kvm_vfio_file_iommu_group(file);
-	if (group)
+	if (group) {
 		kvm_arch_reclaim_group(group);
+		iommu_group_put(group);
+	}
 }
 
 static int kvm_vfio_file_add(struct kvm_device *dev, unsigned int fd)
@@ -251,8 +257,10 @@ static int kvm_vfio_file_add(struct kvm_device *dev, unsigned int fd)
 	}
 
 	ret = kvm_vfio_assign_file(filp);
-	if (ret)
+	if (ret) {
+		kfree(kvf);
 		goto out_unlock;
+	}
 
 	kvf->file = get_file(filp);
 	list_add_tail(&kvf->node, &kv->file_list);
@@ -272,11 +280,10 @@ static int kvm_vfio_file_del(struct kvm_device *dev, unsigned int fd)
 {
 	struct kvm_vfio *kv = dev->private;
 	struct kvm_vfio_file *kvf;
-	struct fd f;
+	CLASS(fd, f)(fd);
 	int ret;
 
-	f = fdget(fd);
-	if (!fd_file(f))
+	if (fd_empty(f))
 		return -EBADF;
 
 	ret = -ENOENT;
@@ -303,9 +310,6 @@ static int kvm_vfio_file_del(struct kvm_device *dev, unsigned int fd)
 	kvm_vfio_update_coherency(dev);
 
 	mutex_unlock(&kv->lock);
-
-	fdput(f);
-
 	return ret;
 }
 
@@ -537,7 +541,9 @@ static int kvm_vfio_pviommu(struct kvm_device *dev, long attr,
 		ret = kvm_vfio_pviommu_get_info(dev, &info);
 		if (ret)
 			return ret;
-		return copy_to_user(arg, &info, usize);
+		if (copy_to_user(arg, &info, sizeof(info)))
+			return -EFAULT;
+		return 0;
 	}
 	return -ENXIO;
 }
