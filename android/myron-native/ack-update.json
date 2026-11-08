@@ -1,0 +1,104 @@
+{
+  "linux_version": "6.12.97",
+  "ack_repository": "https://android.googlesource.com/kernel/common",
+  "ack_branch": "android16-6.12-lts",
+  "ack_commit": "17cce7bfbb9debdca995c7ce2a34da4f13c5aafc",
+  "ack_tree": "4dec91dd6cb3009789f1bd4e8b54bc43f7d99fef",
+  "previous_ack_commit": "41a2024a9e2eb66ab0643a865d74943b4ee3cff8",
+  "previous_ack_tree": "5f2b062619465b7fbe8139cc73fd57c64898a6ca",
+  "native_base_commit": "821dfb2ebc7735b9169573554ad05a7a508f1ec9",
+  "strategy": "Explicit three-way merge using the recorded original ACK import as base; squash onto the snapshot-based native history. No fabricated ACK ancestry.",
+  "initial_conflict_files": 8,
+  "initial_conflict_hunks": 16,
+  "resolutions": [
+    {
+      "path": "arch/arm64/gunyah/Makefile",
+      "hunk": 0,
+      "reason": "Retain ACK additions and downstream native platform objects."
+    },
+    {
+      "path": "drivers/dma-buf/heaps/Makefile",
+      "hunk": 0,
+      "reason": "Retain ACK additions and downstream native platform objects."
+    },
+    {
+      "path": "drivers/hwtracing/coresight/coresight-sysfs.c",
+      "hunk": 0,
+      "reason": "Vendor coresight_store_path allocates the path before enabling the source; the upstream post-enable allocation failure no longer exists. Preserve vendor error unwinding."
+    },
+    {
+      "path": "drivers/mailbox/qcom-ipcc.c",
+      "hunk": 0,
+      "reason": "Retain spinlock definitions and vendor suspend support."
+    },
+    {
+      "path": "drivers/remoteproc/qcom_common.c",
+      "hunk": 0,
+      "reason": "Keep vendor encrypted minidump handling and callback, use 64-bit field, retain ACK error cleanup and release unconsumed name."
+    },
+    {
+      "path": "drivers/soc/qcom/ice.c",
+      "hunk": 0,
+      "reason": "Keep xarray state and Qualcomm HWKM support."
+    },
+    {
+      "path": "drivers/soc/qcom/ice.c",
+      "hunk": 1,
+      "reason": "Preserve ACK no-device error and vendor OF reference cleanup."
+    },
+    {
+      "path": "drivers/soc/qcom/ice.c",
+      "hunk": 2,
+      "reason": "Propagate cached ICE probe errors; defer only missing handles; preserve OF reference cleanup."
+    },
+    {
+      "path": "net/qrtr/af_qrtr.c",
+      "hunk": 0,
+      "reason": "Retain vendor irq-safe lookup lock, erase the port before dropping the table socket reference."
+    },
+    {
+      "path": "net/qrtr/af_qrtr.c",
+      "hunk": 1,
+      "reason": "Retain vendor irq-safe lookup lock, erase the port before dropping the table socket reference."
+    },
+    {
+      "path": "net/qrtr/ns.c",
+      "hunk": 0,
+      "reason": "Retain kthread worker with ACK resource limits and callback restoration."
+    },
+    {
+      "path": "net/qrtr/ns.c",
+      "hunk": 1,
+      "reason": "Decrement ACK server counter while preserving vendor xarray unlocking."
+    },
+    {
+      "path": "net/qrtr/ns.c",
+      "hunk": 2,
+      "reason": "Retain detailed rate-limited logging and ACK node cleanup on send failure."
+    },
+    {
+      "path": "net/qrtr/ns.c",
+      "hunk": 3,
+      "reason": "Retain ACK node reclamation; protect vendor readers separately with RCU."
+    },
+    {
+      "path": "net/qrtr/ns.c",
+      "hunk": 4,
+      "reason": "Restore callback and quiesce callbacks/work before stopping the vendor kthread."
+    },
+    {
+      "path": "net/qrtr/ns.c",
+      "hunk": 5,
+      "reason": "Restore callback and quiesce callbacks/work before stopping the vendor kthread."
+    }
+  ],
+  "additional_integration": [
+    "QRTR: RCU-protect vendor service lookup against ACK node reclamation; use IRQ-safe server lookup locking.",
+    "QRTR: restore socket callback, synchronize network readers, cancel kthread work, then stop the vendor worker.",
+    "QRTR: return the actual kthread creation error.",
+    "BTF: remove old .BTF and .BTF.base before embedding regenerated module BTF; tested 340 modules with vmlinux timestamp changed and zero module relinks."
+  ],
+  "validation_status": "Host Image, 340 in-tree modules, 68 external modules, all 297 catalog entries, CRC/vermagic checks, 32 DT inputs and 1006 exported headers passed. See ack-validation.json; full ROM and device tests pending.",
+  "device_tested": false,
+  "validation_report": "ack-validation.json"
+}

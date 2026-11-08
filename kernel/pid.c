@@ -537,11 +537,10 @@ EXPORT_SYMBOL_GPL(find_ge_pid);
 
 struct pid *pidfd_get_pid(unsigned int fd, unsigned int *flags)
 {
-	struct fd f;
+	CLASS(fd, f)(fd);
 	struct pid *pid;
 
-	f = fdget(fd);
-	if (!fd_file(f))
+	if (fd_empty(f))
 		return ERR_PTR(-EBADF);
 
 	pid = pidfd_pid(fd_file(f));
@@ -549,8 +548,6 @@ struct pid *pidfd_get_pid(unsigned int fd, unsigned int *flags)
 		get_pid(pid);
 		*flags = fd_file(f)->f_flags;
 	}
-
-	fdput(f);
 	return pid;
 }
 EXPORT_SYMBOL_GPL(pidfd_get_pid);
@@ -694,10 +691,12 @@ static struct file *__pidfd_fget(struct task_struct *task, int fd)
 	if (ret)
 		return ERR_PTR(ret);
 
-	if (ptrace_may_access(task, PTRACE_MODE_ATTACH_REALCREDS))
-		file = fget_task(task, fd);
-	else
+	if (!ptrace_may_access(task, PTRACE_MODE_ATTACH_REALCREDS))
 		file = ERR_PTR(-EPERM);
+	else if (task->flags & PF_EXITING)
+		file = ERR_PTR(-ESRCH);
+	else
+		file = fget_task(task, fd);
 
 	up_read(&task->signal->exec_update_lock);
 

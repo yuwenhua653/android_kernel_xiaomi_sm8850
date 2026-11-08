@@ -199,7 +199,7 @@ static int qcom_add_minidump_segments(struct rproc *rproc, struct minidump_subsy
 				break;
 			}
 			da = le64_to_cpu(region.address);
-			size = le32_to_cpu(region.size);
+			size = le64_to_cpu(region.size);
 			if (le32_to_cpu(subsystem->encryption_status) != MINIDUMP_SS_ENCR_DONE) {
 				if (!i && len < MAX_REGION_NAME_LENGTH &&
 				    !strcmp(name, dbg_buf_name)) {
@@ -207,6 +207,8 @@ static int qcom_add_minidump_segments(struct rproc *rproc, struct minidump_subsy
 										dumpfn, name);
 					if (ret)
 						kfree(name);
+				} else {
+					kfree(name);
 				}
 				break;
 			}

@@ -11,6 +11,7 @@
 #include <linux/interval_tree_generic.h>
 #include <linux/io.h>
 #include <linux/iommu.h>
+#include <linux/irqchip/arm-gic-v3.h>
 #include <linux/kmemleak.h>
 #include <linux/kvm_host.h>
 #include <asm/kvm_mmu.h>
@@ -179,11 +180,82 @@ static int __init register_moveable_fdt_resource(struct device_node *np,
 	return 0;
 }
 
+static int pkvm_register_gic_redist_cb(phys_addr_t phys, u64 size)
+{
+	unsigned int idx = kvm_nvhe_sym(pkvm_moveable_regs_nr);
+
+	if (idx >= PKVM_NR_MOVEABLE_REGS)
+		return -ENOMEM;
+	if (size < SZ_64K)
+		return -EINVAL;
+
+	moveable_regs[idx].start = phys;
+	moveable_regs[idx].size = SZ_64K;
+	moveable_regs[idx].type = PKVM_MREG_EMULATE_MMIO;
+	moveable_regs[idx].cb = lm_alias(&kvm_nvhe_sym(pkvm_handle_rdist_emulation));
+	idx++;
+
+	/* Skip SGI_Base to avoid bottlenecking vgic with emulation */
+
+	if (size >= 3 * SZ_64K) {
+		if (idx >= PKVM_NR_MOVEABLE_REGS)
+			return -ENOMEM;
+
+		moveable_regs[idx].start = phys + SZ_128K;
+		moveable_regs[idx].size = SZ_64K;
+		moveable_regs[idx].type = PKVM_MREG_EMULATE_MMIO;
+		moveable_regs[idx].cb =
+			lm_alias(&kvm_nvhe_sym(pkvm_handle_vlpi_emulation));
+		idx++;
+	}
+
+	kvm_nvhe_sym(pkvm_moveable_regs_nr) = idx;
+	return 0;
+}
+
+static int __init register_its_emulated_region(void)
+{
+	int ret = 0, i = kvm_nvhe_sym(pkvm_moveable_regs_nr);
+	struct device_node *np;
+	struct resource res;
+
+	for_each_compatible_node(np, NULL, "arm,gic-v3-its") {
+		ret = of_address_to_resource(np, 0, &res);
+		if (ret)
+			return ret;
+
+		if (i >= PKVM_NR_MOVEABLE_REGS) {
+			ret = -ENOMEM;
+			goto out_fail;
+		}
+
+		if (!PAGE_ALIGNED(res.start) || !PAGE_ALIGNED(resource_size(&res))) {
+			ret = -EINVAL;
+			goto out_fail;
+		}
+
+		moveable_regs[i].start = res.start;
+		moveable_regs[i].type = PKVM_MREG_EMULATE_MMIO;
+		moveable_regs[i].cb = lm_alias(&kvm_nvhe_sym(pkvm_handle_gic_emulation));
+		moveable_regs[i].size = min_t(u64, resource_size(&res),
+					      PAGE_ALIGN_DOWN(GITS_TRANSLATER));
+		i++;
+	}
+	kvm_nvhe_sym(pkvm_moveable_regs_nr) = i;
+	return i;
+out_fail:
+	of_node_put(np);
+	kvm_nvhe_sym(pkvm_moveable_regs_nr) = 0;
+	return ret;
+}
+
+DEFINE_STATIC_KEY_FALSE(kvm_its_hardening);
+
 static int __init register_moveable_regions(void)
 {
 	struct memblock_region *reg;
 	struct device_node *np;
-	int i = 0, ret = 0, idx = 0;
+	int i = 0, ret = 0, idx;
 
 	for_each_mem_region(reg) {
 		if (i >= PKVM_NR_MOVEABLE_REGS)
@@ -195,6 +267,20 @@ static int __init register_moveable_regions(void)
 	}
 	kvm_nvhe_sym(pkvm_moveable_regs_nr) = i;
 
+	if (static_branch_unlikely(&kvm_its_hardening)) {
+		ret = register_its_emulated_region();
+		if (ret < 0)
+			return ret;
+
+		ret = gic_pkvm_iter_early_redists(pkvm_register_gic_redist_cb);
+		if (ret < 0) {
+			kvm_err("Failed to register GIC redistributors for emulation: %d\n",
+				ret);
+			kvm_nvhe_sym(pkvm_moveable_regs_nr) = 0;
+			return ret;
+		}
+	}
+
 	for_each_compatible_node(np, NULL, "pkvm,protected-region") {
 		ret = register_moveable_fdt_resource(np, PKVM_MREG_PROTECTED_RANGE);
 		if (ret)
@@ -204,6 +290,7 @@ static int __init register_moveable_regions(void)
 	for_each_compatible_node(np, NULL, PKVM_DEVICE_ASSIGN_COMPAT) {
 		struct of_phandle_args args;
 
+		idx = 0;
 		while (!of_parse_phandle_with_fixed_args(np, "devices", 1, idx, &args)) {
 			idx++;
 			ret = register_moveable_fdt_resource(args.np, PKVM_MREG_ASSIGN_MMIO);
@@ -378,7 +465,7 @@ static int __pkvm_notify_guest_vm_avail_retry(struct kvm *host_kvm, u32 availabi
 
 static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 {
-	struct mm_struct *mm = current->mm;
+	struct mm_struct *mm = host_kvm->mm;
 	struct kvm_pinned_page *ppage;
 	struct kvm_vcpu *host_vcpu;
 	unsigned long nr_busy;
@@ -399,7 +486,7 @@ retry:
 		struct kvm_pinned_page *next;
 
 		ret = kvm_call_hyp_nvhe(__pkvm_reclaim_dying_guest_page, host_kvm->arch.pkvm.handle,
-					page_to_pfn(ppage->page), ppage->ipa >> PAGE_SHIFT,
+					ppage->pfn, ppage->ipa >> PAGE_SHIFT,
 					ppage->order);
 		cond_resched();
 		if (ret == -EBUSY) {
@@ -410,9 +497,10 @@ retry:
 		}
 		WARN_ON(ret);
 
-		unpin_user_pages_dirty_lock(&ppage->page, 1, true);
+		pkvm_release_ppage(ppage, true);
 		next = kvm_pinned_pages_iter_next(ppage, 0, ~(0UL));
 		kvm_pinned_pages_remove(ppage, &host_kvm->arch.pkvm.pinned_pages);
+		ppage->slot->arch.pkvm_pf_count--;
 		pages += 1 << ppage->order;
 		kfree(ppage);
 		ppage = next;
@@ -590,21 +678,28 @@ static int pkvm_register_device(struct of_phandle_args *args,
 	while (!of_parse_phandle_with_args(np, "iommus",
 					   "#iommu-cells",
 					   j, &iommu_spec)) {
-		if (iommu_spec.args_count != 1) {
-			kvm_err("[Devices] Unsupported binding for %s, expected <&iommu id>",
-				np->full_name);
-			return -EINVAL;
-		}
+		u64 endpoint;
 
 		if (j >= PKVM_DEVICE_MAX_RESOURCE) {
 			of_node_put(iommu_spec.np);
 			return -E2BIG;
 		}
 
+		if (iommu_spec.args_count != 1) {
+			/* Unknown binding, check if the driver knows it. */
+			if (kvm_get_iommu_endpoint(&iommu_spec, &endpoint)) {
+				kvm_err("[Devices] Unsupported binding for %s, expected <&iommu id>",
+					np->full_name);
+				return -EINVAL;
+			}
+		} else {
+			endpoint = iommu_spec.args[0];
+		}
+
 		iommu_id = kvm_get_iommu_id_by_of(iommu_spec.np);
 
 		dev->iommus[j].id = iommu_id;
-		dev->iommus[j].endpoint = iommu_spec.args[0];
+		dev->iommus[j].endpoint = endpoint;
 		of_node_put(iommu_spec.np);
 		j++;
 	}
@@ -638,7 +733,7 @@ static int pkvm_init_devices(void)
 
 	dev_sz = PAGE_ALIGN(size_mul(sizeof(struct pkvm_device), dev_cnt));
 
-	dev_base = alloc_pages_exact(dev_sz, GFP_KERNEL_ACCOUNT);
+	dev_base = alloc_pages_exact(dev_sz, GFP_KERNEL_ACCOUNT | __GFP_ZERO);
 
 	if (!dev_base)
 		return -ENOMEM;
@@ -674,16 +769,63 @@ static void __init _kvm_host_prot_finalize(void *arg)
 		WRITE_ONCE(*err, -EINVAL);
 }
 
+#define ITS_PRIV_NUM_PAGES	(2UL)
+
+static int pkvm_init_its_emulation(phys_addr_t dev_addr, struct its_shadow_tables *shadow)
+{
+	size_t its_priv_sz = ITS_PRIV_NUM_PAGES << PAGE_SHIFT;
+	void *its_state;
+	int ret;
+
+	its_state = alloc_pages_exact(its_priv_sz, GFP_ATOMIC);
+	if (!its_state)
+		return -ENOMEM;
+
+	ret = kvm_call_hyp_nvhe(__pkvm_init_its_emulation, dev_addr, its_state, ITS_PRIV_NUM_PAGES,
+				shadow);
+	if (ret)
+		free_pages_exact(its_state, its_priv_sz);
+
+	return ret;
+}
+
+static int pkvm_init_redist_emulation(phys_addr_t dev_addr)
+{
+	void *redist_state;
+	int ret;
+
+	redist_state = (void *)__get_free_page(GFP_ATOMIC);
+	if (!redist_state)
+		return -ENOMEM;
+
+	ret = kvm_call_hyp_nvhe(__pkvm_init_redist_emulation, dev_addr,
+				redist_state);
+	if (ret)
+		free_page((unsigned long)redist_state);
+
+	return ret;
+}
+
 static int __init pkvm_drop_host_privileges(void)
 {
 	int ret = 0;
+	unsigned long its_flags;
 
 	/*
 	 * Flip the static key upfront as that may no longer be possible
 	 * once the host stage 2 is installed.
 	 */
 	static_branch_enable(&kvm_protected_mode_initialized);
+
+	if (static_branch_unlikely(&kvm_its_hardening))
+		its_start_deprivilege(&its_flags);
+
 	on_each_cpu(_kvm_host_prot_finalize, &ret, 1);
+
+	if (static_branch_unlikely(&kvm_its_hardening)) {
+		its_end_deprivilege(ret, &its_flags, &pkvm_init_its_emulation);
+		gic_redist_deprivilege(&pkvm_init_redist_emulation);
+	}
 	return ret;
 }
 
@@ -744,7 +886,7 @@ device_initcall_sync(finalize_pkvm);
 
 void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa)
 {
-	struct mm_struct *mm = current->mm;
+	struct mm_struct *mm = host_kvm->mm;
 	struct kvm_pinned_page *ppage;
 	u8 order;
 
@@ -753,8 +895,10 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa)
 					   ipa, ipa + PAGE_SIZE - 1);
 	if (ppage) {
 		order = ppage->order;
-		if (!order)
+		if (!order) {
 			kvm_pinned_pages_remove(ppage, &host_kvm->arch.pkvm.pinned_pages);
+			ppage->slot->arch.pkvm_pf_count--;
+		}
 	}
 	write_unlock(&host_kvm->mmu_lock);
 
@@ -762,7 +906,7 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa)
 		return;
 
 	account_locked_vm(mm, 1 << ppage->order, false);
-	unpin_user_pages_dirty_lock(&ppage->page, 1, true);
+	pkvm_release_ppage(ppage, true);
 	kfree(ppage);
 }
 
@@ -1358,7 +1502,6 @@ static unsigned long mod_direct_hyp_base;
 
 unsigned long pkvm_el2_mod_kern_va(unsigned long addr)
 {
-#ifdef CONFIG_PKVM_STACKTRACE
 	struct pkvm_el2_module *mod;
 
 	/* Fast lookup into the direct range */
@@ -1376,7 +1519,7 @@ unsigned long pkvm_el2_mod_kern_va(unsigned long addr)
 			return (unsigned long)mod->sections.start +
 				(addr - hyp_va);
 	}
-#endif
+
 	return 0;
 }
 
@@ -1956,3 +2099,11 @@ static int __init early_ffa_unmap_on_lend_cfg(char *arg)
 }
 
 early_param("kvm-arm.ffa-unmap-on-lend", early_ffa_unmap_on_lend_cfg);
+
+static int early_its_hardening_cfg(char *arg)
+{
+	static_branch_enable(&kvm_its_hardening);
+	return 0;
+}
+
+early_param("kvm-arm.its_hardening", early_its_hardening_cfg);

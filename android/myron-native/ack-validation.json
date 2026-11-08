@@ -1,0 +1,204 @@
+{
+  "pass": true,
+  "date": "2026-11-08",
+  "scope": "Host native Kbuild compilation and module/DT/UAPI consistency checks; not a full ROM, KMI certification or phone test.",
+  "source_commits": {
+    "kernel": "366d8d13560898d47501fe3d0d256d036fcb8bff",
+    "external_modules": "64523af994c38172db2de4955843d92ed484ded8",
+    "devicetrees": "b84c303a85a8f8b73d7fa3d4df37b57a601dd5b1"
+  },
+  "linux_version": "6.12.97",
+  "kernel_release": "6.12.97-4k-g366d8d135608",
+  "toolchain": {
+    "clang": "Android r536225, LLVM 19.0.1, build 12833971",
+    "rust": "Android 1.82.0.p2, rustc 1.82.0-dev f6e511eec, LLVM 19.0.1, build linux-glibc-15545352",
+    "pahole": "v1.28",
+    "production_clang21_rust1_93_tested": false
+  },
+  "config_fragments": [
+    "gki_defconfig",
+    "vendor/canoe_GKI.config",
+    "vendor/myron_GKI.config"
+  ],
+  "config_sha256": "a6669b29f7e45dfbf431bd67bd4021a563f398d796b9b0755cd685a3e40b6907",
+  "enabled_config": [
+    "RUST",
+    "ANDROID_BINDER_IPC_RUST=m",
+    "DEBUG_INFO_BTF",
+    "DEBUG_INFO_BTF_MODULES",
+    "CFI_CLANG",
+    "MODVERSIONS",
+    "EXTENDED_MODVERSIONS",
+    "GENDWARFKSYMS",
+    "TARGET_PRODUCT_MYRON"
+  ],
+  "image": {
+    "bytes": 42252800,
+    "sha256": "0d951b10012891edb3cb8d3347b656f7d407702678bf595ced04acb2ed804d07"
+  },
+  "in_tree_modules": 340,
+  "required_platform_modules": 226,
+  "required_platform_modules_missing": [],
+  "external_module_directories": 23,
+  "external_modules": 68,
+  "external_source_changes_required": false,
+  "modpost_warning_override_used": false,
+  "modpost_errors_or_warnings_in_final_logs": false,
+  "module_consistency": {
+    "catalog_entries": 297,
+    "catalog_missing": [],
+    "exported_symbols": 23348,
+    "version_records_checked": 49253,
+    "errors": []
+  },
+  "module_manifest": "ack-modules-validation.json",
+  "dt": {
+    "compiled_inputs": 32,
+    "all_byte_identical_to_6_12_81_reference": true,
+    "manifest": "ack-dt-validation.json"
+  },
+  "headers": {
+    "headers_install_pass": true,
+    "exported_header_count": 1006,
+    "asm_signal_h": true,
+    "asm_generic_signal_h": true,
+    "soong_sbox_bionic_cleaning_tested": false
+  },
+  "btf_incremental_regression": {
+    "pass": true,
+    "modules_checked": 340,
+    "btf_regenerations": 340,
+    "module_relinks": 0,
+    "bad_sections": []
+  },
+  "external_results": [
+    {
+      "directory": "qcom/opensource/mm-drivers/msm_ext_display",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/mm-drivers/hfi_core",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/mm-drivers/hw_fence",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/mm-drivers/sync_fence",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/audio-kernel",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/dsp-kernel",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/mmrm-driver",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/synx-kernel",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/securemsm-kernel",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/datarmnet-ext/mem",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/dataipa",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/datarmnet",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/datarmnet-ext/shs",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/datarmnet-ext/perf",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/data-kernel/drivers/smem-mailbox",
+      "exit_code": 0
+    },
+    {
+      "directory": "nxp/opensource/driver",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/camera-kernel",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/graphics-kernel",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/display-drivers",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/eva-kernel",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/wlan/platform",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/bt-kernel",
+      "exit_code": 0
+    },
+    {
+      "directory": "qcom/opensource/wlan/qcacld-3.0",
+      "exit_code": 0
+    }
+  ],
+  "log_sha256": {
+    "build-btf-fix.log": "3e85b9ff93bb3cc2c07b9b07c75e512575e0e4231b035175432ff70dc2e1279f",
+    "btf-incremental.log": "0ced2aa551c0d0fe147d7dfc3171e38e32da001c61888b861c21f39d40177e13",
+    "external-logs/nxp_opensource_driver.log": "2f8d274df0fa7e49e90bc4a07c4f2069966dcc6519ddf2839c018f2a431c8b07",
+    "external-logs/qcom_opensource_audio-kernel.log": "fe58aec447df5d76a1b197815de67146700f82ae0fd714ca8446d92df395032a",
+    "external-logs/qcom_opensource_bt-kernel.log": "21cf318e66f9f546a38b8d5ea3bbdfc33b59ae4b935ca3c8763b8f0355d28521",
+    "external-logs/qcom_opensource_camera-kernel.log": "48959fe90effe64d02785ba949a8a2bfe388c50accdc47922bf10d55f417bc3f",
+    "external-logs/qcom_opensource_data-kernel_drivers_smem-mailbox.log": "aad4bc444ad02f8b9341d17c623d11582aec933374c3f914b151b2190254c6df",
+    "external-logs/qcom_opensource_dataipa.log": "92a045c2d68f4d773f0609a1cbe6bb7da01c4f9f78cf4188db4265b79863fa72",
+    "external-logs/qcom_opensource_datarmnet-ext_mem.log": "c9aaebec2abd3e5c8454b0abab7bdaa3dabda67caeb59af4c8ffb2b2bc8636aa",
+    "external-logs/qcom_opensource_datarmnet-ext_perf.log": "4002efb9ccbc610a8a330a8c2c2c48e5c3af420ee2637a6f902e5b98cfd673b4",
+    "external-logs/qcom_opensource_datarmnet-ext_shs.log": "449f2f53be26c7b6cb6f18d84f1e53b1fdcb0b0e1a930d17a271ba512f87e455",
+    "external-logs/qcom_opensource_datarmnet.log": "eb6e5e55455cb1138b684eaa0af39e3d6014d77ffca451f66f747618ebdbbf48",
+    "external-logs/qcom_opensource_display-drivers.log": "dfb8f4b9bba9003f6587cbaa9d9701590027fdc955c2b77566125525f2ba0381",
+    "external-logs/qcom_opensource_dsp-kernel.log": "55d19e061985a9a4700383b35a48f6c620f3d1f732c35e72d57193ecb11089e3",
+    "external-logs/qcom_opensource_eva-kernel.log": "2f4712bc9ce97e612e9bd5831f60065110c78a1dd604c2bfdbcea32f61c8aabd",
+    "external-logs/qcom_opensource_graphics-kernel.log": "3d3d7cc7c7dff441a416c31741d7ccf642c80240f14fd12718a9aec3dc4b5659",
+    "external-logs/qcom_opensource_mm-drivers_hfi_core.log": "b7552fde44c121dadc4fb08542fe38b7d34602a52316d360cb7071b74e9ce2c7",
+    "external-logs/qcom_opensource_mm-drivers_hw_fence.log": "ae280dc8d2554100c4580d7e9d0b72ddf0d1cb8fc2e491f1bc8d50c110b34d12",
+    "external-logs/qcom_opensource_mm-drivers_msm_ext_display.log": "319537307b4b2319bd405b5fe560fdf84cf9b7497a0a9179fff62f4c65b6af58",
+    "external-logs/qcom_opensource_mm-drivers_sync_fence.log": "5bdc8be702e6914e5676fe277b9899f52889f7fbbe1b52c3d786f1f0d5eb9f90",
+    "external-logs/qcom_opensource_mmrm-driver.log": "466992855aba8304a3dc91577d683691089aadc7d28b532c080757925605938a",
+    "external-logs/qcom_opensource_securemsm-kernel.log": "8935bfd47df3b329151545f0edc0f70272ac4cf3355867d1ee955ff3b974824c",
+    "external-logs/qcom_opensource_synx-kernel.log": "3659fbfdb53c2f64ee4bb1de397c3144ee232c76a78bd3f3a40e2a0020b1a483",
+    "external-logs/qcom_opensource_wlan_platform.log": "b6d3875776ee57a80ee2e3072bd964f2fda4652e431c43a690ec372c26f892ea",
+    "external-logs/qcom_opensource_wlan_qcacld-3.0.log": "a27983db9bff0728e49fbf8f2a91d00ad550946d6e9831ccd6041fe85865026e"
+  },
+  "notes": [
+    "Initial interrupted compilation left net/netfilter/core.o without CRC records; rebuilt that object and verified all final module version records.",
+    "Existing securemsm UAPI deprecation pragmas and DT warnings remain; no warning-free claim.",
+    "The SPI standby driver change remains unchanged from native_base_commit; this test pins the earlier DT baseline and does not validate the separate suspend DT opt-in."
+  ],
+  "full_rom_tested": false,
+  "signed_partition_images_generated": false,
+  "device_tested": false,
+  "standby_power_improvement_verified": false
+}

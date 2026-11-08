@@ -348,7 +348,8 @@ EXPORT_SYMBOL_GPL(page_cache_ra_unbounded);
  * We really don't want to intermingle reads and writes like that.
  */
 static void do_page_cache_ra(struct readahead_control *ractl,
-		unsigned long nr_to_read, unsigned long lookahead_size)
+		unsigned long nr_to_read, unsigned long lookahead_size,
+		bool forced)
 {
 	struct inode *inode = ractl->mapping->host;
 	unsigned long index = readahead_index(ractl);
@@ -366,6 +367,21 @@ static void do_page_cache_ra(struct readahead_control *ractl,
 		nr_to_read = end_index - index + 1;
 
 	page_cache_ra_unbounded(ractl, nr_to_read, lookahead_size);
+#ifdef CONFIG_64BIT
+	if (forced && lru_gen_enabled()) {
+		struct address_space *mapping = ractl->mapping;
+		unsigned long i;
+
+		for (i = 0; i < nr_to_read; i++) {
+			struct folio *folio = filemap_get_folio(mapping, index + i);
+
+			if (!IS_ERR(folio)) {
+				set_bit(PG_oem_reserved_5, folio_flags(folio, 0));
+				folio_put(folio);
+			}
+		}
+	}
+#endif
 }
 
 /*
@@ -402,7 +418,7 @@ void force_page_cache_ra(struct readahead_control *ractl,
 
 		if (this_chunk > nr_to_read)
 			this_chunk = nr_to_read;
-		do_page_cache_ra(ractl, this_chunk, 0);
+		do_page_cache_ra(ractl, this_chunk, 0, true);
 
 		nr_to_read -= this_chunk;
 	}
@@ -592,7 +608,7 @@ fallback:
 	 */
 	if (ra->size > index - start)
 		do_page_cache_ra(ractl, ra->size - (index - start),
-				 ra->async_size);
+				 ra->async_size, false);
 }
 
 static unsigned long ractl_max_pages(struct readahead_control *ractl,
@@ -671,7 +687,7 @@ void page_cache_sync_ra(struct readahead_control *ractl,
 	 * readahead state.
 	 */
 	if (contig_count <= req_count) {
-		do_page_cache_ra(ractl, req_count, 0);
+		do_page_cache_ra(ractl, req_count, 0, false);
 		return;
 	}
 	/*
@@ -766,29 +782,22 @@ EXPORT_SYMBOL_GPL(page_cache_async_ra);
 
 ssize_t ksys_readahead(int fd, loff_t offset, size_t count)
 {
-	ssize_t ret;
-	struct fd f;
+	CLASS(fd, f)(fd);
 
-	ret = -EBADF;
-	f = fdget(fd);
-	if (!fd_file(f) || !(fd_file(f)->f_mode & FMODE_READ))
-		goto out;
+	if (fd_empty(f) || !(fd_file(f)->f_mode & FMODE_READ))
+		return -EBADF;
 
 	/*
 	 * The readahead() syscall is intended to run only on files
 	 * that can execute readahead. If readahead is not possible
 	 * on this file, then we must return -EINVAL.
 	 */
-	ret = -EINVAL;
 	if (!fd_file(f)->f_mapping || !fd_file(f)->f_mapping->a_ops ||
 	    (!S_ISREG(file_inode(fd_file(f))->i_mode) &&
 	    !S_ISBLK(file_inode(fd_file(f))->i_mode)))
-		goto out;
+		return -EINVAL;
 
-	ret = vfs_fadvise(fd_file(f), offset, count, POSIX_FADV_WILLNEED);
-out:
-	fdput(f);
-	return ret;
+	return vfs_fadvise(fd_file(f), offset, count, POSIX_FADV_WILLNEED);
 }
 
 SYSCALL_DEFINE3(readahead, int, fd, loff_t, offset, size_t, count)

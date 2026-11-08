@@ -731,6 +731,12 @@ static inline bool blk_pipeline_zwr(struct request_queue *q)
 	return q->limits.features & BLK_FEAT_ORDERED_HWQ;
 }
 
+/* Whether or not to use the zone write order restore feature. */
+static inline bool blk_use_zwor(struct request_queue *q)
+{
+	return q->limits.features & BLK_FEAT_ZWOR;
+}
+
 /**
  * bio_needs_zone_write_plugging - Check if a BIO needs to be handled with zone
  *				   write plugging
@@ -787,6 +793,11 @@ static inline unsigned int disk_nr_zones(struct gendisk *disk)
 }
 
 static inline bool blk_pipeline_zwr(struct request_queue *q)
+{
+	return false;
+}
+
+static inline bool blk_use_zwor(struct request_queue *q)
 {
 	return false;
 }
@@ -1163,16 +1174,12 @@ static inline void blk_flush_plug(struct blk_plug *plug, bool async)
 		__blk_flush_plug(plug, async);
 }
 
-/*
- * tsk == current here
- */
-static inline void blk_plug_invalidate_ts(struct task_struct *tsk)
+static __always_inline void blk_plug_invalidate_ts(void)
 {
-	struct blk_plug *plug = tsk->plug;
-
-	if (plug)
-		plug->cur_ktime = 0;
-	current->flags &= ~PF_BLOCK_TS;
+	if (unlikely(current->flags & PF_BLOCK_TS)) {
+		current->plug->cur_ktime = 0;
+		current->flags &= ~PF_BLOCK_TS;
+	}
 }
 
 int blkdev_issue_flush(struct block_device *bdev);
@@ -1198,7 +1205,7 @@ static inline void blk_flush_plug(struct blk_plug *plug, bool async)
 {
 }
 
-static inline void blk_plug_invalidate_ts(struct task_struct *tsk)
+static inline void blk_plug_invalidate_ts(void)
 {
 }
 

@@ -148,6 +148,8 @@ KVM_NVHE_ALIAS(__hyp_patchable_function_entries_end);
 
 /* pKVM static key */
 KVM_NVHE_ALIAS(kvm_protected_mode_initialized);
+
+KVM_NVHE_ALIAS(kvm_its_hardening);
 #endif /* CONFIG_KVM */
 
 #ifdef CONFIG_EFI_ZBOOT

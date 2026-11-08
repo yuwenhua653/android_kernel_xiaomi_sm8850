@@ -463,12 +463,14 @@ void __vunmap_range_noflush(unsigned long start, unsigned long end)
 	if (mask & ARCH_PAGE_TABLE_SYNC_MASK)
 		arch_sync_kernel_mappings(start, end);
 }
+EXPORT_SYMBOL_GPL(__vunmap_range_noflush);
 
 void vunmap_range_noflush(unsigned long start, unsigned long end)
 {
 	kmsan_vunmap_range_noflush(start, end);
 	__vunmap_range_noflush(start, end);
 }
+EXPORT_SYMBOL_GPL(vunmap_range_noflush);
 
 /**
  * vunmap_range - unmap kernel virtual addresses
@@ -5224,6 +5226,7 @@ vmap_node_shrink_scan(struct shrinker *shrink, struct shrink_control *sc)
 {
 	int i;
 
+	guard(mutex)(&vmap_purge_lock);
 	for (i = 0; i < nr_vmap_nodes; i++)
 		decay_va_pool_node(&vmap_nodes[i], true);
 

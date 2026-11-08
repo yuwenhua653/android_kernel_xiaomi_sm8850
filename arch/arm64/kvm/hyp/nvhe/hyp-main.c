@@ -21,6 +21,7 @@
 #include <nvhe/alloc_mgt.h>
 #include <nvhe/ffa.h>
 #include <nvhe/iommu.h>
+#include <nvhe/its_emulate.h>
 #include <nvhe/mem_protect.h>
 #include <nvhe/modules.h>
 #include <nvhe/mm.h>
@@ -62,6 +63,9 @@ static inline void hyp_reqs_smccc_encode(unsigned long ret, struct kvm_cpu_conte
 	WARN_ON((req->type != KVM_HYP_REQ_TYPE_MEM) && ((req->type != KVM_HYP_LAST_REQ)));
 	req->type = KVM_HYP_LAST_REQ;
 }
+
+/* Number of implemented GICv3 LRs. Used by flush_hyp_vcpu(). */
+unsigned int hyp_gicv3_nr_lr;
 
 void __kvm_hyp_host_forward_smc(struct kvm_cpu_context *host_ctxt);
 
@@ -872,6 +876,12 @@ static void flush_hyp_vcpu(struct pkvm_hyp_vcpu *hyp_vcpu)
 	}
 
 	hyp_vcpu->exit_code = 0;
+
+	/* Bound used_lrs by the number of implemented list registers. */
+	hyp_vcpu->vcpu.arch.vgic_cpu.vgic_v3.used_lrs =
+		min_t(unsigned int,
+		      hyp_vcpu->vcpu.arch.vgic_cpu.vgic_v3.used_lrs,
+		      hyp_gicv3_nr_lr);
 }
 
 static void sync_hyp_vcpu(struct pkvm_hyp_vcpu *hyp_vcpu, u64 *exit_code)
@@ -1336,6 +1346,32 @@ static void handle___kvm_tlb_flush_vmid(struct kvm_cpu_context *host_ctxt)
 	DECLARE_REG(struct kvm_s2_mmu *, mmu, host_ctxt, 1);
 
 	__kvm_tlb_flush_vmid(kern_hyp_va(mmu));
+}
+
+static void handle___pkvm_init_its_emulation(struct kvm_cpu_context *host_ctxt)
+{
+	DECLARE_REG(phys_addr_t, dev_addr, host_ctxt, 1);
+	DECLARE_REG(void *, priv_its_state, host_ctxt, 2);
+	DECLARE_REG(size_t, priv_num_pages, host_ctxt, 3);
+	DECLARE_REG(struct its_shadow_tables *, shadow, host_ctxt, 4);
+
+	if (!is_protected_kvm_enabled())
+		return;
+
+	cpu_reg(host_ctxt, 1) = pkvm_init_gic_its_emulation(dev_addr, priv_its_state,
+							    priv_num_pages, shadow);
+}
+
+static void handle___pkvm_init_redist_emulation(struct kvm_cpu_context *host_ctxt)
+{
+	DECLARE_REG(phys_addr_t, dev_addr, host_ctxt, 1);
+	DECLARE_REG(void *, redist_state, host_ctxt, 2);
+
+	if (!is_protected_kvm_enabled())
+		return;
+
+	cpu_reg(host_ctxt, 1) =
+		pkvm_init_redist_emulation(dev_addr, redist_state);
 }
 
 static void handle___pkvm_tlb_flush_vmid(struct kvm_cpu_context *host_ctxt)
@@ -2099,6 +2135,8 @@ static const hcall_t host_hcall[] = {
 	HANDLE_FUNC(__pkvm_pviommu_attach),
 	HANDLE_FUNC(__pkvm_pviommu_add_vsid),
 	HANDLE_FUNC(__pkvm_host_get_ffa_version),
+	HANDLE_FUNC(__pkvm_init_its_emulation),
+	HANDLE_FUNC(__pkvm_init_redist_emulation),
 };
 
 static void handle_host_hcall(struct kvm_cpu_context *host_ctxt)
