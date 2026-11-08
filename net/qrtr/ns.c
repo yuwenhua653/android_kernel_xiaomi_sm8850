@@ -89,10 +89,10 @@ struct qrtr_node {
  */
 #define QRTR_NS_MAX_SERVERS 256
 
-/* Max lookup limit is chosen based on the current platform requirements. If the
- * requirement changes in the future, this value can be increased.
+/* Android vendor services can exceed 64 concurrent local lookups. Follow
+ * upstream 7fc1c937b6b3 and keep a finite bound with room for those clients.
  */
-#define QRTR_NS_MAX_LOOKUPS 64
+#define QRTR_NS_MAX_LOOKUPS 128U
 
 /* Max nodes limit is chosen based on the current platform requirements.
  * If the requirement changes in the future, this value can be increased.
@@ -642,7 +642,9 @@ static int ctrl_cmd_new_lookup(struct sockaddr_qrtr *from,
 		return -EINVAL;
 
 	if (qrtr_ns.lookup_count >= QRTR_NS_MAX_LOOKUPS) {
-		pr_err_ratelimited("QRTR client node exceeds max lookup limit!\n");
+		pr_err_ratelimited("QRTR client node exceeds max lookup limit (%u/%u), port=%u service=%u instance=%u\n",
+				   qrtr_ns.lookup_count, QRTR_NS_MAX_LOOKUPS,
+				   from->sq_port, service, instance);
 		return -ENOSPC;
 	}
 
