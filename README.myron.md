@@ -1,8 +1,8 @@
 # Myron native Kbuild migration
 
-This native integration has passed host kernel/module compilation and device
-DT/module-packaging checks. It is not a complete ROM or a device-tested
-replacement for the working kernel adapter.
+This native integration uses standard ROM Kbuild rules. The ACK 6.12.97 update
+has passed the host checks listed below. Complete ROM, final image packaging
+and device runtime validation remain necessary for this update.
 
 ## Source layout
 
@@ -41,9 +41,23 @@ kernel build wrapper, or replacement build-message echo.
 ## ACK 6.12.97 update
 
 The ACK update provenance and conflict resolutions are recorded in
-`android/myron-native/ack-update.json`. This update requires new build and
-device validation. The older validation reports below describe the 6.12.81
-baseline; they do not certify this update.
+`android/myron-native/ack-update.json`. Host validation with Android Clang
+r536225 / Rust 1.82.0.p2 (LLVM 19) and pahole 1.28 passed:
+
+* Image, 340 in-tree modules (all 226 platform modules), and all 68 external modules.
+* Rust Binder, BTF, CFI and module versions enabled; strict modpost checks retained.
+* All 297 original catalog entries present; 49,253 basic/extended version records
+  match the same build exports, and every module has the same kernel release.
+* All 32 DT inputs remain byte-identical to the pinned 6.12.81 reference.
+* headers_install exports 1006 headers, including both signal.h variants.
+* Regenerating BTF for all 340 in-tree modules without relinking leaves exactly
+  one .BTF section per module. This includes the incremental BTF script fix.
+
+See `android/myron-native/ack-validation.json` and its module/DT manifests.
+[ACK update instructions](README.ACK-update.md) describe applying the Git bundle
+to a new branch while retaining local commits. Full ROM, production Clang 21 /
+Rust 1.93.1, signed-image, runtime and standby-power tests remain outstanding.
+The older validation reports below describe the 6.12.81 baseline only.
 
 ## Previously verified 6.12.81 scope
 

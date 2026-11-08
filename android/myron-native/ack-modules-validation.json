@@ -1,0 +1,4094 @@
+{
+  "pass": true,
+  "kernel_release": "6.12.97-4k-g366d8d135608",
+  "in_tree_modules": 340,
+  "external_modules": 68,
+  "catalog_entries": 297,
+  "catalog_missing": [],
+  "symvers_files": 24,
+  "exported_symbols": 23348,
+  "version_records_checked": 49253,
+  "errors": [],
+  "modules": [
+    {
+      "file": "out/arch/arm64/crypto/aes-neon-blk.ko",
+      "name": "aes-neon-blk.ko",
+      "bytes": 255648,
+      "sha256": "cfed8350a8469e3f19b28e95daa41b689ffc943fa3dc9738b13729d03e6c3a97",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 42
+    },
+    {
+      "file": "out/arch/arm64/geniezone/gzvm.ko",
+      "name": "gzvm.ko",
+      "bytes": 1493912,
+      "sha256": "269aa499202d92c9f63875e280cc32dae5e905bd74cab1f2a475c5001298f1ed",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 236
+    },
+    {
+      "file": "out/arch/arm64/gunyah/gh_arm_drv.ko",
+      "name": "gh_arm_drv.ko",
+      "bytes": 165392,
+      "sha256": "72aa4fe900b3f92f82509305c794626794889af7e22146928a54915772875c85",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 20
+    },
+    {
+      "file": "out/drivers/android/binder/rust_binder.ko",
+      "name": "rust_binder.ko",
+      "bytes": 2875856,
+      "sha256": "66750ff6fedfd3c3587adbb96dc23488ce9105b25f06e7253f4ae61eefc2ebb7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 465
+    },
+    {
+      "file": "out/drivers/base/regmap/qti-regmap-debugfs.ko",
+      "name": "qti-regmap-debugfs.ko",
+      "bytes": 239952,
+      "sha256": "f530d342f015a798832d6c8b712611b2a6571087f7fbedd47e78015cb2c081f9",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 68
+    },
+    {
+      "file": "out/drivers/base/regmap/regmap-kunit.ko",
+      "name": "regmap-kunit.ko",
+      "bytes": 496232,
+      "sha256": "d237278dcd1eeb0face5c74ebb3e4e4acc7e34a978cbcd164820bfbe77ed4109",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 80
+    },
+    {
+      "file": "out/drivers/base/regmap/regmap-ram.ko",
+      "name": "regmap-ram.ko",
+      "bytes": 208256,
+      "sha256": "badc0e4adfefa9a6b4a1f2f990ba451b0d3f84be2489976cd4bd1843bdc68117",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 12
+    },
+    {
+      "file": "out/drivers/base/regmap/regmap-raw-ram.ko",
+      "name": "regmap-raw-ram.ko",
+      "bytes": 211192,
+      "sha256": "5db8e7cb513caf35a1c539698802ffb6c1fdc20d60f680480b1fa712bfae1ca8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 14
+    },
+    {
+      "file": "out/drivers/block/virtio_blk.ko",
+      "name": "virtio_blk.ko",
+      "bytes": 319152,
+      "sha256": "83e698e6b7e37523f24e6836372b5e8d97339efe4520fca04f2f1f1bb82883e1",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 166
+    },
+    {
+      "file": "out/drivers/block/zram/zram.ko",
+      "name": "zram.ko",
+      "bytes": 538088,
+      "sha256": "fd5919b8d79b9050562c416e87f46a91a614c166f85c050797bfd9217e305cff",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 182
+    },
+    {
+      "file": "out/drivers/bluetooth/btbcm.ko",
+      "name": "btbcm.ko",
+      "bytes": 401824,
+      "sha256": "c4b71cb09d2cd8861aba1b07ed6f80959d78afe82afb21d78d32cca1ee349e16",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 44
+    },
+    {
+      "file": "out/drivers/bluetooth/btqca.ko",
+      "name": "btqca.ko",
+      "bytes": 403800,
+      "sha256": "c35504b640e5435ed9ffed3a4d320707d194352c3f26fa67e43afa37e7d65caa",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 62
+    },
+    {
+      "file": "out/drivers/bluetooth/btsdio.ko",
+      "name": "btsdio.ko",
+      "bytes": 394992,
+      "sha256": "d285fff5632bf0a0e0cec0763f01162c3e1277919df36bc3cfc59b0330010348",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 66
+    },
+    {
+      "file": "out/drivers/bluetooth/hci_uart.ko",
+      "name": "hci_uart.ko",
+      "bytes": 1820056,
+      "sha256": "f4b6f28c8093788de81b8c56469916b8a4462ca5c7583a8f6d8bed2c3a2a3891",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 366
+    },
+    {
+      "file": "out/drivers/bus/mhi/host/mhi.ko",
+      "name": "mhi.ko",
+      "bytes": 1318176,
+      "sha256": "ae6b7c48ff3119373ca8b6cc7f615539efbc6ccb95550dfc16181b9768c88fbe",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 266
+    },
+    {
+      "file": "out/drivers/char/hw_random/cctrng.ko",
+      "name": "cctrng.ko",
+      "bytes": 234896,
+      "sha256": "ff4d49ca18643e25ae738c2b0a8b6412d798fa1b0690a7d29efd39f5de6b3e00",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 74
+    },
+    {
+      "file": "out/drivers/char/virtio_console.ko",
+      "name": "virtio_console.ko",
+      "bytes": 359616,
+      "sha256": "b17987b46367c2e0ad432e2f05c0913e29c238a748a1bfeea0e09789187967f9",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 200
+    },
+    {
+      "file": "out/drivers/clk/clk-gate_test.ko",
+      "name": "clk-gate_test.ko",
+      "bytes": 279520,
+      "sha256": "07fa286e3f9da4591a9135269ace31e00e3cf6c833755cfa989887d331217988",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 54
+    },
+    {
+      "file": "out/drivers/clk/clk-scmi.ko",
+      "name": "clk-scmi.ko",
+      "bytes": 220688,
+      "sha256": "74d3160e1e83c998a7d1425dc6a5734edf12b7c3f8dcbc1340945350b563f829",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 24
+    },
+    {
+      "file": "out/drivers/clk/clk-test.ko",
+      "name": "clk-test.ko",
+      "bytes": 519096,
+      "sha256": "2325026fc78597ab9bd4216b66884b3ec6c8e55b527e17dd8f9ba7a9c8f004cc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 96
+    },
+    {
+      "file": "out/drivers/clk/clk_kunit_helpers.ko",
+      "name": "clk_kunit_helpers.ko",
+      "bytes": 197048,
+      "sha256": "426f4f394ad26d7ccb515ee85c883ab0ee6fa19c52231ca735d26a251680e812",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 26
+    },
+    {
+      "file": "out/drivers/clk/qcom/cambistmclkcc-canoe.ko",
+      "name": "cambistmclkcc-canoe.ko",
+      "bytes": 276776,
+      "sha256": "374dbed14e39ea631f1f37c365309c30b083393adc9a65c908fd54bcfe0ff301",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 50
+    },
+    {
+      "file": "out/drivers/clk/qcom/camcc-alor.ko",
+      "name": "camcc-alor.ko",
+      "bytes": 368576,
+      "sha256": "54bcd7468c81c9da4a98298f64d728fddb92c2d93f0d0f5a46da2964e00e301c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 58
+    },
+    {
+      "file": "out/drivers/clk/qcom/camcc-canoe.ko",
+      "name": "camcc-canoe.ko",
+      "bytes": 373544,
+      "sha256": "d165b22f09410a2d5c949f1632eb28c4d46d54e215939024f6d5047c2cbf9701",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 64
+    },
+    {
+      "file": "out/drivers/clk/qcom/clk-dummy.ko",
+      "name": "clk-dummy.ko",
+      "bytes": 212072,
+      "sha256": "5253c8e7de667e9ea0b620db24a617c875f8c3539ff8cf5a86accc7af5a442c8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 32
+    },
+    {
+      "file": "out/drivers/clk/qcom/clk-qcom.ko",
+      "name": "clk-qcom.ko",
+      "bytes": 3030112,
+      "sha256": "4750366eba184844aae3f9c46007802eae3a98638c30486de071034670bf364f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 344
+    },
+    {
+      "file": "out/drivers/clk/qcom/clk-rpmh.ko",
+      "name": "clk-rpmh.ko",
+      "bytes": 323096,
+      "sha256": "90e22c33a1830fd567cbcdc4ad54785681f3a48273f3384e4a3092137ed56253",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 42
+    },
+    {
+      "file": "out/drivers/clk/qcom/debugcc-canoe.ko",
+      "name": "debugcc-canoe.ko",
+      "bytes": 269168,
+      "sha256": "83708edb239b52066a86fcedba5a744e2d0adf408950e7aa6829870e6fd6b0d4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 24
+    },
+    {
+      "file": "out/drivers/clk/qcom/dispcc-canoe.ko",
+      "name": "dispcc-canoe.ko",
+      "bytes": 351448,
+      "sha256": "a227d91d899d0ceaacbbb97c24c8256ad2f04681905812c21e662991f6d72445",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 76
+    },
+    {
+      "file": "out/drivers/clk/qcom/evacc-canoe.ko",
+      "name": "evacc-canoe.ko",
+      "bytes": 282200,
+      "sha256": "1632a8ad02ec766285736bfb781f4236492071dabe913f09df9973857f02616f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 54
+    },
+    {
+      "file": "out/drivers/clk/qcom/gcc-alor.ko",
+      "name": "gcc-alor.ko",
+      "bytes": 398608,
+      "sha256": "a9b6be8d1e398d9f84762f952992cdb188f6bbea01747b21be0eb5a6588feafa",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 40
+    },
+    {
+      "file": "out/drivers/clk/qcom/gcc-canoe.ko",
+      "name": "gcc-canoe.ko",
+      "bytes": 401624,
+      "sha256": "945e4e304e2d97174dc16bbd5e5f955fd9c91117accd2947155dec32eee9b696",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 38
+    },
+    {
+      "file": "out/drivers/clk/qcom/gdsc-regulator.ko",
+      "name": "gdsc-regulator.ko",
+      "bytes": 365128,
+      "sha256": "0c906d77c95cb0ce27ac9bb10fba183004e307b8db5e46d31e3a8ce1da53fa6e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 142
+    },
+    {
+      "file": "out/drivers/clk/qcom/gpucc-canoe.ko",
+      "name": "gpucc-canoe.ko",
+      "bytes": 294392,
+      "sha256": "ab4d1dc6184d160ca375966b6180243e3e1e8f993fb2bb7c57a88fb4192cc5ae",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 50
+    },
+    {
+      "file": "out/drivers/clk/qcom/tcsrcc-canoe.ko",
+      "name": "tcsrcc-canoe.ko",
+      "bytes": 248112,
+      "sha256": "9320fe8082ec29287bfdf7cca5593a22a85b41b62c4724d6ebf670aa13e6193d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "out/drivers/clk/qcom/videocc-canoe.ko",
+      "name": "videocc-canoe.ko",
+      "bytes": 305040,
+      "sha256": "0ded99f7b0047a5739a3810deecb1041b28d10e30f37f30b63c35361a394f352",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 52
+    },
+    {
+      "file": "out/drivers/devfreq/governor_gpubw_mon.ko",
+      "name": "governor_gpubw_mon.ko",
+      "bytes": 214920,
+      "sha256": "8f58c4d44857d43b8df907e95d4411e54ef6b4c063a8f7e570e0822dc096bb96",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 30
+    },
+    {
+      "file": "out/drivers/devfreq/governor_msm_adreno_ro.ko",
+      "name": "governor_msm_adreno_ro.ko",
+      "bytes": 197160,
+      "sha256": "180bdd424f5540c9c9e0a7793dfd7dfce16c1ebebad9bb867c2e7a2061ff6fcc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 8
+    },
+    {
+      "file": "out/drivers/devfreq/governor_msm_adreno_tz.ko",
+      "name": "governor_msm_adreno_tz.ko",
+      "bytes": 241488,
+      "sha256": "9327780d49715accbd1e21c2b4968f82892d453ad640aa66f6b6bc3306428c54",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 68
+    },
+    {
+      "file": "out/drivers/dma/qcom/msm_gpi.ko",
+      "name": "msm_gpi.ko",
+      "bytes": 521456,
+      "sha256": "d1905fa0024bc778ce27e93b7ecf7d01a34010057f1ce9800ab960d11baf0f32",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 172
+    },
+    {
+      "file": "out/drivers/dma-buf/heaps/deferred-free-helper.ko",
+      "name": "deferred-free-helper.ko",
+      "bytes": 242608,
+      "sha256": "d95b14a825f72594f46c062d81005729bd8c8e84f56d469aa75723052f7750b7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 36
+    },
+    {
+      "file": "out/drivers/dma-buf/heaps/qcom_dma_heaps.ko",
+      "name": "qcom_dma_heaps.ko",
+      "bytes": 1333688,
+      "sha256": "6805f0e090e1c6d0fb410459a5701f954630cb247b0b9e88e05984b8a1ac8ba5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 222
+    },
+    {
+      "file": "out/drivers/eom/eom_driver.ko",
+      "name": "eom_driver.ko",
+      "bytes": 345920,
+      "sha256": "c8ee0fbf1eabc40a433c86ff69c6a33f5486dcf1f6fc586fb4ad0ea1d1849dc1",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 58
+    },
+    {
+      "file": "out/drivers/firmware/arm_scmi/qcom_scmi_vendor.ko",
+      "name": "qcom_scmi_vendor.ko",
+      "bytes": 202928,
+      "sha256": "61ec8d67f503cbe4097eab94a918dce33505c9d98f91813800841e9a97284317",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 14
+    },
+    {
+      "file": "out/drivers/firmware/qcom/qcom-scm.ko",
+      "name": "qcom-scm.ko",
+      "bytes": 1156144,
+      "sha256": "66020f04a0bc196a34746a3d993f6bbf0ba1c1f9e57496403901e56fc7cdf285",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 230
+    },
+    {
+      "file": "out/drivers/firmware/qcom/si_core/si_core_module.ko",
+      "name": "si_core_module.ko",
+      "bytes": 839392,
+      "sha256": "8ddb80bc87dc15cbb437cf0a149a719824203746b9a5093caa631a0338d8d8e5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 186
+    },
+    {
+      "file": "out/drivers/gnss/gnss.ko",
+      "name": "gnss.ko",
+      "bytes": 238616,
+      "sha256": "981e80bbe2c47713c2646de34f55e5d1d96218b94975d10874222526f927650d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 100
+    },
+    {
+      "file": "out/drivers/gpu/drm/display/drm_display_helper.ko",
+      "name": "drm_display_helper.ko",
+      "bytes": 1697856,
+      "sha256": "5de0a9d515b443dcdc64bb77be9d739c09adb4111c77f5d68a29679bb259c00b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 192
+    },
+    {
+      "file": "out/drivers/hid/hid-uclogic-test.ko",
+      "name": "hid-uclogic-test.ko",
+      "bytes": 194016,
+      "sha256": "e0410b41e5e66d8d029fec13fe8ad7cd9d24b6454a4fa1e29a35666a2e7896e3",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 20
+    },
+    {
+      "file": "out/drivers/hwspinlock/qcom_hwspinlock.ko",
+      "name": "qcom_hwspinlock.ko",
+      "bytes": 217552,
+      "sha256": "bb9de0fb80feef4fbfd550de3bb15ec127fd0edf6b3070671fa4cbab14aa0a93",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 36
+    },
+    {
+      "file": "out/drivers/hwtracing/coresight/coresight.ko",
+      "name": "coresight.ko",
+      "bytes": 1644880,
+      "sha256": "cc4b39e07a6d67aa4fe89c87a94e30780f351ba2aa8d8f88da6717957e4835ee",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 228
+    },
+    {
+      "file": "out/drivers/i2c/busses/i2c-msm-geni.ko",
+      "name": "i2c-msm-geni.ko",
+      "bytes": 555200,
+      "sha256": "cc642665c9d4a1600e6c1b80bc42763a829d044eff68f388ea4cf3143c2b2a0d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 210
+    },
+    {
+      "file": "out/drivers/iio/adc/qcom-spmi-adc5-gen3.ko",
+      "name": "qcom-spmi-adc5-gen3.ko",
+      "bytes": 363312,
+      "sha256": "3bd6752dcd9153a33645ab44d986820e8e136a365d762d93fc1baea313c734ee",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 114
+    },
+    {
+      "file": "out/drivers/iio/adc/qcom-vadc-common.ko",
+      "name": "qcom-vadc-common.ko",
+      "bytes": 155840,
+      "sha256": "9a6f0784085f18e653eda96d2a1bcbd21cee46ddf36d3b792df98241465de304",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 4
+    },
+    {
+      "file": "out/drivers/iio/test/iio-test-format.ko",
+      "name": "iio-test-format.ko",
+      "bytes": 261216,
+      "sha256": "62c92364d5c21b60465aca130421b97de267b41ceb211d7d86a0b6b8c2704f11",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 22
+    },
+    {
+      "file": "out/drivers/input/fingerprint/mi_fp.ko",
+      "name": "mi_fp.ko",
+      "bytes": 1167480,
+      "sha256": "05f7f03e6f4582f844fb7a3e975b72c8ff82d3fed8439307964b67e9dac4e437",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 222
+    },
+    {
+      "file": "out/drivers/input/misc/pm8941-pwrkey.ko",
+      "name": "pm8941-pwrkey.ko",
+      "bytes": 267816,
+      "sha256": "0dc59a11e0f667f0a0556711a972f51c9aa6f29401bef50c16521b65408788e4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 62
+    },
+    {
+      "file": "out/drivers/input/misc/qcom-hv-haptics.ko",
+      "name": "qcom-hv-haptics.ko",
+      "bytes": 679616,
+      "sha256": "44b1f3351eca5f570d7b18233e4994d3c8fb58977976fb74fc826f2aaa8e245a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 246
+    },
+    {
+      "file": "out/drivers/input/tests/input_test.ko",
+      "name": "input_test.ko",
+      "bytes": 224240,
+      "sha256": "6444d5bc70dd6a3a7340fefb03fc91dd389f6a566d2f0cebe4cf48f58b16b147",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 48
+    },
+    {
+      "file": "out/drivers/input/touchscreen/myron/focaltech_myron.ko",
+      "name": "focaltech_myron.ko",
+      "bytes": 299792,
+      "sha256": "014ce41beb28743ea0c4187a01caf31067b3a442df6b6a4a61796c0fb8e34b78",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 98
+    },
+    {
+      "file": "out/drivers/interconnect/icc-clk.ko",
+      "name": "icc-clk.ko",
+      "bytes": 206160,
+      "sha256": "fb89f9d27403587186fbd0235def9ff96cfc9193b4a23edbb3498d4bcfe5c86e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 38
+    },
+    {
+      "file": "out/drivers/interconnect/qcom/icc-bcm-voter.ko",
+      "name": "icc-bcm-voter.ko",
+      "bytes": 325896,
+      "sha256": "99dc6d5e1ecdc2ccdb02e4cf3b199664a4044d614e9a9013debdb4ca62ee1abd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 76
+    },
+    {
+      "file": "out/drivers/interconnect/qcom/icc-debug.ko",
+      "name": "icc-debug.ko",
+      "bytes": 290592,
+      "sha256": "5ff147ef82b4224951d77cfc93de0a28e8f8be531dc10756e4adc33e095f8334",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 42
+    },
+    {
+      "file": "out/drivers/interconnect/qcom/icc-rpmh.ko",
+      "name": "icc-rpmh.ko",
+      "bytes": 240696,
+      "sha256": "0ceaece4b3bc7701958cf64e552963809d59838e76783413697435a4f0bbe9df",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 88
+    },
+    {
+      "file": "out/drivers/interconnect/qcom/qnoc-alor.ko",
+      "name": "qnoc-alor.ko",
+      "bytes": 887712,
+      "sha256": "3635d9f05b90774adba03bbe958fc30553f2943c872d4f81b9d2d8b82b3a6bdc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "out/drivers/interconnect/qcom/qnoc-canoe.ko",
+      "name": "qnoc-canoe.ko",
+      "bytes": 878912,
+      "sha256": "de647da26dc428c0a55c5bcaa8043da968704c705db395b116a485dc40ee2c5c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "out/drivers/interconnect/qcom/qnoc-qos.ko",
+      "name": "qnoc-qos.ko",
+      "bytes": 112008,
+      "sha256": "584d3667d658eeaeba3071bcda9a9e2ed0b3fb06c23d57d2e1fa86e551ca8d9f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 4
+    },
+    {
+      "file": "out/drivers/iommu/arm/arm-smmu/arm_smmu.ko",
+      "name": "arm_smmu.ko",
+      "bytes": 1109032,
+      "sha256": "7df7442f2b4672e8957c5621264d1b275bbb0987e1db777e35a5655df82bb1d5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 322
+    },
+    {
+      "file": "out/drivers/iommu/iommu-logger.ko",
+      "name": "iommu-logger.ko",
+      "bytes": 217864,
+      "sha256": "6e1099303e9c9c1817357e2067526e2e1cbce69f982a908bc26660c0db54b1db",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 26
+    },
+    {
+      "file": "out/drivers/iommu/msm_dma_iommu_mapping.ko",
+      "name": "msm_dma_iommu_mapping.ko",
+      "bytes": 238888,
+      "sha256": "43dde8294725e8cd8322a338b8ca582d78b283df93d154b5db9aff123f4addb4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 56
+    },
+    {
+      "file": "out/drivers/iommu/qcom_iommu_debug.ko",
+      "name": "qcom_iommu_debug.ko",
+      "bytes": 589480,
+      "sha256": "607203fb0f33181e50a4d816ddbd88df1cf509f214d68019b1a7e8ebdacbed73",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 178
+    },
+    {
+      "file": "out/drivers/iommu/qcom_iommu_util.ko",
+      "name": "qcom_iommu_util.ko",
+      "bytes": 1041784,
+      "sha256": "47f71af73e1749c5d4ae7b8fcd6c949344fdd966720c40633c7f22a4104dfc69",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 246
+    },
+    {
+      "file": "out/drivers/irqchip/qcom-pdc.ko",
+      "name": "qcom-pdc.ko",
+      "bytes": 282384,
+      "sha256": "5d5cce2903c01d722c423477741eda8370a26b1f82ceaa2b5aa7c4411d1574f0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 104
+    },
+    {
+      "file": "out/drivers/leds/flash/leds-qcom-flash.ko",
+      "name": "leds-qcom-flash.ko",
+      "bytes": 341696,
+      "sha256": "cb6ef3b3345dd7c9ab7b710ae44a6f8f32f081112ab4fd2cc16e7104f54579f2",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 62
+    },
+    {
+      "file": "out/drivers/mailbox/msm_qmp.ko",
+      "name": "msm_qmp.ko",
+      "bytes": 315920,
+      "sha256": "a35ee272a7413896b1b6122ceb36a857affbc333a49f1d678cbdba9493a538b5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 118
+    },
+    {
+      "file": "out/drivers/mailbox/qcom-ipcc.ko",
+      "name": "qcom-ipcc.ko",
+      "bytes": 267664,
+      "sha256": "98db9e562e80d310192a2a9e928cacfcb93925b3c6de3ec9560be5a375f080d5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 56
+    },
+    {
+      "file": "out/drivers/mfd/qcom-spmi-pmic.ko",
+      "name": "qcom-spmi-pmic.ko",
+      "bytes": 229488,
+      "sha256": "efd9e5529f9b1b4b8abd72a56430482e326fa885286f7e08d332a7ade580ae2f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 40
+    },
+    {
+      "file": "out/drivers/misc/hwid/hwid.ko",
+      "name": "hwid.ko",
+      "bytes": 190312,
+      "sha256": "6518a7841b72c17537f45a0e33d46bac826a4bee559bdd9f50ed960089685652",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/drivers/misc/miev/miev.ko",
+      "name": "miev.ko",
+      "bytes": 319824,
+      "sha256": "e9fdcf9a35ce026afe0b763f306818ef3343090fadfadc84bde373089a713732",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 72
+    },
+    {
+      "file": "out/drivers/misc/open-dice.ko",
+      "name": "open-dice.ko",
+      "bytes": 213424,
+      "sha256": "4a2b61d78598d196c4b12c78e8bfd2462de67ca700817c42da68500f6b07b0eb",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 38
+    },
+    {
+      "file": "out/drivers/misc/qseecom_proxy.ko",
+      "name": "qseecom_proxy.ko",
+      "bytes": 114752,
+      "sha256": "3370ff17f5812437ed01a03eface691279ccb5df2eb4de0a74b76449dd4a92b0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/drivers/misc/vcpu_stall_detector.ko",
+      "name": "vcpu_stall_detector.ko",
+      "bytes": 219992,
+      "sha256": "8f79b6d3a3f6fde1a92ded074efb29c639c0d4b5f7d6ddeaabd1036292b8a89b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 46
+    },
+    {
+      "file": "out/drivers/mmc/host/cqhci.ko",
+      "name": "cqhci.ko",
+      "bytes": 425072,
+      "sha256": "7898abaa8c50c5972cbfaea58ed3de4480b30c3660cf5ce04b4e5070585cd9ad",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 74
+    },
+    {
+      "file": "out/drivers/mmc/host/sdhci-msm.ko",
+      "name": "sdhci-msm.ko",
+      "bytes": 521832,
+      "sha256": "147b13498427337a46c0d0bb6f5748ca181e9df1a6ab62181f928b56d85b44b3",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 334
+    },
+    {
+      "file": "out/drivers/net/can/dev/can-dev.ko",
+      "name": "can-dev.ko",
+      "bytes": 1777984,
+      "sha256": "2224b889cce8cb7868704f7f4253620477b60b4b8aeddc387eee3876e860f53a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 126
+    },
+    {
+      "file": "out/drivers/net/can/slcan/slcan.ko",
+      "name": "slcan.ko",
+      "bytes": 624000,
+      "sha256": "3529fd81ad1e156f1bd7e19a47b59384512278bb98088b4e3ae1a40342cba63b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 106
+    },
+    {
+      "file": "out/drivers/net/can/vcan.ko",
+      "name": "vcan.ko",
+      "bytes": 360840,
+      "sha256": "e2a61306a1f5cc69668d6abec5517204c9cca7f7650542b7807c7985098f74fe",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 32
+    },
+    {
+      "file": "out/drivers/net/macsec.ko",
+      "name": "macsec.ko",
+      "bytes": 656616,
+      "sha256": "17a1f2a03d217ee925a91fd332285f74ced698080e485a17adf236dd3538d5d7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 200
+    },
+    {
+      "file": "out/drivers/net/mii.ko",
+      "name": "mii.ko",
+      "bytes": 348360,
+      "sha256": "0069a414ead4ae4622faf456fe026529691b20c2e391553fc6a2cc83da0fbef7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 14
+    },
+    {
+      "file": "out/drivers/net/ppp/bsd_comp.ko",
+      "name": "bsd_comp.ko",
+      "bytes": 208544,
+      "sha256": "8f06b44af9f6b6ec7265a672a7c1cca302afebf24459402a61756af84346657b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 20
+    },
+    {
+      "file": "out/drivers/net/ppp/ppp_deflate.ko",
+      "name": "ppp_deflate.ko",
+      "bytes": 210624,
+      "sha256": "8b0bd1e48fa931ada62134c1a77b158dd0a8f34a321ac55bb206c2659419a8f1",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 42
+    },
+    {
+      "file": "out/drivers/net/ppp/ppp_generic.ko",
+      "name": "ppp_generic.ko",
+      "bytes": 534040,
+      "sha256": "b1da03168784d977bb9a2434f7f2bc0765334e160ac8a169165f1f003d3c2770",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 220
+    },
+    {
+      "file": "out/drivers/net/ppp/ppp_mppe.ko",
+      "name": "ppp_mppe.ko",
+      "bytes": 220808,
+      "sha256": "00650e0dbe10f2f9ff7648a6ce89137a238b61dcabf759457a342b21e18436b2",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 38
+    },
+    {
+      "file": "out/drivers/net/ppp/pppox.ko",
+      "name": "pppox.ko",
+      "bytes": 344096,
+      "sha256": "068b5dd56de7d2a9b0b6ea6112e9584fbc40850d05a4e067b4dc2123da14d4bc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 22
+    },
+    {
+      "file": "out/drivers/net/ppp/pptp.ko",
+      "name": "pptp.ko",
+      "bytes": 414960,
+      "sha256": "02df97797eaddee13c676ec0fd973282bdc1bfd908c39c3b96549eb256a532a0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 116
+    },
+    {
+      "file": "out/drivers/net/slip/slhc.ko",
+      "name": "slhc.ko",
+      "bytes": 381448,
+      "sha256": "f0f07057c74e04f1f8442ec1b48d4d83afd02c9477579e2f6a780372dcc33125",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 24
+    },
+    {
+      "file": "out/drivers/net/usb/aqc111.ko",
+      "name": "aqc111.ko",
+      "bytes": 429360,
+      "sha256": "5684229053cd2728ea7e1c9d3e7d5dd9974941d7cb93307e64b9e76813649814",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 106
+    },
+    {
+      "file": "out/drivers/net/usb/asix.ko",
+      "name": "asix.ko",
+      "bytes": 953744,
+      "sha256": "9da2729677314bc95e63f6dc192b1487c15d48c259e745266102e4d617acf9fc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 200
+    },
+    {
+      "file": "out/drivers/net/usb/ax88179_178a.ko",
+      "name": "ax88179_178a.ko",
+      "bytes": 489808,
+      "sha256": "65e60ee6608751f9c93af8897eae3ada61bbbc12b3e34d8a55bd45ed2dd58d33",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 116
+    },
+    {
+      "file": "out/drivers/net/usb/cdc_eem.ko",
+      "name": "cdc_eem.ko",
+      "bytes": 354472,
+      "sha256": "72453bf3b8899d54f75b8ea6a5fea0ae6a5d88f26e7346d1cb56b459fa24cfdf",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 48
+    },
+    {
+      "file": "out/drivers/net/usb/cdc_ether.ko",
+      "name": "cdc_ether.ko",
+      "bytes": 381888,
+      "sha256": "3e5e06ec0b0139714fb17816a3e797f224791d17811bc3a3959e3eb9fa83847f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 68
+    },
+    {
+      "file": "out/drivers/net/usb/cdc_ncm.ko",
+      "name": "cdc_ncm.ko",
+      "bytes": 452192,
+      "sha256": "52be1f7b75bbe994c1887b90d1d63047ed5bbd74624f31115abf505ad8693279",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 144
+    },
+    {
+      "file": "out/drivers/net/usb/r8152.ko",
+      "name": "r8152.ko",
+      "bytes": 1162632,
+      "sha256": "6371bf06545e6b02aeb5ea3a9a90bbe5bce8deeb1a2a27a0ca7267966e4867ea",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 266
+    },
+    {
+      "file": "out/drivers/net/usb/r8153_ecm.ko",
+      "name": "r8153_ecm.ko",
+      "bytes": 346680,
+      "sha256": "1a50b86d128e1d7dc31c46271d58039da837f8708aa620bbce50fc7e535e0ab5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 30
+    },
+    {
+      "file": "out/drivers/net/usb/rtl8150.ko",
+      "name": "rtl8150.ko",
+      "bytes": 405328,
+      "sha256": "936dc2c88d60d3ff5920feaee00472a43954e542341832cc701ec8beeedbba43",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 110
+    },
+    {
+      "file": "out/drivers/net/usb/usbnet.ko",
+      "name": "usbnet.ko",
+      "bytes": 505896,
+      "sha256": "c4e5d9e78b04b4a31e60154f89bc2d790d8757eebdfd1df486f3f6753f5a1552",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 188
+    },
+    {
+      "file": "out/drivers/net/wwan/wwan.ko",
+      "name": "wwan.ko",
+      "bytes": 422984,
+      "sha256": "86e52481c941c0a3d257264f82f26b3681c0410b9d66b7b4b26a2f60cc226bc8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 152
+    },
+    {
+      "file": "out/drivers/nvmem/nvmem_qcom-spmi-sdam.ko",
+      "name": "nvmem_qcom-spmi-sdam.ko",
+      "bytes": 205960,
+      "sha256": "ef85a89fc3f0164b4dd362f86b95bb097bf831dbbb2e1e3c5a0e9634ea9230fd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 24
+    },
+    {
+      "file": "out/drivers/nvmem/nvmem_qfprom.ko",
+      "name": "nvmem_qfprom.ko",
+      "bytes": 280480,
+      "sha256": "a3eb181a165d24383c6f21c0082eb761c0c9f133d0e1a3ac5885ea2b2cc63a1f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 90
+    },
+    {
+      "file": "out/drivers/of/of_kunit_helpers.ko",
+      "name": "of_kunit_helpers.ko",
+      "bytes": 192392,
+      "sha256": "efdf0c413f4deb53bdf44f9255b1220f14c0fcff4a206ef5506aa9ad22770be8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 20
+    },
+    {
+      "file": "out/drivers/pci/controller/pci-msm-drv.ko",
+      "name": "pci-msm-drv.ko",
+      "bytes": 1263264,
+      "sha256": "15c11796db1bd6193361f0b924672d047f508810f45055176b21d292ecb2b320",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 450
+    },
+    {
+      "file": "out/drivers/perf/arm_smmu_pmu.ko",
+      "name": "arm_smmu_pmu.ko",
+      "bytes": 330552,
+      "sha256": "a9f9d8937d66f7b99ce50f8f7219b1c405b15d841c20f1bb9a32be4befb762d0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 70
+    },
+    {
+      "file": "out/drivers/perf/qcom_llcc_pmu.ko",
+      "name": "qcom_llcc_pmu.ko",
+      "bytes": 296744,
+      "sha256": "8602c6577631cf7706853660590c8d185aca5b441a672d3328fc4856075644b6",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 58
+    },
+    {
+      "file": "out/drivers/phy/qualcomm/phy-qcom-ufs-qmp-v4-canoe.ko",
+      "name": "phy-qcom-ufs-qmp-v4-canoe.ko",
+      "bytes": 269952,
+      "sha256": "f62ebf35dc61446dbec7c41ecd980d122190265e4facafc05e630e43328e78d1",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 54
+    },
+    {
+      "file": "out/drivers/phy/qualcomm/phy-qcom-ufs-qrbtc-sdm845.ko",
+      "name": "phy-qcom-ufs-qrbtc-sdm845.ko",
+      "bytes": 257896,
+      "sha256": "bde1aa442387ad0341e39b75cfd08078c6c6ab0f6539c64449f011be008b9544",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 40
+    },
+    {
+      "file": "out/drivers/phy/qualcomm/phy-qcom-ufs.ko",
+      "name": "phy-qcom-ufs.ko",
+      "bytes": 318328,
+      "sha256": "b563913a19118784467e91524c672e067240f1da217a2f8b2032f18b11899620",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 82
+    },
+    {
+      "file": "out/drivers/pinctrl/qcom/pinctrl-alor.ko",
+      "name": "pinctrl-alor.ko",
+      "bytes": 390928,
+      "sha256": "f29de11e80d0fbbe10b8887a7ed783ed7aeb923517cc1f5879f5723ae09eafbd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 12
+    },
+    {
+      "file": "out/drivers/pinctrl/qcom/pinctrl-canoe.ko",
+      "name": "pinctrl-canoe.ko",
+      "bytes": 404624,
+      "sha256": "5929390b019fe03a30649ceb528d0da8944dc0fa5088569d5336663de549c491",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 14
+    },
+    {
+      "file": "out/drivers/pinctrl/qcom/pinctrl-chora.ko",
+      "name": "pinctrl-chora.ko",
+      "bytes": 340224,
+      "sha256": "26c05e4a171eb4ba890394c1898cd7233537f986d8e94768d675f48f5f8fa355",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 12
+    },
+    {
+      "file": "out/drivers/pinctrl/qcom/pinctrl-msm.ko",
+      "name": "pinctrl-msm.ko",
+      "bytes": 383408,
+      "sha256": "74d9dee87049e1d5df43c542da9602636a1e3baf15ca1814128f9059dfb95bd4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 192
+    },
+    {
+      "file": "out/drivers/pinctrl/qcom/pinctrl-spmi-gpio.ko",
+      "name": "pinctrl-spmi-gpio.ko",
+      "bytes": 339784,
+      "sha256": "0b6edef27613bbba5f6b79852303f58630c4fd3665d1be6f9c3936263d1d1a2c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 84
+    },
+    {
+      "file": "out/drivers/power/reset/qcom-dload-mode.ko",
+      "name": "qcom-dload-mode.ko",
+      "bytes": 267072,
+      "sha256": "322129bc361d04d46560ea09a1a8664f68ecc63d6898070b59c7aae19fa86b58",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 80
+    },
+    {
+      "file": "out/drivers/power/reset/qcom-pon.ko",
+      "name": "qcom-pon.ko",
+      "bytes": 204944,
+      "sha256": "90e9dbf6130a3bce23bc1fa0ea76a7e189823a8d54ddfeab813e71534f0f7ff6",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 22
+    },
+    {
+      "file": "out/drivers/power/reset/qcom-reboot-reason.ko",
+      "name": "qcom-reboot-reason.ko",
+      "bytes": 202528,
+      "sha256": "c3743736052e5c45fd6866be5eebb2ff333133ed00277115d9647dff60e00c0c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "out/drivers/power/reset/reboot-mode.ko",
+      "name": "reboot-mode.ko",
+      "bytes": 206456,
+      "sha256": "e1af0a28bea4b85b3eac1137c3eaa111c493afc45a1cca996c33eafc40efcf4f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 32
+    },
+    {
+      "file": "out/drivers/power/sequencing/pwrseq-core.ko",
+      "name": "pwrseq-core.ko",
+      "bytes": 266624,
+      "sha256": "3df3a586fdbd5176055c2d98319c59c461ad7eb528aa327a5eebb8b8804e250a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 108
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_business/business_battery/mca_business_battery_comp.ko",
+      "name": "mca_business_battery_comp.ko",
+      "bytes": 344512,
+      "sha256": "53ee9846f6aae9ac00bba58ffbfbe6e85f320c24d0ac820f2ce00d977e5cc9af",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 74
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_business/business_charger/mca_business_charger_comp.ko",
+      "name": "mca_business_charger_comp.ko",
+      "bytes": 524072,
+      "sha256": "7777894f56092d94b51358c35778ef3b91c2fb50db84116917674419355a5c15",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 176
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_adsp_glink.ko",
+      "name": "mca_adsp_glink.ko",
+      "bytes": 233728,
+      "sha256": "c48ada932f1f5acc452555157dc230d825fab0cbfda4958f5df03027b278d3fd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 48
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_charge_interface.ko",
+      "name": "mca_charge_interface.ko",
+      "bytes": 226920,
+      "sha256": "b8e47b8f6a40a72d17857ad9d6286c21bc9636b09683c8463d33ed8b32895575",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 40
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_charge_mievent.ko",
+      "name": "mca_charge_mievent.ko",
+      "bytes": 156504,
+      "sha256": "ef6d090d42c7c570569a4f092d427bee94eea9b140d42b2157755610c5b09fd3",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 28
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_event.ko",
+      "name": "mca_event.ko",
+      "bytes": 219992,
+      "sha256": "638cad654dc4b39ca5701a49daa3bac2c9132b1c4fd8a6adda391ef2ea0f577a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 44
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_hwid.ko",
+      "name": "mca_hwid.ko",
+      "bytes": 191120,
+      "sha256": "f90d3c4c7671345a22a25fda8a1f700c991082a48a1920c700367085f26f54c3",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 34
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_log.ko",
+      "name": "mca_log.ko",
+      "bytes": 236176,
+      "sha256": "39634ab6786981d66782e6e6875d7029e3843685ef0ab421220b5ff1fc91b223",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 50
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_parse_dts.ko",
+      "name": "mca_parse_dts.ko",
+      "bytes": 203136,
+      "sha256": "eb7a4aae1033f7397fdc799cf64187425904c7e1015fb6e56e8cec44743e0117",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 22
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_qcom_smem.ko",
+      "name": "mca_qcom_smem.ko",
+      "bytes": 110040,
+      "sha256": "058da0d332a1a4e3d056be65b0ba2b1b42df2afa8dbf2595a3cde044c438c51f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 10
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_sysfs.ko",
+      "name": "mca_sysfs.ko",
+      "bytes": 247168,
+      "sha256": "28c0a3b70805703704fbe24b174ad90733260c756c753d1e3b56e80ce3654df7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 70
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_voter.ko",
+      "name": "mca_voter.ko",
+      "bytes": 236248,
+      "sha256": "9a958f2113ed262a7fe4febd3271ebad5c6132a91dde065ab7fca1a6950c1ada",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 68
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_common/mca_workqueue.ko",
+      "name": "mca_workqueue.ko",
+      "bytes": 115696,
+      "sha256": "1dc7aec40e15fa27d431b387425baa566bb4a57fa13ab55a9d6a9acfaf9f80b0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_hardware_ic/charge_pump_ic/sc8581/sc8581.ko",
+      "name": "sc8581.ko",
+      "bytes": 403944,
+      "sha256": "bd6146529a5001c890bc566cfa8454d4ce64e9d0f1b35d4ed4269f0e3f5093f7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 98
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_hardware_ic/fuelgauge_ic/bq27z561/bq27z561.ko",
+      "name": "bq27z561.ko",
+      "bytes": 615152,
+      "sha256": "ddde5c81a6b384f237e981775200246aba880ca5518054ea0001fec4411374b8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 120
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_hardware_monitor/mca_bmd.ko",
+      "name": "mca_bmd.ko",
+      "bytes": 252032,
+      "sha256": "294b8d10b5bec6586d102221bd2c8fb870defaabb39fb09164ec913ca348fc30",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 66
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_hardware_monitor/mca_connector_antiburn.ko",
+      "name": "mca_connector_antiburn.ko",
+      "bytes": 277176,
+      "sha256": "681a890c52dcf2c1517034c6f8d00f39e84c5a409c8475d14c38319a97c9251b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 96
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_hardware_monitor/mca_ibat_ocp_monitor.ko",
+      "name": "mca_ibat_ocp_monitor.ko",
+      "bytes": 235424,
+      "sha256": "dc22a63087eb85331eeb212e1181533dcd02648da793436932b3bd136bdfa691",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 54
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_hardware_monitor/mca_lpd_detect.ko",
+      "name": "mca_lpd_detect.ko",
+      "bytes": 213048,
+      "sha256": "dd8ad9e88aa4361d7d2b0c3e56ac653842dd78e361a14c5c7dbbdc0188d6b5f8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 52
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_hardware_monitor/mca_path_control.ko",
+      "name": "mca_path_control.ko",
+      "bytes": 260976,
+      "sha256": "eada82d405f48c1761d9e24f41d93e088795d022f6bcdc2e63f8d1e7a449d456",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 80
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_hardware_monitor/mca_vbat_ovp_monitor.ko",
+      "name": "mca_vbat_ovp_monitor.ko",
+      "bytes": 227160,
+      "sha256": "8bba9cc340269034925ef72ce74349f0722302733ace812d4165b87dd829e93c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 54
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_platform/mca_platform_bc12_class.ko",
+      "name": "mca_platform_bc12_class.ko",
+      "bytes": 220304,
+      "sha256": "e5e2f2611eea74c85cd034df73aecd698ac31328a276d3c6c9b9fc816e3044c1",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 40
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_platform/mca_platform_buckchg_class.ko",
+      "name": "mca_platform_buckchg_class.ko",
+      "bytes": 373832,
+      "sha256": "7ff85552730674992d526aaae26aca480fc5fb4daa26e00c9e80598d63305f62",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 28
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_platform/mca_platform_cp_class.ko",
+      "name": "mca_platform_cp_class.ko",
+      "bytes": 305952,
+      "sha256": "886f4472ad5cd9e81f063e9d799e33120d4a97164e9e4c5d1401e41c39a70a73",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 42
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_platform/mca_platform_fg_ic_ops.ko",
+      "name": "mca_platform_fg_ic_ops.ko",
+      "bytes": 345784,
+      "sha256": "a9396c14a318dbc258bfcc3711cc92fda42c8245ede1951cdaf36dd80acba071",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 28
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_platform/mca_platform_loadsw_class.ko",
+      "name": "mca_platform_loadsw_class.ko",
+      "bytes": 225416,
+      "sha256": "7a2da447fdaf1bb0e1d6e0f2ff3a0a56ec183667a708670ca989c78acef50793",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 34
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_platform/mca_platform_wireless_class.ko",
+      "name": "mca_platform_wireless_class.ko",
+      "bytes": 333152,
+      "sha256": "54027a040436ab4fb51842b184e36999c75f2e81ec730102802c8710e83fb5b5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 32
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_protocol/mca_protocol_class.ko",
+      "name": "mca_protocol_class.ko",
+      "bytes": 233400,
+      "sha256": "d808d8772ca0dea23aa831ddcaf2a93028f3353f2a578f6f5c05712b2266fff8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 26
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_protocol/protocol_pd/mca_protocol_pd_class.ko",
+      "name": "mca_protocol_pd_class.ko",
+      "bytes": 369184,
+      "sha256": "23843f7fbc075c82fc0b9037c0cd7afb2b5b841f8b509b915a7eb5a07d8f4084",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 54
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_protocol/protocol_pd/qcom_tcpc/qcom_adsp_pd_protocol.ko",
+      "name": "qcom_adsp_pd_protocol.ko",
+      "bytes": 292888,
+      "sha256": "357d8ed5c56e98e95d2930e55bf2faeccef6c58b265335ad9ff9d021e5247a0f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 36
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_protocol/protocol_qc/mca_protocol_qc_class.ko",
+      "name": "mca_protocol_qc_class.ko",
+      "bytes": 209608,
+      "sha256": "73435dee53de6c20d59cdd6af32dd13c0303f263988d3ae8d5cf3eb22ff7ea6a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 10
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_qcom_subpmic_proxy/mca_qcom_subpmic_proxy.ko",
+      "name": "mca_qcom_subpmic_proxy.ko",
+      "bytes": 309088,
+      "sha256": "750737c863e67fbb2e3916f4274b79ab99b5f2423a702791a04b5daca9f6fb8c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 102
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_qcom_sysfs/mca_qcom_sysfs.ko",
+      "name": "mca_qcom_sysfs.ko",
+      "bytes": 252936,
+      "sha256": "37fdca18640d7cdf91bfbaaa0ee63fbb3de52b70aa81f59bf04bf629b298e5f7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 94
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_shared_memory/charger_partition.ko",
+      "name": "charger_partition.ko",
+      "bytes": 328848,
+      "sha256": "66e4c15ef68e073c1276530d48540d9d11b3c09d3b976a4d9c3517301cbaedd0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 84
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_smart_charge/mca_smart_charge.ko",
+      "name": "mca_smart_charge.ko",
+      "bytes": 344960,
+      "sha256": "1f74be5c2cd94952ce18baf03b00cd4131020502117e3553e78f07c8e6d57a73",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 124
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/mca_strategy_class.ko",
+      "name": "mca_strategy_class.ko",
+      "bytes": 200408,
+      "sha256": "ee3610764990870a84271b479e0134a588d6cc113cdbfa46e555e4e36ce6eaff",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_charger/mca_buckchg_jeita.ko",
+      "name": "mca_buckchg_jeita.ko",
+      "bytes": 287880,
+      "sha256": "2c07356cb5850ff42d6054c2ab29a722d4e4e455643a09482685c0ef2272e275",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 92
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_charger/mca_charger_thermal.ko",
+      "name": "mca_charger_thermal.ko",
+      "bytes": 289064,
+      "sha256": "6c86f4c2249fa4acf76fd1b44d93c4c163b6fbd63951b3a8e9b8f6428260d164",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 82
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_buckchg.ko",
+      "name": "mca_strategy_buckchg.ko",
+      "bytes": 409464,
+      "sha256": "84f37baf692ac4e618ed9f05d0b3bc957c2de70c1df90a0b23d81785e746a12c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 224
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.ko",
+      "name": "mca_strategy_quickchg.ko",
+      "bytes": 528592,
+      "sha256": "c48c5a1986788bf41a03d9f0fbcbb0a64774376e29a02e9f6225a93b1069cc8c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 224
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_fg/mca_strategy_fg_class.ko",
+      "name": "mca_strategy_fg_class.ko",
+      "bytes": 228376,
+      "sha256": "2827358e192ce0dbed4d1f14ff66b55ab7c3a6637d70d3af7dde5064c99b25a0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_fg/mca_strategy_fg_comp.ko",
+      "name": "mca_strategy_fg_comp.ko",
+      "bytes": 690696,
+      "sha256": "a260511636d77c724514324989d02772f0d18e5a90c88176cdaa099bdd7d7819",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 278
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_pd/mca_pd_auth.ko",
+      "name": "mca_pd_auth.ko",
+      "bytes": 241848,
+      "sha256": "979b56246e2ef81f24116d071736c3998bb6960dd2cd5dfea200d175be69e9d5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 64
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.ko",
+      "name": "mca_basic_wireless.ko",
+      "bytes": 521112,
+      "sha256": "71bb2cb6cac084c249be799898908f4d96b9e52af6a3ca5e03c8c505755568cd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 284
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_quick_wireless.ko",
+      "name": "mca_quick_wireless.ko",
+      "bytes": 384152,
+      "sha256": "36e479d9446b9474f509f76c20b9f4c0914bad6c8b9e6304f8a4caf766db892d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 170
+    },
+    {
+      "file": "out/drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_wireless_revchg.ko",
+      "name": "mca_wireless_revchg.ko",
+      "bytes": 352208,
+      "sha256": "588ee0d05772871d0fc4e4bcd8a98eb92610f0ce8f876938983c6ce031fb478d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 150
+    },
+    {
+      "file": "out/drivers/power/supply/myron_bq_readonly.ko",
+      "name": "myron_bq_readonly.ko",
+      "bytes": 284904,
+      "sha256": "b302de7d052dfd5700095324ee838acc9a76a4753726d88599e014253c2cd66a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 54
+    },
+    {
+      "file": "out/drivers/power/supply/myron_mca_readonly/myron_mca_readonly.ko",
+      "name": "myron_mca_readonly.ko",
+      "bytes": 267144,
+      "sha256": "f66cfd5a9047005fa7c1a5643786fd84afa19c8ff64923030fe48fec1099818b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 80
+    },
+    {
+      "file": "out/drivers/power/supply/qti_battery_charger.ko",
+      "name": "qti_battery_charger.ko",
+      "bytes": 467488,
+      "sha256": "bea29d34d51f60ce57bba4929ba0fe0dacd9b070583921362aae186d3b8f1f70",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 176
+    },
+    {
+      "file": "out/drivers/pps/pps_core.ko",
+      "name": "pps_core.ko",
+      "bytes": 432104,
+      "sha256": "7a6a66642eaee893e2aa6b040c7dccb732fe3add706a6e9793a7c88b0b58000a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 90
+    },
+    {
+      "file": "out/drivers/ptp/ptp.ko",
+      "name": "ptp.ko",
+      "bytes": 710688,
+      "sha256": "a8c840a30d9b4c2d1630585a760d4310816ff2469cff1d6ea2c2ead7a8002671",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 162
+    },
+    {
+      "file": "out/drivers/ptp/ptp_kvm.ko",
+      "name": "ptp_kvm.ko",
+      "bytes": 216816,
+      "sha256": "9d0cdcc25d76e3039c31165b343432af7667e238318bc37e228329cf900b4691",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 24
+    },
+    {
+      "file": "out/drivers/regulator/debug-regulator.ko",
+      "name": "debug-regulator.ko",
+      "bytes": 351416,
+      "sha256": "efcc11d150dd9e700dbf798af9cccf8dcc655e6ba0a4bbfa2e2091d7fd22653b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 114
+    },
+    {
+      "file": "out/drivers/regulator/proxy-consumer.ko",
+      "name": "proxy-consumer.ko",
+      "bytes": 254144,
+      "sha256": "3da3cbd62419bca861de1ab5d8c77d9079fdb9a90768a63e3966b5f01676ecad",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 48
+    },
+    {
+      "file": "out/drivers/regulator/qti-fixed-regulator.ko",
+      "name": "qti-fixed-regulator.ko",
+      "bytes": 263712,
+      "sha256": "a87f546125b4edf793b3d300f862c04a5c2ab1164017cf1e3642d85dc143610d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 58
+    },
+    {
+      "file": "out/drivers/regulator/rpmh-regulator.ko",
+      "name": "rpmh-regulator.ko",
+      "bytes": 321584,
+      "sha256": "c65a1eb158fc8310c2dd1b6d9f68df3216028b9eff46db81fa9017936690ab9f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 76
+    },
+    {
+      "file": "out/drivers/regulator/stub-regulator.ko",
+      "name": "stub-regulator.ko",
+      "bytes": 251680,
+      "sha256": "71eab8cd1bfaf1fc09b3a6ebbfa4c1c16a24e37dd21d69e6d94fd9f92940c5c6",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 24
+    },
+    {
+      "file": "out/drivers/remoteproc/qcom_pil_info.ko",
+      "name": "qcom_pil_info.ko",
+      "bytes": 195504,
+      "sha256": "f12191462b35e0ed55e564b6d55913338a6489ffc531c011ba7cfa8878b84c4c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 36
+    },
+    {
+      "file": "out/drivers/remoteproc/qcom_q6v5.ko",
+      "name": "qcom_q6v5.ko",
+      "bytes": 250008,
+      "sha256": "9b8ce5558a5fd71eb8633a73372c98f8f65175b50f6ba5e1cdd6917df2c27f79",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 96
+    },
+    {
+      "file": "out/drivers/remoteproc/qcom_q6v5_pas.ko",
+      "name": "qcom_q6v5_pas.ko",
+      "bytes": 483280,
+      "sha256": "7fe35cd9c617a2841eedc7028bbf01e12770e77ead6b7016593d2137ba7aaa71",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 296
+    },
+    {
+      "file": "out/drivers/remoteproc/qcom_sysmon.ko",
+      "name": "qcom_sysmon.ko",
+      "bytes": 274816,
+      "sha256": "4e85fab66da9e05befab166fc6233298010e98c4b62275effaa81b5152a7d92f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 108
+    },
+    {
+      "file": "out/drivers/remoteproc/rproc_qcom_common.ko",
+      "name": "rproc_qcom_common.ko",
+      "bytes": 471728,
+      "sha256": "0dd82a630c6ebdd400fb7fd30177201f0bd0d172167f9b4f7ace9f324b1da1a2",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 166
+    },
+    {
+      "file": "out/drivers/rpmsg/glink_pkt.ko",
+      "name": "glink_pkt.ko",
+      "bytes": 340872,
+      "sha256": "b277cb0431c9d3d858da2a56edc3c1e6286624541f22911041fdad5461aad2e0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 198
+    },
+    {
+      "file": "out/drivers/rpmsg/qcom_glink.ko",
+      "name": "qcom_glink.ko",
+      "bytes": 604192,
+      "sha256": "57fa0a0ab8b2fa92937a55edac218002560b0b10d15ed0c064989fd276c9573a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 162
+    },
+    {
+      "file": "out/drivers/rpmsg/qcom_glink_smem.ko",
+      "name": "qcom_glink_smem.ko",
+      "bytes": 229816,
+      "sha256": "57a72cc0c72e39f42e8292b96b1c4aa6d988fdfa356119cdccb7fc9d147954ec",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 70
+    },
+    {
+      "file": "out/drivers/rpmsg/qcom_smd.ko",
+      "name": "qcom_smd.ko",
+      "bytes": 291344,
+      "sha256": "d6da961e4e91c2becd3f318d0d9e0990dc50c5eb8755989a2af4ca383e1f2296",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 136
+    },
+    {
+      "file": "out/drivers/rtc/lib_test.ko",
+      "name": "lib_test.ko",
+      "bytes": 191040,
+      "sha256": "860ff91562d887b3861d842df7339dac6b3e36c62ca02e778612219024238ea5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 14
+    },
+    {
+      "file": "out/drivers/rtc/rtc-pm8xxx.ko",
+      "name": "rtc-pm8xxx.ko",
+      "bytes": 263352,
+      "sha256": "92b0363e2d8af2fdd04df111d0b4ee19daaf500777d64fbf82d44ce7c33aa330",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 60
+    },
+    {
+      "file": "out/drivers/scsi/sg.ko",
+      "name": "sg.ko",
+      "bytes": 410576,
+      "sha256": "dcb90beab2cc4590c3ab0b6e4409fb5ced1989664748ad198974ea3c9b242156",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 194
+    },
+    {
+      "file": "out/drivers/soc/qcom/altmode-glink.ko",
+      "name": "altmode-glink.ko",
+      "bytes": 247648,
+      "sha256": "da083d99258a29669c4516fe376c69dcb113d25ccf6b2dbf8c51d16bc7b91c33",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 86
+    },
+    {
+      "file": "out/drivers/soc/qcom/cmd-db.ko",
+      "name": "cmd-db.ko",
+      "bytes": 215480,
+      "sha256": "c724acd502a2e65d83e4de3fee6e3a8ed3978783306db6680fe5d26224040ffc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 36
+    },
+    {
+      "file": "out/drivers/soc/qcom/cpu_phys_log_map.ko",
+      "name": "cpu_phys_log_map.ko",
+      "bytes": 200928,
+      "sha256": "122957eaae20cf664fc813d41030360ff6441feb51f96b55818273543738a30f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 20
+    },
+    {
+      "file": "out/drivers/soc/qcom/cpucp_fast.ko",
+      "name": "cpucp_fast.ko",
+      "bytes": 229264,
+      "sha256": "1c2743d91e27650838099f90948037c2845d4815f73599820b3100841325b967",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 50
+    },
+    {
+      "file": "out/drivers/soc/qcom/crm-v2.ko",
+      "name": "crm-v2.ko",
+      "bytes": 413312,
+      "sha256": "d0fc20e1d95efba1394017379ca6efc551ecbb1d5b4ca7798689436be40458c6",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 130
+    },
+    {
+      "file": "out/drivers/soc/qcom/dcvs/dcvs_fp.ko",
+      "name": "dcvs_fp.ko",
+      "bytes": 210200,
+      "sha256": "eb5ebcdfd1ec86ffc4ebfa2c3d8459996efb9ac75efb33988149f5664052602f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 28
+    },
+    {
+      "file": "out/drivers/soc/qcom/dcvs/qcom-dcvs.ko",
+      "name": "qcom-dcvs.ko",
+      "bytes": 717272,
+      "sha256": "c51ad7dd2cec373cb0c9cbf76f928a03f69e72bee45913cde19d36bdfdbe4130",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 138
+    },
+    {
+      "file": "out/drivers/soc/qcom/dcvs/qcom-pmu-lib.ko",
+      "name": "qcom-pmu-lib.ko",
+      "bytes": 373024,
+      "sha256": "d0b797e0dc7fe7761f0b73761397df900963aed1c80b49672f79a0e9b3d0aae3",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 114
+    },
+    {
+      "file": "out/drivers/soc/qcom/dcvs/qcom_scmi_client.ko",
+      "name": "qcom_scmi_client.ko",
+      "bytes": 205240,
+      "sha256": "4a209abaf9675c2fd4a52b787f50c33e4988605938b48b3090e0e72b0c958c39",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 22
+    },
+    {
+      "file": "out/drivers/soc/qcom/debug_symbol.ko",
+      "name": "debug_symbol.ko",
+      "bytes": 213248,
+      "sha256": "fdaa3ff5a9dffe9400ebafc4b872c46ff3ac5ab931cef76583d788b1dfeb5dff",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 20
+    },
+    {
+      "file": "out/drivers/soc/qcom/eud.ko",
+      "name": "eud.ko",
+      "bytes": 311240,
+      "sha256": "c52f6de736a903f38605ba774d18f641e50de6554e2d40d3fd7aff6d43d6a990",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 120
+    },
+    {
+      "file": "out/drivers/soc/qcom/fsa4480_i2c.ko",
+      "name": "fsa4480_i2c.ko",
+      "bytes": 288944,
+      "sha256": "6fd7e96032e6952edee7f6568bfc02c02c577b62e7cada7e8646e7d8084f5815",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 74
+    },
+    {
+      "file": "out/drivers/soc/qcom/gic_intr_routing.ko",
+      "name": "gic_intr_routing.ko",
+      "bytes": 294776,
+      "sha256": "5dbefb5b9e911d55a3cee9f3d74b683510a3062147711b44a4ab29ceac7ae0e7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 130
+    },
+    {
+      "file": "out/drivers/soc/qcom/llcc-qcom.ko",
+      "name": "llcc-qcom.ko",
+      "bytes": 342248,
+      "sha256": "abfaa9e7f9e951390bd572a511c2eb2a37e691255f742ee4348d0dbc6a587167",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 102
+    },
+    {
+      "file": "out/drivers/soc/qcom/mdt_loader.ko",
+      "name": "mdt_loader.ko",
+      "bytes": 213752,
+      "sha256": "710bc3cff40bf93eea18c82d006c80c6c9ecb638101d08d57b4e126bc60f6894",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 38
+    },
+    {
+      "file": "out/drivers/soc/qcom/mem-prot.ko",
+      "name": "mem-prot.ko",
+      "bytes": 240040,
+      "sha256": "d5452b9dc443650a2d629e5054823c6407d1238eea1db4f5e16af5533e6a74e8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 76
+    },
+    {
+      "file": "out/drivers/soc/qcom/mem_buf/mem_buf.ko",
+      "name": "mem_buf.ko",
+      "bytes": 469176,
+      "sha256": "53b7a4b867def5c2fa2610c0689c090b2ea43579fa6bcb53fe22e28ab1b634ae",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 248
+    },
+    {
+      "file": "out/drivers/soc/qcom/mem_buf/mem_buf_dev.ko",
+      "name": "mem_buf_dev.ko",
+      "bytes": 856504,
+      "sha256": "a75c87c5d01fcbcc20c26f513daba0d091fcc107ef8b4b7d5c3fd608eeda3415",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 208
+    },
+    {
+      "file": "out/drivers/soc/qcom/mem_buf/mem_buf_msgq.ko",
+      "name": "mem_buf_msgq.ko",
+      "bytes": 237816,
+      "sha256": "a96545e948d79759d2f498c6111ee9959e4c09829dea88e77a520c6e8c24ed76",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 84
+    },
+    {
+      "file": "out/drivers/soc/qcom/memory_dump_v2.ko",
+      "name": "memory_dump_v2.ko",
+      "bytes": 281632,
+      "sha256": "2deccaca20777cab4d21e455ab6b560894d6b5164dba9e4c77de3742370bac9e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 104
+    },
+    {
+      "file": "out/drivers/soc/qcom/minidump.ko",
+      "name": "minidump.ko",
+      "bytes": 923576,
+      "sha256": "1f72e71d1ade0998b657afa885f126185e0cd3dc97696336e9961d7161a476ef",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 250
+    },
+    {
+      "file": "out/drivers/soc/qcom/msm_performance.ko",
+      "name": "msm_performance.ko",
+      "bytes": 347984,
+      "sha256": "a7e48e4046b18ea4d27807eb2f634384d25a2e25df7ee45046d8d20384ac1026",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 106
+    },
+    {
+      "file": "out/drivers/soc/qcom/panel_event_notifier.ko",
+      "name": "panel_event_notifier.ko",
+      "bytes": 191288,
+      "sha256": "bca813f1322626253c39ab4eed9490649709508aef8221c6deeb7077a62ea997",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 8
+    },
+    {
+      "file": "out/drivers/soc/qcom/pcie-pdc.ko",
+      "name": "pcie-pdc.ko",
+      "bytes": 208104,
+      "sha256": "cc00622582e12e91ca6894d9cae7fef6ad33c1d206687ab8114efadbd54a121e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "out/drivers/soc/qcom/pdr_interface.ko",
+      "name": "pdr_interface.ko",
+      "bytes": 243384,
+      "sha256": "12de2d44345939e94bd6cdc0bba582677388d81aa6358875eaabfb02fe9222bd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 92
+    },
+    {
+      "file": "out/drivers/soc/qcom/pmic-pon-log.ko",
+      "name": "pmic-pon-log.ko",
+      "bytes": 234664,
+      "sha256": "b7d7d4c7c46c11102baba285fae7dd96beb92345063fc7ad4b6cf9066d8d1224",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 32
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_aoss.ko",
+      "name": "qcom_aoss.ko",
+      "bytes": 366856,
+      "sha256": "072003fcb17c9b82910658fc112ed47372bc2d4f4cc66559c13d8860ac86ed77",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 152
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_cpu_vendor_hooks.ko",
+      "name": "qcom_cpu_vendor_hooks.ko",
+      "bytes": 214416,
+      "sha256": "876c1a38f926c1bf83dc6a38d57efed51766df3075a5f5d4e48a2db9ac115852",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 44
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_cpucp.ko",
+      "name": "qcom_cpucp.ko",
+      "bytes": 228768,
+      "sha256": "285907530dddc9ffbd7fd6844b2a5661db06c01fd40f19b39d03ed49327a8888",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 44
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_ice.ko",
+      "name": "qcom_ice.ko",
+      "bytes": 257944,
+      "sha256": "ed376528c8a60d2d6360c5d0d2573c99e9ebc5355b065a4ddb10639fe18f2483",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 94
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_logbuf_boot_log.ko",
+      "name": "qcom_logbuf_boot_log.ko",
+      "bytes": 194784,
+      "sha256": "f4d24fb1fc81e125e04c453303f7bb21d27221409253c6f3f1229a5a44d4d453",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 34
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_logbuf_vendor_hooks.ko",
+      "name": "qcom_logbuf_vendor_hooks.ko",
+      "bytes": 208624,
+      "sha256": "6264772c218f69ecfe127ba8f43cee7cbbda635e8335b05900aef97c20937437",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 20
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_pdr_msg.ko",
+      "name": "qcom_pdr_msg.ko",
+      "bytes": 113496,
+      "sha256": "aaa4f7efbd9ae199cb62184c93d9bdae2f7b0bb11066e65ca4d2ca2982be8414",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 4
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_ramdump.ko",
+      "name": "qcom_ramdump.ko",
+      "bytes": 255272,
+      "sha256": "55e75168bf8c1699829a4576f7388d5c90c8660e14bf2fd613775cf6ae6e911d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 80
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_rpmh.ko",
+      "name": "qcom_rpmh.ko",
+      "bytes": 562360,
+      "sha256": "4516117d69426b24a325814b6049ee0c8d21b840ce8750eee891092144f38547",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 186
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_sdei.ko",
+      "name": "qcom_sdei.ko",
+      "bytes": 206720,
+      "sha256": "d7971ee9a7d879abfc441d5c1fd074229b6e5029389e3f63b9d3f48a392ce7b7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 28
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_soc_wdt.ko",
+      "name": "qcom_soc_wdt.ko",
+      "bytes": 210280,
+      "sha256": "e6593a76a4f9e879ad7a6dc4462dfed5dd2563979e821c7819aeb22742462f19",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 26
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_va_minidump.ko",
+      "name": "qcom_va_minidump.ko",
+      "bytes": 264520,
+      "sha256": "d27207ddea953f37b06f5024a92b3c99415326350945d96ab874329acf22ecfc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 98
+    },
+    {
+      "file": "out/drivers/soc/qcom/qcom_wdt_core.ko",
+      "name": "qcom_wdt_core.ko",
+      "bytes": 300904,
+      "sha256": "da1f8d3208aa8be78a0b81c31514c666bc1993c1a7d71a8f04f6becc94baf76f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 148
+    },
+    {
+      "file": "out/drivers/soc/qcom/qmi_helpers.ko",
+      "name": "qmi_helpers.ko",
+      "bytes": 490544,
+      "sha256": "f9ac14140cf93758e2b2949689e45b0e3d659d3d530c10f1788dc62112694a40",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 86
+    },
+    {
+      "file": "out/drivers/soc/qcom/qti_pmic_glink.ko",
+      "name": "qti_pmic_glink.ko",
+      "bytes": 279104,
+      "sha256": "fc9d8ddaaa2f72fc5bcb8372eb6aef110876dfe02ff2b52d770005806e4d4b09",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 138
+    },
+    {
+      "file": "out/drivers/soc/qcom/secure_buffer.ko",
+      "name": "secure_buffer.ko",
+      "bytes": 365328,
+      "sha256": "de5d3482f12aa49af474c7ff3b17be7e71da060bb347a0751d7de2696dd0aa44",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 84
+    },
+    {
+      "file": "out/drivers/soc/qcom/smem.ko",
+      "name": "smem.ko",
+      "bytes": 252864,
+      "sha256": "47fad022a350f86036a319ab0095dfdc24f04bf43e43fb0265058cccea45d31c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 50
+    },
+    {
+      "file": "out/drivers/soc/qcom/smp2p.ko",
+      "name": "smp2p.ko",
+      "bytes": 267848,
+      "sha256": "e723e818d1aede57e45e70334bf1e90d3b8df884c1d952449fc460a34175a436",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 124
+    },
+    {
+      "file": "out/drivers/soc/qcom/socinfo.ko",
+      "name": "socinfo.ko",
+      "bytes": 374368,
+      "sha256": "7c1a7c51d611d5392fc8c4ca7a41749122582a6ca0468c7b186145e29f4d35e8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 62
+    },
+    {
+      "file": "out/drivers/soc/qcom/wcd_usbss_i2c.ko",
+      "name": "wcd_usbss_i2c.ko",
+      "bytes": 597072,
+      "sha256": "3df12336eb610d3c53eabe9229811548c058a551942eae154bb4f8976521f8fd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 140
+    },
+    {
+      "file": "out/drivers/spi/spi-msm-geni.ko",
+      "name": "spi-msm-geni.ko",
+      "bytes": 537880,
+      "sha256": "97e48f37a21424ff24fab2f1ada543956acc8c0b4d534ee8ca9772dd1e8c6feb",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 238
+    },
+    {
+      "file": "out/drivers/spmi/spmi-pmic-arb.ko",
+      "name": "spmi-pmic-arb.ko",
+      "bytes": 322312,
+      "sha256": "6b967410fdf2d3aeb4925bba379ffbd4ac2ae139e36b23c4afb4018365797aa0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 114
+    },
+    {
+      "file": "out/drivers/thermal/qcom/bcl_pmic5.ko",
+      "name": "bcl_pmic5.ko",
+      "bytes": 389624,
+      "sha256": "6f06d28c6db7fd5c97bbf0baa0aba3951652ed34e2e1b90ad7de69240b317f69",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 108
+    },
+    {
+      "file": "out/drivers/thermal/qcom/cpu_hotplug.ko",
+      "name": "cpu_hotplug.ko",
+      "bytes": 224048,
+      "sha256": "ac783f3c5a4349903d57ee2d314274e94fd01bf8f92305a9df60614bee2ebaeb",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 58
+    },
+    {
+      "file": "out/drivers/thermal/qcom/qcom_tsens.ko",
+      "name": "qcom_tsens.ko",
+      "bytes": 717688,
+      "sha256": "f67d84039572948ec6a146be557c7fd20d525a177b03e9eb81b6353f4979f21e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 120
+    },
+    {
+      "file": "out/drivers/thermal/qcom/thermal_pause.ko",
+      "name": "thermal_pause.ko",
+      "bytes": 276048,
+      "sha256": "2aeba077ff9d2bdafdccc4f359efc8a88f6c7550c9c70b1c5b823bc30303e020",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 70
+    },
+    {
+      "file": "out/drivers/tty/serial/msm_geni_serial.ko",
+      "name": "msm_geni_serial.ko",
+      "bytes": 691472,
+      "sha256": "9ba826858cf4658b02f0fce9fff0ab7305714ede105d295b736b105020a2e095",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 298
+    },
+    {
+      "file": "out/drivers/ufs/host/ufs-qcom.ko",
+      "name": "ufs-qcom.ko",
+      "bytes": 849552,
+      "sha256": "17d4f116f971e0fd6a7c80d952f301f835813af89b16933e66574aff01efcad9",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 444
+    },
+    {
+      "file": "out/drivers/ufs/host/ufshcd-crypto-qti.ko",
+      "name": "ufshcd-crypto-qti.ko",
+      "bytes": 311320,
+      "sha256": "799a98319ded7a71ed9777976cdbe02500f7c0d33516283589724cb2f12ec698",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 30
+    },
+    {
+      "file": "out/drivers/uio/msm_sharedmem/msm_sharedmem.ko",
+      "name": "msm_sharedmem.ko",
+      "bytes": 221600,
+      "sha256": "1b81f38a1dc1cd6e80d5281ea99cb104e19086a04cb3658539c7b1a46a900dec",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 36
+    },
+    {
+      "file": "out/drivers/usb/class/cdc-acm.ko",
+      "name": "cdc-acm.ko",
+      "bytes": 360096,
+      "sha256": "86f111b01c7443c74183e4880f35e6b70a50ee984fb22169c786fa94d652df1f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 188
+    },
+    {
+      "file": "out/drivers/usb/dwc3/dwc3-msm.ko",
+      "name": "dwc3-msm.ko",
+      "bytes": 1121336,
+      "sha256": "4e8d2db8f7ef7243b9a04eafa93603736626e82a69c453b370509b7a25c896d4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 446
+    },
+    {
+      "file": "out/drivers/usb/gadget/function/usb_f_gsi.ko",
+      "name": "usb_f_gsi.ko",
+      "bytes": 855576,
+      "sha256": "c52880a95d8627ce3929f342a2615cc269339c5d19300ae91258b6972586f3cb",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 220
+    },
+    {
+      "file": "out/drivers/usb/host/xhci-pci-renesas.ko",
+      "name": "xhci-pci-renesas.ko",
+      "bytes": 236112,
+      "sha256": "6233fa99a5a4159123757a8b3ba26f062dc0f25aa19d608c923f820b59aa82f4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 46
+    },
+    {
+      "file": "out/drivers/usb/misc/ehset.ko",
+      "name": "ehset.ko",
+      "bytes": 213280,
+      "sha256": "afbf8ec63c612d6f88c32611d72e04eb60c26ad3007469e9a39bed1405f0543d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "out/drivers/usb/mon/usbmon.ko",
+      "name": "usbmon.ko",
+      "bytes": 683848,
+      "sha256": "14911f328a8b9cc21db5bc0c82cb42a53715e0074c1b7bb54b61f99a3e63461b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 124
+    },
+    {
+      "file": "out/drivers/usb/phy/phy-generic.ko",
+      "name": "phy-generic.ko",
+      "bytes": 279904,
+      "sha256": "ef7e4ee2f8a14638de0068d446ebbdada644563c33a4e433c4ba5cc8e86c5764",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 64
+    },
+    {
+      "file": "out/drivers/usb/phy/phy-msm-m31-eusb2.ko",
+      "name": "phy-msm-m31-eusb2.ko",
+      "bytes": 294760,
+      "sha256": "0f265633d4559b101d727793dd735862c6c51f7fd30fb83ae160f259d0d91dee",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 92
+    },
+    {
+      "file": "out/drivers/usb/phy/phy-msm-snps-hs.ko",
+      "name": "phy-msm-snps-hs.ko",
+      "bytes": 328512,
+      "sha256": "7fa641d5a4143b1380d507bf2e0d9d9f257c50fc2c37888b39ab378246da4242",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 128
+    },
+    {
+      "file": "out/drivers/usb/phy/phy-msm-ssusb-qmp.ko",
+      "name": "phy-msm-ssusb-qmp.ko",
+      "bytes": 309576,
+      "sha256": "9e42f8b2842da9682fe50079e87ee984c5d4af2aab18e901ed412833ef8218fe",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 96
+    },
+    {
+      "file": "out/drivers/usb/redriver/nb7vpq904m.ko",
+      "name": "nb7vpq904m.ko",
+      "bytes": 303152,
+      "sha256": "94925194c371ab8a2ee797aa0ae322e9bc6e12e63c6f55a677ab360a4b08f0fa",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 80
+    },
+    {
+      "file": "out/drivers/usb/redriver/redriver.ko",
+      "name": "redriver.ko",
+      "bytes": 208080,
+      "sha256": "7264a7a1bc5da80b4f8befa95811e6ed54d0263bfee1b0c0534c96ee96478f56",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "out/drivers/usb/repeater/repeater-qti-pmic-eusb2.ko",
+      "name": "repeater-qti-pmic-eusb2.ko",
+      "bytes": 264864,
+      "sha256": "88ae9c813cbf7087d07a1a087620434e9613473607c3f82004a88a38fec6ceea",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 48
+    },
+    {
+      "file": "out/drivers/usb/repeater/repeater.ko",
+      "name": "repeater.ko",
+      "bytes": 210912,
+      "sha256": "c987816dd8848d0623ce845bebb86080a91fa8c39ffa9b22200223476d5dd6e4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 38
+    },
+    {
+      "file": "out/drivers/usb/serial/ftdi_sio.ko",
+      "name": "ftdi_sio.ko",
+      "bytes": 476816,
+      "sha256": "edb03d257d54069ba5025b9b7d1d7c55b8893cb9fe466188a7bfe8dc2887cd76",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 96
+    },
+    {
+      "file": "out/drivers/usb/serial/usbserial.ko",
+      "name": "usbserial.ko",
+      "bytes": 583120,
+      "sha256": "31dd54634a4d7b4f7369d89313285abd1bb22f44891846e87fa8c9bb847d7c04",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 210
+    },
+    {
+      "file": "out/drivers/usb/typec/ucsi/ucsi_qti_glink.ko",
+      "name": "ucsi_qti_glink.ko",
+      "bytes": 250952,
+      "sha256": "95a9a3860eec77558d791ca84516bdb61ae00203e3f598010b134d479811bf96",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 78
+    },
+    {
+      "file": "out/drivers/video/backlight/qcom-spmi-wled.ko",
+      "name": "qcom-spmi-wled.ko",
+      "bytes": 350688,
+      "sha256": "4bbea1364e756aa217e27f69153dd3d7ff51273cc309f3fd7cf464fd4082f6af",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 86
+    },
+    {
+      "file": "out/drivers/virt/gunyah/gh_dbl.ko",
+      "name": "gh_dbl.ko",
+      "bytes": 221728,
+      "sha256": "56856021ef9ac20edb1e7ca29ad59c784fc368f50819e4275d5fa2dbad3306ca",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 38
+    },
+    {
+      "file": "out/drivers/virt/gunyah/gh_irq_lend.ko",
+      "name": "gh_irq_lend.ko",
+      "bytes": 138176,
+      "sha256": "34eb7461cd102607297999cf243cf9c5f18e5936c1722cfe22b7f311170b8d56",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 42
+    },
+    {
+      "file": "out/drivers/virt/gunyah/gh_mem_notifier.ko",
+      "name": "gh_mem_notifier.ko",
+      "bytes": 116048,
+      "sha256": "ab62189b08c8926ae4e61d0458fd48704d98d20f438624ed56df72e937d84903",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 12
+    },
+    {
+      "file": "out/drivers/virt/gunyah/gh_msgq.ko",
+      "name": "gh_msgq.ko",
+      "bytes": 229648,
+      "sha256": "e29e11e3018c66629f8d3091021467ede74366ab38036f7b0522f289cd89f64d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 48
+    },
+    {
+      "file": "out/drivers/virt/gunyah/gh_rm_drv.ko",
+      "name": "gh_rm_drv.ko",
+      "bytes": 838944,
+      "sha256": "80bc049580069d4deefe8fc1ffa6779559b3ce2345954de2339310d36f724f80",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 180
+    },
+    {
+      "file": "out/drivers/virt/gunyah/gh_rm_heap_manager.ko",
+      "name": "gh_rm_heap_manager.ko",
+      "bytes": 224728,
+      "sha256": "13274b50579f4fc70b08964924597ee9122ee11dc1d416f80a7e2d3f3b0343d3",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 38
+    },
+    {
+      "file": "out/drivers/virt/gunyah/gh_vcpu_mgr.ko",
+      "name": "gh_vcpu_mgr.ko",
+      "bytes": 345088,
+      "sha256": "04cd8fcbce291071b4ef4f1ffa1eb226f05afbc0fd833951f24d200e16e70897",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 134
+    },
+    {
+      "file": "out/drivers/virt/halla/exynos-hvm.ko",
+      "name": "exynos-hvm.ko",
+      "bytes": 1131864,
+      "sha256": "f2f3723124e82ef50fbc62f3da91aced4256ef02b74f865f83fd078801b9b2e5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 196
+    },
+    {
+      "file": "out/drivers/virtio/virtio_balloon.ko",
+      "name": "virtio_balloon.ko",
+      "bytes": 325640,
+      "sha256": "cbc2c18f772a2c375461ec347cc7c2220a5f84c2f56c2cc875fc18790cb6af28",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 166
+    },
+    {
+      "file": "out/drivers/virtio/virtio_pci.ko",
+      "name": "virtio_pci.ko",
+      "bytes": 531472,
+      "sha256": "7c2e9a2c9322c0172902aca9aa2774da04fd687f1d3d0ddf62ab56926908b8fc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 208
+    },
+    {
+      "file": "out/drivers/virtio/virtio_pci_legacy_dev.ko",
+      "name": "virtio_pci_legacy_dev.ko",
+      "bytes": 223008,
+      "sha256": "2eed84a42f2dcdbb482e0d5c35ef2bbd2eb4215d0eb3a1bba5901c076324422d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 24
+    },
+    {
+      "file": "out/drivers/virtio/virtio_pci_modern_dev.ko",
+      "name": "virtio_pci_modern_dev.ko",
+      "bytes": 248048,
+      "sha256": "b3e5c3da0a67a98f847d11581080398fe9d39b9dc39be40c22f30352a2934c71",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 40
+    },
+    {
+      "file": "out/drivers/watchdog/pretimeout_dump.ko",
+      "name": "pretimeout_dump.ko",
+      "bytes": 196016,
+      "sha256": "f3c2c12aff03ed06562e91a4cb492e2f274d85d58a742796946487e5e9492791",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 12
+    },
+    {
+      "file": "out/drivers/xiaomi/myron_tfa98xx/tfa98xx_dlkm.ko",
+      "name": "tfa98xx_dlkm.ko",
+      "bytes": 1444520,
+      "sha256": "f7d506711699daf9f471c148a769c2aa21979ef0b923c6a0f8b700bf0814136f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 212
+    },
+    {
+      "file": "out/fs/efivarfs/efivarfs.ko",
+      "name": "efivarfs.ko",
+      "bytes": 584088,
+      "sha256": "a6fe11d17e6cb7c33cb1db3d6a0c54d5933419f33b1350a665a38f16c5ef9774",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 158
+    },
+    {
+      "file": "out/fs/ext4/ext4-inode-test.ko",
+      "name": "ext4-inode-test.ko",
+      "bytes": 222912,
+      "sha256": "77c58670e468e620e47087b6a5059746cfeda6d46efeab11a7c133b82a036d24",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 10
+    },
+    {
+      "file": "out/fs/fat/fat_test.ko",
+      "name": "fat_test.ko",
+      "bytes": 270480,
+      "sha256": "af5ab15f42132488db6ec8452621a849b7e0bf38557054785f91edd604c76c7c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 14
+    },
+    {
+      "file": "out/fs/netfs/netfs.ko",
+      "name": "netfs.ko",
+      "bytes": 2451520,
+      "sha256": "1b85e871f7f704a522d21657950c749023b389fde4dde286227ef05c3c3dd338",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 278
+    },
+    {
+      "file": "out/fs/pstore/pstore_blk.ko",
+      "name": "pstore_blk.ko",
+      "bytes": 243568,
+      "sha256": "4aa4a98365a58486d77dc180f2dc42f83070db99629bbcfa56a73c38e2d32d66",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 46
+    },
+    {
+      "file": "out/fs/pstore/pstore_zone.ko",
+      "name": "pstore_zone.ko",
+      "bytes": 290136,
+      "sha256": "f409a2afb3b5d155ce55901efa8ca8c8c978cda4d0774b65697467e07e7052c4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 50
+    },
+    {
+      "file": "out/kernel/kheaders.ko",
+      "name": "kheaders.ko",
+      "bytes": 4678016,
+      "sha256": "a2bd4ddc299bd9751955965f76ecbad4ead83e058d8a87e63efe3a3db68a4289",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 10
+    },
+    {
+      "file": "out/kernel/msm_sysstats.ko",
+      "name": "msm_sysstats.ko",
+      "bytes": 360672,
+      "sha256": "d75be17face28829ebb98cc46824a6162b9469c0ed73ec1c847a239cd34baa19",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 96
+    },
+    {
+      "file": "out/kernel/sched/walt/sched-walt.ko",
+      "name": "sched-walt.ko",
+      "bytes": 6017864,
+      "sha256": "95f609580db6a56385fc4876b8f5dcd742c6979f7ea1b81197377f8d64066132",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 612
+    },
+    {
+      "file": "out/kernel/time/time_test.ko",
+      "name": "time_test.ko",
+      "bytes": 189216,
+      "sha256": "65ef72bd9036b5dc6a10b73635c16ac172f72c98cfef80c53368c2d030529327",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 12
+    },
+    {
+      "file": "out/kernel/trace/qcom_ipc_logging.ko",
+      "name": "qcom_ipc_logging.ko",
+      "bytes": 381360,
+      "sha256": "e17a7a8ff658b03d4902fc6725c752c5c52b57e02dae0d0dd68296ed02212acd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 102
+    },
+    {
+      "file": "out/lib/crypto/libarc4.ko",
+      "name": "libarc4.ko",
+      "bytes": 107528,
+      "sha256": "6321a1aa274d8a8b4817793e2ea87a7c18a19d3003a0f9ac477f556cd72a1936",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 2
+    },
+    {
+      "file": "out/lib/kunit/kunit-example-test.ko",
+      "name": "kunit-example-test.ko",
+      "bytes": 220632,
+      "sha256": "a137ec710e2a5708248f8aa2f09fbb5d7177a5e084f4087f3675c8c3a16c2906",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 36
+    },
+    {
+      "file": "out/lib/kunit/kunit-test.ko",
+      "name": "kunit-test.ko",
+      "bytes": 334304,
+      "sha256": "05878f27f7b3c8e46aa54bf900e39108539e5d3fb5fe291d7b28bd018dbb9f13",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 82
+    },
+    {
+      "file": "out/lib/kunit/kunit.ko",
+      "name": "kunit.ko",
+      "bytes": 1355904,
+      "sha256": "1e92f044292c752eef3f50b840c8c7abd42c322db3bdf0be78f499c63b68e15b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 180
+    },
+    {
+      "file": "out/lib/kunit/platform-test.ko",
+      "name": "platform-test.ko",
+      "bytes": 231520,
+      "sha256": "70d6c52e70acc9a1c1036f640d5e6a62652c6a152c1bc9170fc0b4057846489c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 44
+    },
+    {
+      "file": "out/mm/zsmalloc.ko",
+      "name": "zsmalloc.ko",
+      "bytes": 370384,
+      "sha256": "cb70bd12ff145f46c6880e3b7f077c0857fdf32027018d21c9161c34125813af",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 106
+    },
+    {
+      "file": "out/net/6lowpan/6lowpan.ko",
+      "name": "6lowpan.ko",
+      "bytes": 1048120,
+      "sha256": "1d23096eb44c9e5b20ec923e432385a7ed5c1ea77ed990cb3bd2ccafe3014d6f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 58
+    },
+    {
+      "file": "out/net/6lowpan/nhc_dest.ko",
+      "name": "nhc_dest.ko",
+      "bytes": 336760,
+      "sha256": "331a75666eef57ae0a5455b33f4651de95d7684031b42433bd75f09d603d28fd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/net/6lowpan/nhc_fragment.ko",
+      "name": "nhc_fragment.ko",
+      "bytes": 336696,
+      "sha256": "fab93b901fd309aba51f571ed8c9bdbb1aa7d06ba8bc47badee16e8df9ff6386",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/net/6lowpan/nhc_hop.ko",
+      "name": "nhc_hop.ko",
+      "bytes": 336696,
+      "sha256": "3b6b908ef007ef8a32b0ea851f1d532064c72d6afe538323863d368f462791e5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/net/6lowpan/nhc_ipv6.ko",
+      "name": "nhc_ipv6.ko",
+      "bytes": 336736,
+      "sha256": "349f6e58d3461994c3b87f009835d142011843744d21555017edd4835eeb2b2f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/net/6lowpan/nhc_mobility.ko",
+      "name": "nhc_mobility.ko",
+      "bytes": 336712,
+      "sha256": "098a8a73774948c04fefe79df6278055c599d54ce41db49835c9923a8a66be01",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/net/6lowpan/nhc_routing.ko",
+      "name": "nhc_routing.ko",
+      "bytes": 336712,
+      "sha256": "a72b5bca608cbc8be0b75fbe342cb4224f24367bf3a23f5b07451510b0c6e93d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 6
+    },
+    {
+      "file": "out/net/6lowpan/nhc_udp.ko",
+      "name": "nhc_udp.ko",
+      "bytes": 349032,
+      "sha256": "37eb9f2fc45c92c625ba1cfd3c758a2f6b1527a187fbccb0bb9e20d872d4b126",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 14
+    },
+    {
+      "file": "out/net/8021q/8021q.ko",
+      "name": "8021q.ko",
+      "bytes": 1050840,
+      "sha256": "b6341bbf1c27ffcd8d0029380245dbfb93d7eea1f1ee448a2a74299b1e58d11d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 198
+    },
+    {
+      "file": "out/net/9p/9pnet.ko",
+      "name": "9pnet.ko",
+      "bytes": 867056,
+      "sha256": "5635d6f14c1acad17e23d205ad93f45dda6a93c290657b5e9bd20e2f691cf91a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 168
+    },
+    {
+      "file": "out/net/9p/9pnet_fd.ko",
+      "name": "9pnet_fd.ko",
+      "bytes": 415928,
+      "sha256": "c8feee8205875e7a78cb2c97d9114682c00b6034ee7f64577291ee759f0a6dd3",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 90
+    },
+    {
+      "file": "out/net/bluetooth/bluetooth.ko",
+      "name": "bluetooth.ko",
+      "bytes": 7567984,
+      "sha256": "acef57cffc83627f441c0106c996c0b3861b8e7d5b64caaf6ac4bb02ef8579eb",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 488
+    },
+    {
+      "file": "out/net/bluetooth/hidp/hidp.ko",
+      "name": "hidp.ko",
+      "bytes": 737592,
+      "sha256": "5a844a1e42f9da0d3ab36da625e00cb1ad04bf9deac382cb57f9b6974d15502d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 212
+    },
+    {
+      "file": "out/net/bluetooth/rfcomm/rfcomm.ko",
+      "name": "rfcomm.ko",
+      "bytes": 1144256,
+      "sha256": "58ea3eb70ec57796461de3148a74e0e8af2c692d95bc6e32c8e2ba744ca6f414",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 290
+    },
+    {
+      "file": "out/net/can/can-bcm.ko",
+      "name": "can-bcm.ko",
+      "bytes": 441936,
+      "sha256": "c630e217a95f11f7a9b78d2a9858a6f4e7041548f81c2d3ace7a40f972d6f0db",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 162
+    },
+    {
+      "file": "out/net/can/can-gw.ko",
+      "name": "can-gw.ko",
+      "bytes": 397296,
+      "sha256": "390d82e0e96d239ebbf709a82d4fb688c9565af1a9fd871208c34b971021a25e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 88
+    },
+    {
+      "file": "out/net/can/can-raw.ko",
+      "name": "can-raw.ko",
+      "bytes": 438392,
+      "sha256": "d1e0f57a5553f8226470beaf76c0f319e65e146e8e9824ee38dc4a29f291269e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 120
+    },
+    {
+      "file": "out/net/can/can.ko",
+      "name": "can.ko",
+      "bytes": 600312,
+      "sha256": "b64b59de0e540bb8881b4667176e17e45007269e80c79a187a786cc003d73d4e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 118
+    },
+    {
+      "file": "out/net/core/dev_addr_lists_test.ko",
+      "name": "dev_addr_lists_test.ko",
+      "bytes": 348624,
+      "sha256": "bbbbaf8a8d22a7cb5313d3f7156829c54504ed15a9eabc53079c6cc8a2eda79c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 42
+    },
+    {
+      "file": "out/net/ieee802154/6lowpan/ieee802154_6lowpan.ko",
+      "name": "ieee802154_6lowpan.ko",
+      "bytes": 1065944,
+      "sha256": "eb03ab9ff28e1cd204a3c91a5f1022da6c6d42b33b6abfbdd463296850c7cc58",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 132
+    },
+    {
+      "file": "out/net/ieee802154/ieee802154.ko",
+      "name": "ieee802154.ko",
+      "bytes": 2378256,
+      "sha256": "6a764a25f0dad8e110278081450db76d90b294da484c5a22ae96d2d4749416d7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 192
+    },
+    {
+      "file": "out/net/ieee802154/ieee802154_socket.ko",
+      "name": "ieee802154_socket.ko",
+      "bytes": 439000,
+      "sha256": "290a5ab547f44642ff0fa73f681ab960fafa504860a4cb1fefa12151c2cf128d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 148
+    },
+    {
+      "file": "out/net/l2tp/l2tp_core.ko",
+      "name": "l2tp_core.ko",
+      "bytes": 598328,
+      "sha256": "ce08b52520c8e3072449a56eb2fc1f8c08de51f9bb2cebef160a24919bd5003d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 168
+    },
+    {
+      "file": "out/net/l2tp/l2tp_ppp.ko",
+      "name": "l2tp_ppp.ko",
+      "bytes": 460496,
+      "sha256": "24734b22eed23f61d42b596c70af7710145da61d9e5f5428ec60dbc76bbb9cd7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 156
+    },
+    {
+      "file": "out/net/mac802154/mac802154.ko",
+      "name": "mac802154.ko",
+      "bytes": 2797336,
+      "sha256": "0dfed87196acf06ab587e6b29e317187c3ecf238d85ff1ffc97cebee0218b080",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 286
+    },
+    {
+      "file": "out/net/nfc/nfc.ko",
+      "name": "nfc.ko",
+      "bytes": 2023584,
+      "sha256": "1f1b450ba68f7395a6498480e5b806a17b86f4a45f021fd45a59e6b0b626b280",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 262
+    },
+    {
+      "file": "out/net/qrtr/qrtr-mhi.ko",
+      "name": "qrtr-mhi.ko",
+      "bytes": 366192,
+      "sha256": "a72aeae38457ad298073d34874c2841f179448b0f4d77ad5faa2e2a71d596cd6",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 54
+    },
+    {
+      "file": "out/net/qrtr/qrtr-smd.ko",
+      "name": "qrtr-smd.ko",
+      "bytes": 224872,
+      "sha256": "0f5ba9f99e3b8d19d5cd882d65d68ea09127d45320802d0f6c5cfe9d7c5938ce",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 46
+    },
+    {
+      "file": "out/net/qrtr/qrtr.ko",
+      "name": "qrtr.ko",
+      "bytes": 810424,
+      "sha256": "23d6c4b7abee55417631f00b4f126a2c6100a315c9f3c8305726a5f19b7577f0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 294
+    },
+    {
+      "file": "out/net/rfkill/rfkill.ko",
+      "name": "rfkill.ko",
+      "bytes": 301344,
+      "sha256": "8e89f61c76bd6b760cb76528c1ccb1e7a0ce2916eef1c83c7773e39b3788b9ca",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 116
+    },
+    {
+      "file": "out/net/tipc/tipc.ko",
+      "name": "tipc.ko",
+      "bytes": 6522744,
+      "sha256": "4e30f36c844cab9835f5a100c4fa54e8e65e2be70b6ae94843ad8dd10473c82d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 498
+    },
+    {
+      "file": "out/net/tipc/tipc_diag.ko",
+      "name": "tipc_diag.ko",
+      "bytes": 331744,
+      "sha256": "b803d2821e416fd8318acc9a12b795241b40f1afd2374e4d90dbc5ac1056aacf",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 22
+    },
+    {
+      "file": "out/net/tls/tls.ko",
+      "name": "tls.ko",
+      "bytes": 1640464,
+      "sha256": "47b1a8e1ecd1d59578c9cf93dd007ab6d261b7dd8f4d699facfe685f16d2c1d5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 294
+    },
+    {
+      "file": "out/net/vmw_vsock/vmw_vsock_virtio_transport.ko",
+      "name": "vmw_vsock_virtio_transport.ko",
+      "bytes": 396808,
+      "sha256": "020923f537c46ed5c519c0c17fa1200211d40d7529ef44b601897a5dea4e2bc2",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 158
+    },
+    {
+      "file": "out/net/wireless/cfg80211.ko",
+      "name": "cfg80211.ko",
+      "bytes": 8387560,
+      "sha256": "3cc3637d5868730d0559f6c13d7542320f0ac2f0f66d404dded8718a0fb92364",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 394
+    },
+    {
+      "file": "out/sound/pci/hda/snd-hda-codec-hdmi.ko",
+      "name": "snd-hda-codec-hdmi.ko",
+      "bytes": 601400,
+      "sha256": "486bc3c324f372ba58bf02b0d4c724f98e3e91e8f64181f1912df23738c7f0f1",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 202
+    },
+    {
+      "file": "out/sound/soc/generic/snd-soc-audio-graph-card.ko",
+      "name": "snd-soc-audio-graph-card.ko",
+      "bytes": 282512,
+      "sha256": "566853ad0254d743e9ecabfaaf4e2573dfadc34eac931071d0e91f04d85476bd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 112
+    },
+    {
+      "file": "out/sound/soc/generic/snd-soc-simple-card-utils.ko",
+      "name": "snd-soc-simple-card-utils.ko",
+      "bytes": 319592,
+      "sha256": "f667012d8fbe35378fee678f6b6d20ca1db142ebc2890eb03fe2040ae94fed22",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 116
+    },
+    {
+      "file": "out/sound/soc/soc-topology-test.ko",
+      "name": "soc-topology-test.ko",
+      "bytes": 308352,
+      "sha256": "ae78e39631fd60f024510cd6fc0bf896f583ffa27ed11807259209489683fb9e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 36
+    },
+    {
+      "file": "out/sound/soc/soc-utils-test.ko",
+      "name": "soc-utils-test.ko",
+      "bytes": 197768,
+      "sha256": "6b8c8ed8e8be3cbd8bfc1cf59b729d87595cc5f1105c8f07063109f6451bc1a2",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 0,
+      "checked_version_records": 18
+    },
+    {
+      "file": "sm8850-modules/nxp/opensource/driver/nxp-nci.ko",
+      "name": "nxp-nci.ko",
+      "bytes": 924936,
+      "sha256": "fa66c01561b1010cf9c6eb0af1dc2adeaa3e1c9cca583769be5e42c9fa585717",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 158
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/adsp_loader_dlkm.ko",
+      "name": "adsp_loader_dlkm.ko",
+      "bytes": 241184,
+      "sha256": "7ce0aadb8390d5d11c00111879940d3f9da84b60dd3c149aefdff5f86f9627c1",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 88
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/audio_pkt_dlkm.ko",
+      "name": "audio_pkt_dlkm.ko",
+      "bytes": 286976,
+      "sha256": "b75508c27f5ec542af1c45251eeb0645b2d057ec124ea857e738d20c28bcb782",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 110
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/audio_prm_dlkm.ko",
+      "name": "audio_prm_dlkm.ko",
+      "bytes": 242888,
+      "sha256": "b4af146c7bc025a65ba7f9fba98be32a3b143486407614322cecc696db36de31",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 52
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/audpkt_ion_dlkm.ko",
+      "name": "audpkt_ion_dlkm.ko",
+      "bytes": 267392,
+      "sha256": "28553704a0fe48d437568655f253d0b6795ccac32b29cbfc903cd97b71075121",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 84
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/gpr_dlkm.ko",
+      "name": "gpr_dlkm.ko",
+      "bytes": 257320,
+      "sha256": "fd0cfadda777192f894aed62f77ac833742516b1d694c93153865cfb63767f5b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 104
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/hdmi_dlkm.ko",
+      "name": "hdmi_dlkm.ko",
+      "bytes": 295584,
+      "sha256": "16a86658cbeeddf44c0f8c10f354dfed936b34a0ed3550a522423311a5872fe9",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 48
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/lpass_bt_swr_dlkm.ko",
+      "name": "lpass_bt_swr_dlkm.ko",
+      "bytes": 244496,
+      "sha256": "939d15c2c90a0adb542bd24a53da87cdeb9d1ea317ce18ededc9270cc72a1907",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 96
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/lpass_cdc_dlkm.ko",
+      "name": "lpass_cdc_dlkm.ko",
+      "bytes": 919584,
+      "sha256": "72cb37349a1c462b24043df1656d1272f12b9eb331743bade064abdd98f84855",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 168
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/lpass_cdc_rx_macro_dlkm.ko",
+      "name": "lpass_cdc_rx_macro_dlkm.ko",
+      "bytes": 552664,
+      "sha256": "308a9ac2e6139a8a459c42e35b2270cab2ee12b4bc6d166f27527c269ef0f9a2",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 186
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/lpass_cdc_tx_macro_dlkm.ko",
+      "name": "lpass_cdc_tx_macro_dlkm.ko",
+      "bytes": 427472,
+      "sha256": "e932c8e2280db03c10afa138610b3e85659cda36773322056e69424c0da51576",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 146
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/lpass_cdc_va_macro_dlkm.ko",
+      "name": "lpass_cdc_va_macro_dlkm.ko",
+      "bytes": 463992,
+      "sha256": "1f94a8d685a373d8d12e13830c2c30b1704894f85f92f9fd451c31bfb4d93d29",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 204
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/lpass_cdc_wsa2_macro_dlkm.ko",
+      "name": "lpass_cdc_wsa2_macro_dlkm.ko",
+      "bytes": 550232,
+      "sha256": "b56b206e169733a7773f6953659247eb858430a3c5e37cc05c9f21824fb4febd",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 182
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/lpass_cdc_wsa_macro_dlkm.ko",
+      "name": "lpass_cdc_wsa_macro_dlkm.ko",
+      "bytes": 545000,
+      "sha256": "3c1bf6d52c19fdc69d1a813428dce50ad89b8aff39b2f5ec4195ce97deada5ef",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 192
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/machine_dlkm.ko",
+      "name": "machine_dlkm.ko",
+      "bytes": 722944,
+      "sha256": "a54d3865488aa814a751731493eb577fe44aa99c1d1fe293ecb8e034fe61c95d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 242
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/mbhc_dlkm.ko",
+      "name": "mbhc_dlkm.ko",
+      "bytes": 588176,
+      "sha256": "8ffc00e149f78b27cd3d31f3d824ca89db20465e9afa049f66fc3b3d550f279c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 88
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/pinctrl_lpi_dlkm.ko",
+      "name": "pinctrl_lpi_dlkm.ko",
+      "bytes": 284176,
+      "sha256": "f2f91e72d7cb47fa1c4b03850a7418ebf472073775aab5f0826affe1aeca37fa",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 100
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/q6_dlkm.ko",
+      "name": "q6_dlkm.ko",
+      "bytes": 116488,
+      "sha256": "be4ad0a34fb515e5b235e4158b6d4dd10ab454d56f2c0123fcc79129f01e244e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 14
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/q6_notifier_dlkm.ko",
+      "name": "q6_notifier_dlkm.ko",
+      "bytes": 255624,
+      "sha256": "5f1929077ea4ebcb3585667060827c559ce94ac71b6dc9ec7f80ef30f73d46a7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 64
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/q6_pdr_dlkm.ko",
+      "name": "q6_pdr_dlkm.ko",
+      "bytes": 110432,
+      "sha256": "1c312cb42af0e49d23e4d4dd97a97abfb17d1445c38cead3e28ac789e18a46db",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 10
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/sdca_registers_dlkm.ko",
+      "name": "sdca_registers_dlkm.ko",
+      "bytes": 260848,
+      "sha256": "b66440d20e71590dd7abf053cc22532f7f7c25f9b83074206cea123bcb066206",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 38
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/snd_event_dlkm.ko",
+      "name": "snd_event_dlkm.ko",
+      "bytes": 225808,
+      "sha256": "8e93a238652446ebb2583f502e597794253e896a4734e46ae4297116e52d6e1b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 26
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/spf_core_dlkm.ko",
+      "name": "spf_core_dlkm.ko",
+      "bytes": 245224,
+      "sha256": "b25281539f6e3573733699eb8a9bc068b05712c485f97b6c47ef27796b50a759",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 72
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/stub_dlkm.ko",
+      "name": "stub_dlkm.ko",
+      "bytes": 237736,
+      "sha256": "98da66b4c47ff28e93b803a832fe2664d050a1b760600a07f4a4bb93cd531728",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 10
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/swr_ctrl_dlkm.ko",
+      "name": "swr_ctrl_dlkm.ko",
+      "bytes": 478000,
+      "sha256": "8e8e91359b0cd52083ca72d574398b40a0712b2e81832a18701c9edc13d6d468",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 202
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/swr_dlkm.ko",
+      "name": "swr_dlkm.ko",
+      "bytes": 395800,
+      "sha256": "6585cbb912c0a84d6b627c098709d5d43ebe01fc7820d770a7536e5af767a453",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 88
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/swr_haptics_dlkm.ko",
+      "name": "swr_haptics_dlkm.ko",
+      "bytes": 340656,
+      "sha256": "314547438ca94e7f0fd170b09170cb2694f6cb38957968d47f1c36d0fcb362c0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 82
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/wcd9378_dlkm.ko",
+      "name": "wcd9378_dlkm.ko",
+      "bytes": 1160120,
+      "sha256": "25d9a44b1890177533820c2c890b45225a191428fad9257bfd7746a1a1ec4017",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 226
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/wcd937x_dlkm.ko",
+      "name": "wcd937x_dlkm.ko",
+      "bytes": 826904,
+      "sha256": "7d01807e3c82d60eaf24b506d73dea89f070e08922201927e6b4071e2b8757fc",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 210
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/wcd939x_dlkm.ko",
+      "name": "wcd939x_dlkm.ko",
+      "bytes": 1148512,
+      "sha256": "189de93abd58fb61fc2567e4b1384748fef142b10ebc8516e9a2ed5bda1bf931",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 272
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/wcd939x_slave_dlkm.ko",
+      "name": "wcd939x_slave_dlkm.ko",
+      "bytes": 240720,
+      "sha256": "3c079ad02905f23a60bfb5981eb4f8af6d39ef85a662137cb889ce8d80a3c387",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 60
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/wcd9xxx_dlkm.ko",
+      "name": "wcd9xxx_dlkm.ko",
+      "bytes": 515928,
+      "sha256": "7efb6b51415bcfd3f11c161bf5e92eefcf43f06a5f830a4da72f3aceabf8379e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 66
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/wcd_core_dlkm.ko",
+      "name": "wcd_core_dlkm.ko",
+      "bytes": 686872,
+      "sha256": "f12cfa926a1cd0a8bbb99b93b2e0f48318cf1d3a68cfa7ce440525ed8cc2f5ce",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 114
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/wsa883x_dlkm.ko",
+      "name": "wsa883x_dlkm.ko",
+      "bytes": 539672,
+      "sha256": "a17091c4268191bab6b903453a0eb91dc5a43e46edfa0c1fb6bb6c565346929f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 184
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/audio-kernel/wsa884x_dlkm.ko",
+      "name": "wsa884x_dlkm.ko",
+      "bytes": 606008,
+      "sha256": "983d6486b06f9ae8cc41e8b4b8d4a5458693d396a5a4ea064343b942d77e0caa",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 194
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/bt-kernel/bt_fm_swr.ko",
+      "name": "bt_fm_swr.ko",
+      "bytes": 407272,
+      "sha256": "912700fbea057ee8ed7b769d989af93684ddcacf66cd1b16884bbfac9604fb46",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 56
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/bt-kernel/btfmcodec.ko",
+      "name": "btfmcodec.ko",
+      "bytes": 821160,
+      "sha256": "0d9198a93f30e13dc669a53d2a37c0205fcd25283828266302db4e20e42ead0d",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 128
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/bt-kernel/btpower.ko",
+      "name": "btpower.ko",
+      "bytes": 497872,
+      "sha256": "962017df2b6cbdd1b2b7d7f044af83a5324299b3be9df93bd6598ed40006ec78",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 202
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/camera-kernel/camera.ko",
+      "name": "camera.ko",
+      "bytes": 34042472,
+      "sha256": "f200daa8e402f01f5e984f20ec8ad7d3dcce834958b40242e53c6fa09d25cb64",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 834
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/data-kernel/drivers/smem-mailbox/smem-mailbox.ko",
+      "name": "smem-mailbox.ko",
+      "bytes": 327240,
+      "sha256": "18673d27f442caa6a69fbc172128664e14bb02faf668b73454a31fd750c4428c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 42
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/dataipa/gsim.ko",
+      "name": "gsim.ko",
+      "bytes": 1390528,
+      "sha256": "0c798f08b722cdcc951b748b468147bf9eed17ed033ba2a61522e379373a28f4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 162
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/dataipa/ipam.ko",
+      "name": "ipam.ko",
+      "bytes": 21747912,
+      "sha256": "0cd85106343729ebd423eccc370a2ec8674cb27913e533d93a9ba311b64c5240",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 766
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/datarmnet/rmnet_core.ko",
+      "name": "rmnet_core.ko",
+      "bytes": 4535888,
+      "sha256": "a1636f6ff70288c7e0a0aaa19809f1e9b67f7cc61229b2a6a276739e7c4600c5",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 310
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/datarmnet/rmnet_ctl.ko",
+      "name": "rmnet_ctl.ko",
+      "bytes": 442744,
+      "sha256": "d583a23030bc4fb8024ab81cc36998b07c2aea1496b13f10faa8240bfbe598bf",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 42
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/datarmnet-ext/mem/rmnet_mem.ko",
+      "name": "rmnet_mem.ko",
+      "bytes": 782416,
+      "sha256": "e3cc50e21794800bd0959bfc955bd393405fcaec1ed3f8a1ddd6ed6ca281192c",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 90
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/datarmnet-ext/perf/rmnet_perf.ko",
+      "name": "rmnet_perf.ko",
+      "bytes": 908168,
+      "sha256": "16a2139ac3a150d1a39cd9941fa2f45f2dfe10a47ce85cf910a6ef3bb4f7e292",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 132
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/datarmnet-ext/shs/rmnet_shs.ko",
+      "name": "rmnet_shs.ko",
+      "bytes": 2560216,
+      "sha256": "4ead2b3b9bedc43f8606ad8e9c22e78ca3b1404fe475361b6836046389544434",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 276
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/display-drivers/msm_drm.ko",
+      "name": "msm_drm.ko",
+      "bytes": 46179392,
+      "sha256": "536af096196c216b505ae8ec87d28767c68cee52abb118f547d010a005f85e7a",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 1666
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/dsp-kernel/frpc-adsprpc.ko",
+      "name": "frpc-adsprpc.ko",
+      "bytes": 1516528,
+      "sha256": "70dcd44f6b0f7f4692ffde1acc315ab7a0cf00d6420871d7e58c3598e001990f",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 390
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/eva-kernel/msm-eva.ko",
+      "name": "msm-eva.ko",
+      "bytes": 5577640,
+      "sha256": "f1ab1554d7b231f50eab73023aed986fa5351cd219ff92700a7d28dbdeb4ff18",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 524
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/graphics-kernel/msm_kgsl.ko",
+      "name": "msm_kgsl.ko",
+      "bytes": 22577928,
+      "sha256": "b207aa0955e36dfddbbfcf4674614675fc33202056244df3cdadc6e4b3232204",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 1104
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/mm-drivers/hfi_core/msm_hfi_core.ko",
+      "name": "msm_hfi_core.ko",
+      "bytes": 1838008,
+      "sha256": "2a977b14163174282c6b7f345f7e355682baacbfdabb67a266810fe4367334c8",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 240
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/mm-drivers/hw_fence/msm_hw_fence.ko",
+      "name": "msm_hw_fence.ko",
+      "bytes": 1837968,
+      "sha256": "7e4d41886fb8f20f4663c14f593c4403c9e2fc661298371cf396ce7772250658",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 258
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/mm-drivers/msm_ext_display/msm_ext_display.ko",
+      "name": "msm_ext_display.ko",
+      "bytes": 234552,
+      "sha256": "47dcc108f27daf7b523186818f4cfb360205c346e8343016e5f9501221e78614",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 40
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/mm-drivers/sync_fence/sync_fence.ko",
+      "name": "sync_fence.ko",
+      "bytes": 274032,
+      "sha256": "9b9d76302c1ffcdc3edf713ebbcea5855780d9e050feb99ccff24285ebe2a236",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 110
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/mmrm-driver/msm-mmrm.ko",
+      "name": "msm-mmrm.ko",
+      "bytes": 839640,
+      "sha256": "ab5426566ec2eb3512580bbce3984e2aa60a01daeeb843472a0338a4dc77a83e",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 88
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/securemsm-kernel/hdcp_qseecom_dlkm.ko",
+      "name": "hdcp_qseecom_dlkm.ko",
+      "bytes": 521752,
+      "sha256": "7d80da7393d130b64f646b90ff98360b346ae3b5174dccc4d8e63115591afcc0",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 44
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/securemsm-kernel/smcinvoke_dlkm.ko",
+      "name": "smcinvoke_dlkm.ko",
+      "bytes": 718800,
+      "sha256": "b8fefb5554807f9867efa3619031da888f7af1e4fca9826c30697f9e3daeeeef",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 184
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/securemsm-kernel/smmu_proxy_dlkm.ko",
+      "name": "smmu_proxy_dlkm.ko",
+      "bytes": 365160,
+      "sha256": "da5004240ed4fa395ab228ef0211735ad7641e1449d68e68d86b5c2f2692cf02",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 88
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/synx-kernel/ipclite.ko",
+      "name": "ipclite.ko",
+      "bytes": 479952,
+      "sha256": "698e4e288b8405f51f70f62517d3845fc30dc7c5a21a7024f1a6d9ea71198af4",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 102
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/synx-kernel/synx-driver.ko",
+      "name": "synx-driver.ko",
+      "bytes": 1619304,
+      "sha256": "23fd1e56f6731fe29ee3c290a5ef415855c142a64e645ebdf87a037c50f369b7",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 216
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/wlan/platform/cnss2.ko",
+      "name": "cnss2.ko",
+      "bytes": 3874144,
+      "sha256": "b6249c2a13ad840d8285c889f2a24eec295b2de58769ecf2cc2cb6c8a8953256",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 752
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/wlan/platform/cnss_nl.ko",
+      "name": "cnss_nl.ko",
+      "bytes": 293592,
+      "sha256": "a10d06aeefe102effbca26b95a719f232bd6357a50c46ab710041d30233569fe",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 14
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/wlan/platform/cnss_plat_ipc_qmi_svc.ko",
+      "name": "cnss_plat_ipc_qmi_svc.ko",
+      "bytes": 278224,
+      "sha256": "a8cd900a33dd765f606980fbdb821bbbd74135389322399a855089427a0a12eb",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 74
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/wlan/platform/cnss_prealloc.ko",
+      "name": "cnss_prealloc.ko",
+      "bytes": 261160,
+      "sha256": "c4a20c0b322de5399b9b37363436de3da0e28e5011c036dc5c3ed1a51b69c50b",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 82
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/wlan/platform/cnss_utils.ko",
+      "name": "cnss_utils.ko",
+      "bytes": 362488,
+      "sha256": "602d8924538c9bfa620fabb0ac395162719a66a37a733814af1ae84411aee341",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 72
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/wlan/platform/wlan_firmware_service.ko",
+      "name": "wlan_firmware_service.ko",
+      "bytes": 312720,
+      "sha256": "2633dda9454b8be3043ed0d21f958daf348c5e5690733008975fedc272bd66b9",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 8
+    },
+    {
+      "file": "sm8850-modules/qcom/opensource/wlan/qcacld-3.0/qca_cld3_peach_v2.ko",
+      "name": "qca_cld3_peach_v2.ko",
+      "bytes": 421548136,
+      "sha256": "b9156cdd59374afcd4f1e4a7b935817c62d00bec056733112b689c3e511e6e21",
+      "vermagic": "6.12.97-4k-g366d8d135608 SMP preempt mod_unload modversions aarch64",
+      "btf_sections": 1,
+      "btf_base_sections": 1,
+      "checked_version_records": 1184
+    }
+  ]
+}

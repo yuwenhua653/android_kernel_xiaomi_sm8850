@@ -95,8 +95,10 @@
   "additional_integration": [
     "QRTR: RCU-protect vendor service lookup against ACK node reclamation; use IRQ-safe server lookup locking.",
     "QRTR: restore socket callback, synchronize network readers, cancel kthread work, then stop the vendor worker.",
-    "QRTR: return the actual kthread creation error."
+    "QRTR: return the actual kthread creation error.",
+    "BTF: remove old .BTF and .BTF.base before embedding regenerated module BTF; tested 340 modules with vmlinux timestamp changed and zero module relinks."
   ],
-  "validation_status": "Pending build validation; previous kernel-validation.json describes the 6.12.81 baseline, not this update.",
-  "device_tested": false
+  "validation_status": "Host Image, 340 in-tree modules, 68 external modules, all 297 catalog entries, CRC/vermagic checks, 32 DT inputs and 1006 exported headers passed. See ack-validation.json; full ROM and device tests pending.",
+  "device_tested": false,
+  "validation_report": "ack-validation.json"
 }
