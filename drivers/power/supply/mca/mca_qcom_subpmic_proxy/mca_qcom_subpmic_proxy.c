@@ -829,9 +829,10 @@ static void qcom_subpmic_update_usb_type_work(struct work_struct *work)
 	}
 
 	if (sc->init_ok == 0) {
+		/* Publish readiness before a listener can handle the notification. */
+		sc->init_ok = 1;
 		mca_event_block_notify(MCA_EVENT_TYPE_HW_INFO,
 				       MCA_EVENT_PMIC_INIT_DONE, NULL);
-		sc->init_ok = 1;
 	}
 
 	if (sc->online != usb_online) {
