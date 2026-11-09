@@ -76,7 +76,7 @@
 #define SUPER_TX_FREQUENCY_MIN_KHZ 116
 #define SUPER_TX_FREQUENCY_MAX_KHZ 141
 
-#define UUID_PARA_MAX_GROUP 16
+#define UUID_PARA_MAX_GROUP 18
 
 #define RX_CHECK_SUCCESS (1 << 0)
 #define TX_CHECK_SUCCESS (1 << 1)
@@ -299,11 +299,15 @@ enum FW_UPDATE_CMD {
 struct adapter_cmd_type_fx {
 	int icl_setting;
 	int fcc_setting;
+	int vout;
+	bool allow_qc;
 };
 
 struct adapter_cmd_type_info {
 	u8 receive_data;
 	struct adapter_cmd_type_fx *cmd_fx;
+	unsigned int num_adapters;
+	bool extended_format;
 };
 
 typedef enum trans_data_flag {
@@ -325,6 +329,7 @@ struct strategy_basic_wireless_proc_data {
 	enum XM_WLS_CHGR_STAGE chgr_stage;
 	enum TX_CMD_TYPE current_for_tx_cmd;
 	enum ADAPTER_CMD_TYPE current_for_adapter_cmd;
+	int adapter_cmd_vout;
 
 	u8 epp;
 	u8 tx_max_power;

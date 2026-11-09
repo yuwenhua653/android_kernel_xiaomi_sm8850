@@ -94,8 +94,9 @@ static int strategy_wireless_set_rx_vout(struct strategy_wireless_dev *info,
 					 int vout)
 {
 	if (info->force_vout_6v)
-		return platform_class_wireless_set_vout(WIRELESS_ROLE_MASTER,
-							6000);
+		vout = 6000;
+	if (info->proc_data.adapter_cmd_vout)
+		vout = min(vout, info->proc_data.adapter_cmd_vout);
 	return platform_class_wireless_set_vout(WIRELESS_ROLE_MASTER, vout);
 }
 
@@ -1536,6 +1537,26 @@ strategy_wireless_cmd_type_f5_func(struct strategy_wireless_dev *info, bool en)
 	return ret;
 }
 
+static int strategy_wireless_apply_dt_command(struct strategy_wireless_dev *info,
+					     const struct adapter_cmd_type_fx *cmd)
+{
+	struct mca_votable *disable = mca_find_votable("wls_quick_chg_disable");
+	int ret;
+
+	if (!disable)
+		return -EPROBE_DEFER;
+	/* Stop the charge pump before applying a requested lower RX voltage. */
+	ret = mca_vote(disable, "adapter_cmd", true, !cmd->allow_qc);
+	if (ret)
+		return ret;
+	info->proc_data.adapter_cmd_vout = cmd->vout;
+	strategy_wireless_67w_icl_setting(info, !!cmd->icl_setting, cmd->icl_setting);
+	strategy_wireless_67w_fcc_setting(info, !!cmd->fcc_setting, cmd->fcc_setting);
+	if (cmd->vout)
+		return strategy_wireless_set_rx_vout(info, cmd->vout);
+	return 0;
+}
+
 static int strategy_wireless_help_fcc_change(struct strategy_wireless_dev *info,
 					     u8 *receive_data)
 {
@@ -1559,6 +1580,17 @@ static int strategy_wireless_help_fcc_change(struct strategy_wireless_dev *info,
 	if (i == ADAPTER_CMD_TYPE_MAX) {
 		mca_log_err("cannot find cmd_type_%02x\n", receive_data[2]);
 		return -1;
+	}
+
+	if (tx_adapter < 0 || tx_adapter >= info->cmd_type_info[i].num_adapters ||
+	    !info->cmd_type_info[i].cmd_fx)
+		return -EINVAL;
+	if (info->cmd_type_info[i].extended_format) {
+		ret = strategy_wireless_apply_dt_command(info,
+				&info->cmd_type_info[i].cmd_fx[tx_adapter]);
+		if (!ret)
+			info->proc_data.current_for_adapter_cmd = receive_data[2];
+		return ret;
 	}
 
 	info->proc_data.current_for_adapter_cmd = receive_data[2];
@@ -3082,9 +3114,12 @@ static int strategy_wireless_process_event(int event, int value, void *data)
 	case MCA_EVENT_WIRELESS_CONNECT:
 	case MCA_EVENT_WIRELESS_DISCONNECT:
 		qcchg_disable_voter = mca_find_votable("wls_quick_chg_disable");
-		if (qcchg_disable_voter)
+		if (qcchg_disable_voter) {
 			mca_vote(qcchg_disable_voter, "basic_wls_set", true,
 				 !value);
+			if (!value)
+				mca_vote(qcchg_disable_voter, "adapter_cmd", false, 0);
+		}
 		strategy_wireless_process_online_change(value, info);
 		break;
 	case MCA_EVENT_WIRELESS_INT_CHANGE:
@@ -4043,40 +4078,66 @@ static void strategy_wireless_trans_data_work(struct work_struct *work)
 			(strategy_wireless_process_trans(info)));
 }
 
+/* Myron DT rows are wire IDs, not enum mca_adapter_type ordinals. */
+static const int strategy_wireless_dt_adapter_map[] = {
+	ADAPTER_NONE, ADAPTER_SDP, ADAPTER_CDP, ADAPTER_DCP, -1,
+	ADAPTER_QC2, ADAPTER_QC3, ADAPTER_PD, ADAPTER_AUTH_FAILED,
+	ADAPTER_XIAOMI_QC3, ADAPTER_XIAOMI_PD, ADAPTER_ZIMI_CAR_POWER,
+	ADAPTER_XIAOMI_PD_40W, ADAPTER_VOICE_BOX, ADAPTER_XIAOMI_PD_50W,
+	ADAPTER_XIAOMI_PD_60W, ADAPTER_XIAOMI_PD_100W,
+};
+
 static int strategy_wireless_parse_cmd_type_para(
 	struct device_node *node, const char *name,
 	struct adapter_cmd_type_info *cmd_type_info)
 {
-	int array_len, i, j, len_temp;
-	int idata[ADAPTER_MAX * ADAPTER_CMD_TYPE_SETTING_MAX] = { 0 };
+	int array_len, rows, stride, i, index;
+	u32 idata[ARRAY_SIZE(strategy_wireless_dt_adapter_map) * 4];
+	struct adapter_cmd_type_fx *table;
+	bool extended;
 
-	array_len = mca_parse_dts_u32_count(node, name, ADAPTER_MAX,
-					    ADAPTER_CMD_TYPE_SETTING_MAX);
-	if (array_len < 0) {
-		mca_log_err("parse %s failed", name);
-		return -1;
+	array_len = of_property_count_u32_elems(node, name);
+	extended = array_len == ARRAY_SIZE(idata);
+	stride = extended ? 4 : 2;
+	/* Preserve legacy two-column tables; reject truncated extended tables. */
+	if (array_len <= 0 || array_len % stride ||
+	    (!extended && array_len > (ADAPTER_AUTH_FAILED + 1) * 2))
+		return -EINVAL;
+	if (mca_parse_dts_u32_array(node, name, idata, array_len))
+		return -EINVAL;
+
+	rows = array_len / stride;
+	table = kcalloc(ADAPTER_AUTH_FAILED + 1, sizeof(*table), GFP_KERNEL);
+	if (!table)
+		return -ENOMEM;
+	for (i = 0; i < rows; i++) {
+		index = extended ? strategy_wireless_dt_adapter_map[i] : i;
+		if (index < 0)
+			continue;
+		if (idata[i * stride] > INT_MAX || idata[i * stride + 1] > INT_MAX)
+			goto invalid;
+		table[index].icl_setting = idata[i * stride];
+		table[index].fcc_setting = idata[i * stride + 1];
+		table[index].allow_qc = true;
+		if (extended) {
+			u32 vout = idata[i * stride + 2];
+			u32 allow_qc = idata[i * stride + 3];
+
+			/* Supported Myron restrictions: no override, 6 V or 9 V. */
+			if ((vout && vout != 6000 && vout != 9000) ||
+			    allow_qc > 1 || (vout && allow_qc))
+				goto invalid;
+			table[index].vout = vout;
+			table[index].allow_qc = allow_qc;
+		}
 	}
-
-	if (mca_parse_dts_u32_array(node, name, idata, array_len)) {
-		mca_log_err("parse %s data failed", name);
-		return -1;
-	}
-
-	len_temp = array_len / ADAPTER_CMD_TYPE_SETTING_MAX;
-	cmd_type_info->cmd_fx = kcalloc(
-		len_temp, sizeof(struct adapter_cmd_type_fx), GFP_KERNEL);
-
-	for (i = 0; i < len_temp; i++) {
-		j = ADAPTER_CMD_TYPE_SETTING_MAX * i;
-		cmd_type_info->cmd_fx[i].icl_setting =
-			idata[j + ADAPTER_CMD_TYPE_SETTING_ICL];
-		cmd_type_info->cmd_fx[i].fcc_setting =
-			idata[j + ADAPTER_CMD_TYPE_SETTING_FCC];
-		mca_log_debug("[%d] icl_setting: %d; fcc_setting: %d\n", i,
-			      cmd_type_info->cmd_fx[i].icl_setting,
-			      cmd_type_info->cmd_fx[i].fcc_setting);
-	}
+	cmd_type_info->cmd_fx = table;
+	cmd_type_info->num_adapters = extended ? ADAPTER_AUTH_FAILED + 1 : rows;
+	cmd_type_info->extended_format = extended;
 	return 0;
+invalid:
+	kfree(table);
+	return -EINVAL;
 }
 
 static int strategy_wireless_parse_adapter_cmd_type_info(
@@ -4403,8 +4464,10 @@ static int strategy_wireless_parse_dt(struct strategy_wireless_dev *info)
 		      info->rx_max_iout[CHG_MODE_DIV2]);
 
 	ret = strategy_wireless_parse_adapter_info(info);
-	if (ret)
-		mca_log_err("parst dts adapter info failed\n");
+	if (ret) {
+		mca_log_err("parse dts adapter info failed: %d\n", ret);
+		return ret;
+	}
 
 	ret = strategy_wireless_parse_adapter_cmd_type_info(info);
 	if (ret)
@@ -4869,8 +4932,11 @@ static int basic_wireless_class_probe(struct platform_device *pdev)
 	device_init_wakeup(info->dev, true);
 	ret = strategy_wireless_parse_dt(info);
 	if (ret) {
-		mca_log_err("parst dts failed\n");
-		return ret;
+		int i;
+
+		for (i = 0; i < ADAPTER_CMD_TYPE_MAX; i++)
+			kfree(info->cmd_type_info[i].cmd_fx);
+		return dev_err_probe(info->dev, ret, "wireless DT tables invalid\n");
 	}
 
 	INIT_LIST_HEAD(&info->header);
