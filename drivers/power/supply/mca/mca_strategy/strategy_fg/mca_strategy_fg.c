@@ -2614,6 +2614,23 @@ void strategy_fg_update_batt_info(struct strategy_fg *fg)
 	strategy_fg_update_rm(fg);
 }
 
+static int strategy_fg_attach_ready_consumer(struct device *dev, void *unused)
+{
+	int ret;
+
+	/* These probes explicitly defer until the asynchronous FG check succeeds. */
+	if (!of_device_is_compatible(dev->of_node, "mca,basic_wireless") &&
+	    !of_device_is_compatible(dev->of_node, "mca,quick_wireless") &&
+	    !of_device_is_compatible(dev->of_node, "mca,quick_charger"))
+		return 0;
+
+	/* device_attach locks the device and leaves an already bound driver alone. */
+	ret = device_attach(dev);
+	if (ret < 0)
+		dev_warn(dev, "FG ready: consumer attach failed: %d\n", ret);
+	return 0;
+}
+
 static void strategy_fg_monitor_workfunc(struct work_struct *work)
 {
 	struct strategy_fg *fg =
@@ -2643,6 +2660,17 @@ static void strategy_fg_monitor_workfunc(struct work_struct *work)
 		if (hwid && hwid->country_version == CountryCN &&
 		    fg->fg_init_flag && fg->cfg.support_fl4p0)
 			platform_fg_ops_fl4p0_enable_check(FG_IC_MASTER);
+
+		/*
+		 * A flag changed by work does not trigger the driver core's deferred
+		 * probe mechanism. Retry just the three FG consumers once, on the
+		 * not-ready -> ready transition. Never unbind or periodically rescan.
+		 */
+		if (fg->fg_init_flag) {
+			mca_log_info("FG ready: retry deferred charging consumers\n");
+			bus_for_each_dev(&platform_bus_type, NULL, NULL,
+					 strategy_fg_attach_ready_consumer);
+		}
 	}
 
 	if (fg->resume_update_soc) {
