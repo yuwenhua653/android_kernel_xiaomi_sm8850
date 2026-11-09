@@ -18,6 +18,7 @@
  */
 #include <linux/slab.h>
 #include <linux/module.h>
+#include <linux/ratelimit.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <linux/delay.h>
@@ -876,6 +877,8 @@ out:
 static int
 mca_charger_thermal_init_wireless_voter(struct mca_thermal_info *info)
 {
+	static DEFINE_RATELIMIT_STATE(init_rs, 60 * HZ, 1);
+
 	if (info->wireless_ctrl_info.voter_ok)
 		return 0;
 
@@ -926,7 +929,8 @@ mca_charger_thermal_init_wireless_voter(struct mca_thermal_info *info)
 	return 0;
 
 out:
-	mca_log_err("init wireless voter failed\n");
+	if (__ratelimit(&init_rs))
+		mca_log_err("init wireless voter failed; keep waiting for supplier\n");
 	return -1;
 }
 
