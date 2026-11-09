@@ -4757,82 +4757,133 @@ static void strategy_wireless_init_work(struct strategy_wireless_dev *info)
 			  strategy_wireless_change_cp_mode_workfunc);
 }
 
+/* Each basic-wireless voter owns a callback into this probe's private data. */
+static struct mca_votable *strategy_wireless_create_voter(
+	const char *name, int type,
+	int (*callback)(struct mca_votable *, void *, int, const char *),
+	int default_value, struct strategy_wireless_dev *info)
+{
+	if (mca_find_votable(name))
+		return ERR_PTR(-EBUSY);
+	return mca_create_votable(name, type, callback, default_value, info);
+}
+
+static void strategy_wireless_destroy_voters(struct strategy_wireless_dev *info)
+{
+	struct mca_votable **voters[] = {
+		&info->input_limit_voter,
+		&info->bpp_in_voter,
+		&info->bppqc2_in_voter,
+		&info->bppqc3_in_voter,
+		&info->epp_in_voter,
+		&info->auth_20w_voter,
+		&info->auth_30w_voter,
+		&info->auth_50w_voter,
+		&info->auth_80w_voter,
+		&info->auth_voice_box_voter,
+		&info->auth_magnet_30w_voter,
+		&info->sw_qc_ichg_voter,
+		&info->sw_thermal_ichg_voter,
+		&info->wls_input_suspend_voter,
+		&info->force_vout_6v_voter,
+	};
+	int i;
+
+	for (i = ARRAY_SIZE(voters) - 1; i >= 0; i--) {
+		if (!IS_ERR_OR_NULL(*voters[i]))
+			mca_destroy_votable(*voters[i]);
+		*voters[i] = NULL;
+	}
+}
+
+static void strategy_wireless_free_cmd_tables(struct strategy_wireless_dev *info)
+{
+	int i;
+
+	for (i = 0; i < ADAPTER_CMD_TYPE_MAX; i++) {
+		kfree(info->cmd_type_info[i].cmd_fx);
+		info->cmd_type_info[i].cmd_fx = NULL;
+	}
+}
+
 static int strategy_wireless_init_voter(struct strategy_wireless_dev *info)
 {
-	info->input_limit_voter = mca_create_votable(
+	info->input_limit_voter = strategy_wireless_create_voter(
 		"wireless_buck_input", MCA_VOTE_MIN,
 		strategy_wireless_set_input_curr_limit, 1100, info);
 	if (IS_ERR(info->input_limit_voter))
-		return -1;
-	info->bpp_in_voter = mca_create_votable("wireless_bpp_in", MCA_VOTE_MIN,
+		return PTR_ERR(info->input_limit_voter);
+	info->bpp_in_voter = strategy_wireless_create_voter("wireless_bpp_in", MCA_VOTE_MIN,
 						strategy_wireless_set_bpp_input,
 						1100, info);
 	if (IS_ERR(info->bpp_in_voter))
-		return -1;
-	info->bppqc2_in_voter = mca_create_votable(
+		return PTR_ERR(info->bpp_in_voter);
+	info->bppqc2_in_voter = strategy_wireless_create_voter(
 		"wireless_bppqc2_in", MCA_VOTE_MIN,
 		strategy_wireless_set_bppqc2_input, 1100, info);
 	if (IS_ERR(info->bppqc2_in_voter))
-		return -1;
-	info->bppqc3_in_voter = mca_create_votable(
+		return PTR_ERR(info->bppqc2_in_voter);
+	info->bppqc3_in_voter = strategy_wireless_create_voter(
 		"wireless_bppqc3_in", MCA_VOTE_MIN,
 		strategy_wireless_set_bppqc3_input, 1100, info);
 	if (IS_ERR(info->bppqc3_in_voter))
-		return -1;
-	info->epp_in_voter = mca_create_votable("wireless_epp_in", MCA_VOTE_MIN,
+		return PTR_ERR(info->bppqc3_in_voter);
+	info->epp_in_voter = strategy_wireless_create_voter("wireless_epp_in", MCA_VOTE_MIN,
 						strategy_wireless_set_epp_input,
 						1100, info);
 	if (IS_ERR(info->epp_in_voter))
-		return -1;
-	info->auth_20w_voter = mca_create_votable(
+		return PTR_ERR(info->epp_in_voter);
+	info->auth_20w_voter = strategy_wireless_create_voter(
 		"wireless_auth_20w", MCA_VOTE_MIN,
 		strategy_wireless_set_auth_20w_ichg, 15600, info);
 	if (IS_ERR(info->auth_20w_voter))
-		return -1;
-	info->auth_30w_voter = mca_create_votable(
+		return PTR_ERR(info->auth_20w_voter);
+	info->auth_30w_voter = strategy_wireless_create_voter(
 		"wireless_auth_30w", MCA_VOTE_MIN,
 		strategy_wireless_set_auth_30w_ichg, 15600, info);
 	if (IS_ERR(info->auth_30w_voter))
-		return -1;
-	info->auth_50w_voter = mca_create_votable(
+		return PTR_ERR(info->auth_30w_voter);
+	info->auth_50w_voter = strategy_wireless_create_voter(
 		"wireless_auth_50w", MCA_VOTE_MIN,
 		strategy_wireless_set_auth_50w_ichg, 15600, info);
 	if (IS_ERR(info->auth_50w_voter))
-		return -1;
-	info->auth_80w_voter = mca_create_votable(
+		return PTR_ERR(info->auth_50w_voter);
+	info->auth_80w_voter = strategy_wireless_create_voter(
 		"wireless_auth_80w", MCA_VOTE_MIN,
 		strategy_wireless_set_auth_80w_ichg, 15600, info);
 	if (IS_ERR(info->auth_80w_voter))
-		return -1;
-	info->auth_voice_box_voter = mca_create_votable(
+		return PTR_ERR(info->auth_80w_voter);
+	info->auth_voice_box_voter = strategy_wireless_create_voter(
 		"wireless_auth_voice_box", MCA_VOTE_MIN,
 		strategy_wireless_set_auth_voice_box_ichg, 15600, info);
 	if (IS_ERR(info->auth_voice_box_voter))
-		return -1;
-	info->auth_magnet_30w_voter = mca_create_votable(
+		return PTR_ERR(info->auth_voice_box_voter);
+	info->auth_magnet_30w_voter = strategy_wireless_create_voter(
 		"wireless_auth_magnet_30w", MCA_VOTE_MIN,
 		strategy_wireless_set_auth_magnet_30w_ichg, 15600, info);
 	if (IS_ERR(info->auth_magnet_30w_voter))
-		return -1;
-	info->sw_qc_ichg_voter = mca_create_votable(
+		return PTR_ERR(info->auth_magnet_30w_voter);
+	info->sw_qc_ichg_voter = strategy_wireless_create_voter(
 		"wireless_sw_qc_ich", MCA_VOTE_MIN,
 		strategy_wireless_sw_set_qc_ichg, 15600, info);
 	if (IS_ERR(info->sw_qc_ichg_voter))
-		return -1;
-	info->sw_thermal_ichg_voter = mca_create_votable(
+		return PTR_ERR(info->sw_qc_ichg_voter);
+	info->sw_thermal_ichg_voter = strategy_wireless_create_voter(
 		"wireless_sw_thermal_ich", MCA_VOTE_MIN,
 		strategy_wireless_sw_set_thermal_ichg, 15600, info);
 	if (IS_ERR(info->sw_thermal_ichg_voter))
-		return -1;
+		return PTR_ERR(info->sw_thermal_ichg_voter);
 	info->wls_input_suspend_voter =
-		mca_create_votable("wireless_input_suspend", MCA_VOTE_OR,
+		strategy_wireless_create_voter("wireless_input_suspend", MCA_VOTE_OR,
 				   strategy_wireless_input_suspend,
 				   MCA_WLS_CHARGE_INPUT_SUSPEND, info);
 	if (IS_ERR(info->wls_input_suspend_voter))
-		return -1;
-	info->force_vout_6v_voter = mca_create_votable(
+		return PTR_ERR(info->wls_input_suspend_voter);
+	info->force_vout_6v_voter = strategy_wireless_create_voter(
 		"wireless_force_vout_6v", MCA_VOTE_OR,
 		strategy_wireless_force_set_vout_6v, 0, info);
+	if (IS_ERR(info->force_vout_6v_voter))
+		return PTR_ERR(info->force_vout_6v_voter);
 	return 0;
 }
 
@@ -4929,13 +4980,9 @@ static int basic_wireless_class_probe(struct platform_device *pdev)
 
 	info->dev = &pdev->dev;
 	platform_set_drvdata(pdev, info);
-	device_init_wakeup(info->dev, true);
 	ret = strategy_wireless_parse_dt(info);
 	if (ret) {
-		int i;
-
-		for (i = 0; i < ADAPTER_CMD_TYPE_MAX; i++)
-			kfree(info->cmd_type_info[i].cmd_fx);
+		strategy_wireless_free_cmd_tables(info);
 		return dev_err_probe(info->dev, ret, "wireless DT tables invalid\n");
 	}
 
@@ -4944,20 +4991,18 @@ static int basic_wireless_class_probe(struct platform_device *pdev)
 	init_waitqueue_head(&info->wait_que);
 	strategy_wireless_init_work(info);
 
-	info->wl_irq_running = true;
-	schedule_delayed_work(&info->process_irq_work, 0);
+	/* No externally callable strategy or worker until all voters exist. */
+	ret = strategy_wireless_init_voter(info);
+	if (ret)
+		goto err_voters;
+	ret = device_init_wakeup(info->dev, true);
+	if (ret)
+		goto err_voters;
 
 	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
 					strategy_wireless_process_event,
 					strategy_wireless_get_status, NULL,
 					info);
-
-	ret = strategy_wireless_init_voter(info);
-	if (ret) {
-		mca_log_err("init voter err\n");
-		return -1;
-	}
-	schedule_delayed_work(&info->find_voter_work, msecs_to_jiffies(0));
 
 	strategy_wireless_create_group(info->dev);
 
@@ -4967,6 +5012,11 @@ static int basic_wireless_class_probe(struct platform_device *pdev)
 	g_basic_smartchg_if_ops.data = info;
 	(void)mca_smartchg_if_ops_register(&g_basic_smartchg_if_ops);
 
+	info->strategy_init_done = 1;
+	info->wl_irq_running = true;
+	schedule_delayed_work(&info->process_irq_work, 0);
+	schedule_delayed_work(&info->find_voter_work, 0);
+
 	platform_class_wireless_is_present(WIRELESS_ROLE_MASTER, &wls_online);
 	if (wls_online) {
 		mca_log_err("avoid missing wls_online event in probe\n");
@@ -4974,10 +5024,14 @@ static int basic_wireless_class_probe(struct platform_device *pdev)
 				       MCA_EVENT_WIRELESS_CONNECT, NULL);
 	}
 
-	info->strategy_init_done = 1;
 	mca_log_err("probe End\n");
 
-	return ret;
+	return 0;
+
+err_voters:
+	strategy_wireless_destroy_voters(info);
+	strategy_wireless_free_cmd_tables(info);
+	return dev_err_probe(info->dev, ret, "wireless voter initialization failed\n");
 }
 
 static void strategy_wireless_stop_irq_worker(struct strategy_wireless_dev *info)
