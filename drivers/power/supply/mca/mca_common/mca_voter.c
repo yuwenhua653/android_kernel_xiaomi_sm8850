@@ -869,10 +869,6 @@ struct mca_votable *mca_create_votable(
 		votable->effective_result = 0;
 	votable->effective_client_id = -EINVAL;
 
-	spin_lock_irqsave(&votable_list_slock, flags);
-	list_add(&votable->list, &votable_list);
-	spin_unlock_irqrestore(&votable_list_slock, flags);
-
 	votable->root = debugfs_create_dir(name, debug_root);
 	if (!votable->root) {
 		mca_log_err("Couldn't create debug dir %s\n", name);
@@ -909,6 +905,11 @@ struct mca_votable *mca_create_votable(
 	}
 
 	votable->default_value = default_value;
+
+	/* Publish only a fully initialized voter; failures above free it. */
+	spin_lock_irqsave(&votable_list_slock, flags);
+	list_add(&votable->list, &votable_list);
+	spin_unlock_irqrestore(&votable_list_slock, flags);
 
 	return votable;
 }
