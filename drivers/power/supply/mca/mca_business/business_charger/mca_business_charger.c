@@ -840,6 +840,9 @@ business_charger_process_verify_process_change(struct business_charger *charger,
 static void
 business_charger_process_pmic_init_done(struct business_charger *charger)
 {
+	/* A real PMIC event starts a fresh readiness check, including after SSR. */
+	cancel_delayed_work_sync(&charger->pmic_init_done_notify_work);
+	charger->pmic_init_retries = 0;
 	mca_log_err("pmic init done\n");
 	mca_strategy_func_process(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
 				  MCA_EVENT_PMIC_INIT_DONE, 1);
@@ -849,6 +852,16 @@ business_charger_process_pmic_init_done(struct business_charger *charger)
 		schedule_delayed_work(&charger->pmic_init_done_notify_work, 0);
 }
 
+static unsigned int business_charger_pmic_retry_ms(unsigned int retries)
+{
+	/* Fast boot discovery, then bounded polling for an absent supplier. */
+	if (retries < 48)
+		return 250;
+	if (retries < 58)
+		return 5000;
+	return 60000;
+}
+
 static void
 business_charger_pmic_init_done_notify_work(struct work_struct *work)
 {
@@ -856,23 +869,30 @@ business_charger_pmic_init_done_notify_work(struct work_struct *work)
 		work, struct business_charger, pmic_init_done_notify_work.work);
 	int wls_init = 0;
 	int buck_init = 0;
-
-	mca_log_info("pmic init done notify work\n");
+	int wls_ret = 0;
+	int buck_ret;
+	unsigned int delay_ms;
 
 	if (!charger->wls_support)
 		wls_init = 1;
 	else
-		(void)mca_strategy_func_get_status(
+		wls_ret = mca_strategy_func_get_status(
 			STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
 			STRATEGY_STATUS_TYPE_CHARGING, &wls_init);
-	(void)mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
+	buck_ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
 					   STRATEGY_STATUS_TYPE_CHARGING,
 					   &buck_init);
 
-	if (!wls_init || !buck_init) {
-		mca_log_err("wls_basic or buckchg not init done, rerun work\n");
+	if (wls_ret || buck_ret || !wls_init || !buck_init) {
+		delay_ms = business_charger_pmic_retry_ms(charger->pmic_init_retries);
+		if (!charger->pmic_init_retries || delay_ms >= 5000)
+			mca_log_err("PMIC readiness: wireless=%d/%d buck=%d/%d fg=%d retry=%ums\n",
+				    wls_ret, wls_init, buck_ret, buck_init,
+				    strategy_class_fg_ops_is_init_ok(), delay_ms);
+		if (charger->pmic_init_retries < 58)
+			charger->pmic_init_retries++;
 		schedule_delayed_work(&charger->pmic_init_done_notify_work,
-				      msecs_to_jiffies(250));
+				      msecs_to_jiffies(delay_ms));
 		return;
 	}
 
@@ -881,7 +901,12 @@ business_charger_pmic_init_done_notify_work(struct work_struct *work)
 		return;
 	}
 	mca_log_err("pmic init done, process event\n");
-	business_charger_process_pmic_init_done(charger);
+	/* Do not call the event entry point: it queues this same work again. */
+	mca_strategy_func_process(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
+				  MCA_EVENT_PMIC_INIT_DONE, 1);
+	if (charger->wls_support)
+		mca_strategy_func_process(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
+					  MCA_EVENT_PMIC_INIT_DONE, 1);
 }
 
 static void

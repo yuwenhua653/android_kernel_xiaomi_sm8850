@@ -77,6 +77,7 @@ struct business_charger {
 	struct delayed_work report_quick_charge_type_work;
 	struct delayed_work wireless_rerun_usb_sns_work;
 	struct delayed_work pmic_init_done_notify_work;
+	unsigned int pmic_init_retries;
 	union charger_abnormal_info abnormal_info;
 	int wired_qucik_charge_type;
 	int wired_power_max;
