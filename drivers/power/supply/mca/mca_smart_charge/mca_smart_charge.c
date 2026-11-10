@@ -1773,6 +1773,13 @@ static int smart_charge_probe(struct platform_device *pdev)
 	}
 
 	info->dev = &pdev->dev;
+	/* Sysfs, strategy and panel callbacks can run as soon as published. */
+	INIT_DELAYED_WORK(&info->smart_charge_work, smart_charge_workfunc);
+	INIT_DELAYED_WORK(&info->smart_sense_chg_work,
+			  smart_charge_sense_chg_workfunc);
+	INIT_DELAYED_WORK(&info->smart_soc_limit_work,
+			  smart_charge_soc_limit_workfunc);
+	info->fake_scene = SMART_CHARGE_FAKE_SCENE_DEFAULT;
 	platform_set_drvdata(pdev, info);
 	global_smartchg_info = info;
 	ret = smart_charge_parse_dt(info);
@@ -1790,19 +1797,6 @@ static int smart_charge_probe(struct platform_device *pdev)
 	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_SMARTCHG,
 					mca_smart_charge_process_event, NULL,
 					NULL, info);
-
-	info->panel_nb.notifier_call = smart_charge_panel_notifier_cb;
-	mca_event_block_notify_register(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
-
-	info->thermal_nb.notifier_call = smart_charge_thermal_notifier_cb;
-	mca_event_block_notify_register(MCA_EVENT_TYPE_THERMAL_TEMP,
-					&info->thermal_nb);
-
-	INIT_DELAYED_WORK(&info->smart_charge_work, smart_charge_workfunc);
-	INIT_DELAYED_WORK(&info->smart_sense_chg_work,
-			  smart_charge_sense_chg_workfunc);
-	INIT_DELAYED_WORK(&info->smart_soc_limit_work,
-			  smart_charge_soc_limit_workfunc);
 
 	(void)mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
 					   STRATEGY_STATUS_TYPE_ONLINE,
@@ -1828,24 +1822,32 @@ static int smart_charge_probe(struct platform_device *pdev)
 #else
 	info->smart_charge_class = class_create(THIS_MODULE, "smart_charge");
 #endif
-	if (!info->smart_charge_class) {
+	if (IS_ERR(info->smart_charge_class)) {
+		ret = PTR_ERR(info->smart_charge_class);
 		mca_log_err("create smart charge class failed\n");
 		goto error2;
 	}
 
 	info->sys_dev = device_create(info->smart_charge_class, NULL,
 				      info->dev_num, NULL, "smart_charge_cdev");
-	if (!info->sys_dev) {
+	if (IS_ERR(info->sys_dev)) {
+		ret = PTR_ERR(info->sys_dev);
 		mca_log_err("create smart charge device failed\n");
 		goto error3;
 	}
+
+	/* Subscribe only after the remaining fallible device setup succeeds. */
+	info->panel_nb.notifier_call = smart_charge_panel_notifier_cb;
+	mca_event_block_notify_register(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
+
+	info->thermal_nb.notifier_call = smart_charge_thermal_notifier_cb;
+	mca_event_block_notify_register(MCA_EVENT_TYPE_THERMAL_TEMP,
+					&info->thermal_nb);
 
 	if (online || wireless_online) {
 		info->online = 1;
 		schedule_delayed_work(&info->smart_charge_work, 0);
 	}
-
-	info->fake_scene = SMART_CHARGE_FAKE_SCENE_DEFAULT;
 
 	mca_log_info("done\n");
 	return 0;
@@ -1857,7 +1859,7 @@ error2:
 error1:
 	unregister_chrdev_region(info->dev_num, 1);
 
-	return -1;
+	return ret;
 }
 
 static void smart_charge_remove(struct platform_device *pdev)
