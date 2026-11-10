@@ -48,6 +48,16 @@ config MYRON_MCA_BASE
     help
       Seven MCA infrastructure modules. Charger ICs, ADSP protocols
       and current/voltage/thermal policy drivers are not included.
+config MCA_QCOM_PANEL
+	tristate "MCA Qualcomm panel event bridge"
+	depends on MYRON_MCA_BASE && DRM_PANEL && QCOM_PANEL_EVENT_NOTIFIER
+	help
+	  Forward Myron charge-screen blank/unblank and HBM events to MCA
+	  charging strategies. Uses deferred probe while the panel is unavailable.
+	  The panel list is supplied by the sibling charge-screen DT node.
+	  This restores the event source consumed by the battery gauge and
+	  smart-charge policies without introducing a periodic polling worker.
+
 config MYRON_MCA_INTERFACE
     tristate "Myron MCA charge interface source candidate"
     depends on SYSFS && OF && MYRON_MCA_BASE

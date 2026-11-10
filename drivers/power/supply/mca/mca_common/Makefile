@@ -8,6 +8,7 @@ obj-$(CONFIG_MYRON_MCA_SERVICES) += mca_adsp_glink.o
 obj-$(CONFIG_MYRON_MCA_INTERFACE) += mca_charge_interface.o
 obj-$(CONFIG_MYRON_MCA_PLATFORM) += mca_charge_mievent.o
 obj-$(CONFIG_MYRON_MCA_BASE) += mca_event.o
+obj-$(CONFIG_MCA_QCOM_PANEL) += mca_qcom_panel.o
 obj-$(CONFIG_MYRON_MCA_BASE) += mca_hwid.o
 obj-$(CONFIG_MYRON_MCA_BASE) += mca_log.o
 obj-$(CONFIG_MYRON_MCA_BASE) += mca_parse_dts.o
