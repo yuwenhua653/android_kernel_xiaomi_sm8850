@@ -7,6 +7,7 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/module.h>
+#include <linux/srcu.h>
 #include <linux/soc/qcom/panel_event_notifier.h>
 
 struct panel_event_notifier_entry {
@@ -17,6 +18,7 @@ struct panel_event_notifier_entry {
 };
 
 static DEFINE_MUTEX(panel_event_notifier_entries_lock);
+DEFINE_STATIC_SRCU(panel_event_notifier_srcu);
 static struct panel_event_notifier_entry
 		panel_event_notifier_entries[PANEL_EVENT_NOTIFIER_CLIENT_MAX];
 
@@ -92,6 +94,8 @@ EXPORT_SYMBOL(panel_event_notifier_register);
  * panel_event_notifier_unregister: responsible for unregistering clients.
  *
  * @cookie: cookie used for unregistering client.
+ *
+ * Waits for callbacks already in progress. Do not call from a callback.
  */
 void panel_event_notifier_unregister(void *cookie)
 {
@@ -106,6 +110,7 @@ void panel_event_notifier_unregister(void *cookie)
 	entry->pvt_data = NULL;
 	entry->tag = PANEL_EVENT_NOTIFICATION_NONE;
 	mutex_unlock(&panel_event_notifier_entries_lock);
+	synchronize_srcu(&panel_event_notifier_srcu);
 }
 EXPORT_SYMBOL(panel_event_notifier_unregister);
 
@@ -129,19 +134,21 @@ void panel_event_notification_trigger(enum panel_event_notifier_tag tag,
 	struct panel_event_notifier_entry *entry;
 	panel_event_notifier_handler handler = NULL;
 	void *pvt_data;
-	int i;
+	int i, srcu_idx;
 
-	if (!panel_event_notifier_tag_valid(tag)) {
+	if (!notification || !panel_event_notifier_tag_valid(tag)) {
 		pr_err("Invalid panel notifier tag\n");
 		return;
 	}
 
 	for (i = 0; i < PANEL_EVENT_NOTIFIER_CLIENT_MAX; i++) {
+		srcu_idx = srcu_read_lock(&panel_event_notifier_srcu);
 		mutex_lock(&panel_event_notifier_entries_lock);
 		entry = &panel_event_notifier_entries[i];
 		if (notification->panel != entry->panel) {
 			pr_debug("invalid panel found notification_panel\n");
 			mutex_unlock(&panel_event_notifier_entries_lock);
+			srcu_read_unlock(&panel_event_notifier_srcu, srcu_idx);
 			continue;
 		}
 
@@ -149,6 +156,7 @@ void panel_event_notification_trigger(enum panel_event_notifier_tag tag,
 		if (entry->tag != tag) {
 			pr_err("tag mismatch entry->tag:%d tag:%d\n", entry->tag, tag);
 			mutex_unlock(&panel_event_notifier_entries_lock);
+			srcu_read_unlock(&panel_event_notifier_srcu, srcu_idx);
 			continue;
 		}
 
@@ -161,7 +169,7 @@ void panel_event_notification_trigger(enum panel_event_notifier_tag tag,
 
 		if (handler)
 			handler(tag, notification, pvt_data);
-
+		srcu_read_unlock(&panel_event_notifier_srcu, srcu_idx);
 	}
 }
 EXPORT_SYMBOL(panel_event_notification_trigger);

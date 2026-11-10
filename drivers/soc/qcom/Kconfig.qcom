@@ -1054,6 +1054,7 @@ config QCOM_MEM_OFFLINE_ZONE_BALANCING
 config QCOM_PANEL_EVENT_NOTIFIER
 	tristate "panel event notifier"
 	depends on DRM
+	select SRCU
 	help
 	  Enabling this option adds panel event notifier driver.
 	  This driver is responsible for notifying clients interested in display
