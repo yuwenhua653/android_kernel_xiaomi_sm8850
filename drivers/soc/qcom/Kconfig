@@ -209,6 +209,15 @@ config QCOM_SMP2P
 	  Say yes here to support the Qualcomm Shared Memory Point to Point
 	  protocol.
 
+config QCOM_SMP2P_SLEEPSTATE
+	tristate "Qualcomm SMP2P AP sleep-state notifications"
+	depends on ARM64 && OF && PM_SLEEP
+	depends on QCOM_SMP2P
+	help
+	  Notify remote processors when the AP prepares for and returns from
+	  system suspend, and handle remote sleep-state wake events on Canoe.
+	  This builds the smp2p_sleepstate module.
+
 config QCOM_SMSM
 	tristate "Qualcomm Shared Memory State Machine"
 	depends on MAILBOX

@@ -83,6 +83,7 @@ obj-$(CONFIG_QTI_PMIC_GLINK) += qti_pmic_glink.o
 obj-$(CONFIG_QCOM_SECURE_BUFFER) += secure_buffer.o
 obj-$(CONFIG_QCOM_SMEM) += smem.o
 obj-$(CONFIG_QCOM_SMP2P) += smp2p.o
+obj-$(CONFIG_QCOM_SMP2P_SLEEPSTATE) += smp2p_sleepstate.o
 obj-$(CONFIG_QCOM_SOCINFO) += socinfo.o
 obj-$(CONFIG_QCOM_WCD_USBSS_I2C) += wcd_usbss_i2c.o
 wcd_usbss_i2c-y := wcd-usbss-regmap.o wcd-usbss-tables.o wcd-usbss-utils.o wcd939x-i2c.o
