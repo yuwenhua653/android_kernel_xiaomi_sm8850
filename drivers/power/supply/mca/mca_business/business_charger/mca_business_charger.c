@@ -130,15 +130,24 @@ static void business_charger_add_event_node(unsigned long event, void *data,
 {
 	struct charger_event_lis_node *event_node = NULL;
 
+	if (size < 0 || (size && !data)) {
+		pr_err_ratelimited("%s: invalid payload for event %lu\n",
+				   __func__, event);
+		return;
+	}
+
 	event_node = kmalloc(sizeof(*event_node), GFP_ATOMIC);
 	if (!event_node)
 		return;
 
 	event_node->event = event;
 	event_node->data = NULL;
-	if (data) {
-		event_node->data = kmalloc(size, GFP_ATOMIC);
-		memcpy(event_node->data, data, size);
+	if (size) {
+		event_node->data = kmemdup(data, size, GFP_ATOMIC);
+		if (!event_node->data) {
+			kfree(event_node);
+			return;
+		}
 	}
 	spin_lock(&charger->list_lock);
 	list_add_tail(&event_node->lnode, &charger->header);
@@ -204,11 +213,14 @@ static int business_charger_notifier_hw_cb(struct notifier_block *nb,
 
 	switch (event) {
 	case MCA_EVENT_BATT_BTB_CHANGE:
+		size = sizeof(bool);
+		break;
 	case MCA_EVENT_LPD_STATUS_CHANGE:
 	case MCA_EVENT_CC_SHORT_VBUS:
 	case MCA_EVENT_VBAT_OVP_CHANGE:
 	case MCA_EVENT_IBAT_OCP_CHANGE:
 	case MCA_EVENT_CP_REVERT_CHANGE:
+	case MCA_EVENT_SBU_LPD_CHANGE:
 		size = sizeof(int);
 		break;
 	default:
@@ -232,6 +244,7 @@ static int business_charger_notifier_chg_sts_cb(struct notifier_block *nb,
 	case MCA_EVENT_SOC_LIMIT:
 	case MCA_EVENT_BATTERY_DTPT:
 	case MCA_EVENT_CSD_SEND_PULSE:
+	case MCA_EVENT_FG_OTA_PROCESS:
 		size = sizeof(int);
 		break;
 	default:
