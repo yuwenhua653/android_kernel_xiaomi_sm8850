@@ -86,10 +86,10 @@ factory module, the OS4 ROM packaging, or boot on a phone.
 ## OS4 display and touch
 
 Kbuild builds `nezha-canoe-board-overlay.dtbo` directly from the checked-in
-OS4.0.7.0.XPACNXM panel sources in
-`qcom/display/display/nezha-os4/` in the device-tree repository. A clean
-checkout contains all ten panel configurations and their DSI commands and
-timings. The OTA extraction tool is optional for comparison with the factory
+OS4.0.7.0.XPACNXM panel sources. The device-tree repository's
+`qcom/display/display/nezha-sde-display.dtsi` includes the panel and pin
+definitions from the same directory. A clean checkout contains all ten
+panel configurations and their DSI commands and timings. The OTA extraction tool is optional for comparison with the factory
 image.
 
 For a **source** Canoe base, use this overlay order with the built
