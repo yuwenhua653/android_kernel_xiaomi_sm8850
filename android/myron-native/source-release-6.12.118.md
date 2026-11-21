@@ -52,9 +52,8 @@ updating a GitHub branch alone does not override an existing manifest revision.
 The three source histories are now published independently under
 `yuwenhua653/android_kernel_xiaomi_sm8850`,
 `yuwenhua653/android_kernel_xiaomi_sm8850-modules`, and
-`yuwenhua653/android_kernel_xiaomi_sm8850-devicetrees`. Use `lineage-24.0`
-explicitly, as the repository default branch is currently the migration-only
-`main` branch. The original `myron/native-*` branches remain available.
+`yuwenhua653/android_kernel_xiaomi_sm8850-devicetrees`. All three repositories use `lineage-24.0` as their default branch.
+The migration-only `main` branch is retained for provenance. The original `myron/native-*` branches remain available.
 
 The new kernel repository starts from `3bc662f2695f21c7c4047826cd65b9a60d5408f9`.
 This manifest migration changes repository addresses and branch references only;
