@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config MCA_EXTERNAL_WIRELESS_SC96281
+	tristate "Myron SC96281 wireless receiver"
+	depends on I2C && OF && GPIOLIB && MYRON_MCA_SERVICES
+	select REGMAP_I2C
+	help
+	  SC96281 receiver using Myron dual Hall GPIOs and six-column FOD data.
+	  Uses resident IC firmware; contains no firmware programming payload.
+	  The MCA callback provider cannot be unloaded after registration.

@@ -35,10 +35,8 @@ struct telemetry_counter_attributes_value_t {
 };
 
 #if IS_ENABLED(CONFIG_QCOM_CPUSS_TELEMETRY)
-const char *get_telemetry_counter_name(u32 counter_id);
 int64_t get_telemetry_counter_value(u32 counter_id);
 #else
-static inline const char *get_telemetry_counter_name(u32 counter_id) { return NULL; }
 static inline int64_t get_telemetry_counter_value(u32 counter_id) { return -ENODEV; }
 #endif
 #endif /* CPUSS_TELEMETRY_H */

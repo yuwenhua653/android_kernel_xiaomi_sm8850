@@ -17,3 +17,4 @@ obj-$(CONFIG_RPMSG_QCOM_GLINK) += qcom_glink.o
 qcom_glink-y := qcom_glink_memshare.o qcom_glink_native.o qcom_glink_ssr.o
 obj-$(CONFIG_RPMSG_QCOM_GLINK_SMEM) += qcom_glink_smem.o
 obj-$(CONFIG_RPMSG_QCOM_SMD) += qcom_smd.o
+obj-$(CONFIG_RPMSG_QCOM_GLINK_SPSS) += qcom_glink_spss.o

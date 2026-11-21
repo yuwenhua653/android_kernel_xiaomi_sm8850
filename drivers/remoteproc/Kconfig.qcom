@@ -91,6 +91,7 @@ config QCOM_SPSS
 	tristate "QTI Secure Subsystem Peripheral loading support"
 	depends on OF && ARCH_QCOM
 	depends on QCOM_SMEM
+	depends on RPMSG_QCOM_GLINK_SPSS && QCOM_AOSS_QMP
 	depends on RPMSG_QCOM_SMD || (COMPILE_TEST && RPMSG_QCOM_SMD=n)
 	depends on RPMSG_QCOM_GLINK_SMEM || RPMSG_QCOM_GLINK_SMEM=n
 	depends on QCOM_SYSMON || QCOM_SYSMON=n

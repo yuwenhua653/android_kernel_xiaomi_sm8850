@@ -87,3 +87,7 @@ obj-$(CONFIG_QCOM_SMP2P_SLEEPSTATE) += smp2p_sleepstate.o
 obj-$(CONFIG_QCOM_SOCINFO) += socinfo.o
 obj-$(CONFIG_QCOM_WCD_USBSS_I2C) += wcd_usbss_i2c.o
 wcd_usbss_i2c-y := wcd-usbss-regmap.o wcd-usbss-tables.o wcd-usbss-utils.o wcd939x-i2c.o
+
+obj-$(CONFIG_QCOM_CPUSS_TELEMETRY) += cpuss_telemetry.o
+obj-$(CONFIG_QCOM_CPUSS_SLEEP_STATS_V4) += qcom_cpuss_sleep_stats_v4.o
+obj-$(CONFIG_SPS) += sps/

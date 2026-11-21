@@ -46,3 +46,4 @@ obj-$(CONFIG_QCOM_Q6V5_PAS) += qcom_q6v5_pas.o
 obj-$(CONFIG_QCOM_SYSMON) += qcom_sysmon.o
 obj-$(CONFIG_QCOM_RPROC_COMMON) += rproc_qcom_common.o
 rproc_qcom_common-y := qcom_common.o qcom_tracepoints.o
+obj-$(CONFIG_QCOM_SPSS) += qcom_spss.o

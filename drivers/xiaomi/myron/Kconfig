@@ -151,3 +151,12 @@ config TOUCHSCREEN_FOCALTECH_MYRON
     help
       Standalone basic input transport. Hardware validation is pending.
 
+
+config MCA_EXTERNAL_BOOST_HL7603
+    tristate "HL7603 boost/bypass converter"
+    depends on I2C && OF && MYRON_MCA_BASE
+    help
+      Program the board-specified output threshold. On boards with HBM
+      switching, follow the MCA panel notifier. The module is hl7603.
+
+source "drivers/power/supply/mca/mca_hardware_ic/wireless_ic/sc96281/Kconfig"

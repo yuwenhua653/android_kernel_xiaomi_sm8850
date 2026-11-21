@@ -68,7 +68,7 @@ config QCOM_CPUSS_SLEEP_STATS
 
 config QCOM_CPUSS_SLEEP_STATS_V4
 	tristate "Qualcomm Technologies, Inc. (QTI) CPUSS sleep stats v4 driver"
-	depends on DEBUG_FS
+	depends on DEBUG_FS && QCOM_CPUSS_TELEMETRY
 	help
 	 Qualcomm Technologies, Inc. (QTI) CPUSS sleep stats v4 driver to
 	 get hardware LPM counts and residency for particular cluster low
@@ -1270,7 +1270,7 @@ config QCOM_CACHE_ALLOCATION
 
 config QCOM_CPUSS_TELEMETRY
 	tristate "Qualcomm CPUSS Telemetry driver"
-	depends on QTI_SCMI_VENDOR_PROTOCOL
+	depends on QTI_SCMI_VENDOR_PROTOCOL && DEBUG_FS && ARM64
 	default n
 	help
 	  This is a cpuss telemetry driver. It realizes that to get cpuss telemetry data

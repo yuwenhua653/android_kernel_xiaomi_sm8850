@@ -215,3 +215,6 @@ qti-fixed-regulator-y := qti_fixed_regulator.o
 CFLAGS_qti_fixed_regulator.o += -DQTI_FIXED_REGULATOR
 obj-$(CONFIG_REGULATOR_RPMH) += rpmh-regulator.o
 obj-$(CONFIG_REGULATOR_STUB) += stub-regulator.o
+
+# Native OCP/alarm event consumer; no regulator voting.
+obj-$(CONFIG_REGULATOR_QTI_OCP_NOTIFIER) += qti-ocp-notifier.o

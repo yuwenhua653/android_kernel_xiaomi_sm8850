@@ -1,0 +1,1 @@
+../../../../sm8850-modules/qcom/opensource/dataipa/drivers/platform/msm/include/uapi/linux/ipa_qmi_service_v01.h
