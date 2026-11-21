@@ -18,6 +18,7 @@
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/mm.h>
+#include <linux/once.h>
 #include <linux/radix-tree.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
@@ -915,13 +916,16 @@ void qcom_tzmem_inv_shm_buf(phys_addr_t paddr, size_t size)
 }
 EXPORT_SYMBOL_GPL(qcom_tzmem_inv_shm_buf);
 
+static void qcom_tzmem_do_init(int *result)
+{
+	*result = qcom_tzmem_init();
+}
+
 int qcom_tzmem_enable(struct device *dev)
 {
-	if (qcom_tzmem_dev)
-		return -EBUSY;
+	static int result;
 
 	qcom_tzmem_dev = dev;
-
 #if IS_ENABLED(CONFIG_QCOM_TZMEM_FFA)
 	if (qcom_tzmem_ffa_register(qcom_tzmem_dev)) {
 		dev_err(qcom_tzmem_dev, "Failed to register qcom_tzmem with FFA\n");
@@ -930,7 +934,8 @@ int qcom_tzmem_enable(struct device *dev)
 	qcom_tzmem_using_shm_bridge = true;
 	return 0;
 #endif
-	return qcom_tzmem_init();
+	DO_ONCE(qcom_tzmem_do_init, &result);
+	return result;
 }
 EXPORT_SYMBOL_GPL(qcom_tzmem_enable);
 

@@ -3014,7 +3014,7 @@ static int qcom_scm_query_wq_queue_info(struct qcom_scm *scm)
 	struct device_node *parent_irq_node;
 
 	scm->waitq.wq_feature = QCOM_SCM_SINGLE_SMC_ALLOW;
-	ret = qcom_scm_call_atomic(__scm->dev, &desc, &res);
+	ret = qcom_scm_call_atomic(scm->dev, &desc, &res);
 	if (ret) {
 		pr_err("%s: Failed to get wq queue info: %d\n", __func__, ret);
 		return ret;
@@ -3027,11 +3027,16 @@ static int qcom_scm_query_wq_queue_info(struct qcom_scm *scm)
 	ret = qcom_scm_fill_irq_fwspec_params(&fwspec, hwirq);
 	if (ret)
 		return ret;
-	parent_irq_node = of_irq_find_parent(__scm->dev->of_node);
+	parent_irq_node = of_irq_find_parent(scm->dev->of_node);
+	if (!parent_irq_node)
+		return -ENODEV;
 
 	fwspec.fwnode = of_node_to_fwnode(parent_irq_node);
 
 	scm->waitq.irq = irq_create_fwspec_mapping(&fwspec);
+	of_node_put(parent_irq_node);
+	if (!scm->waitq.irq)
+		return -EINVAL;
 
 	pr_info("WQ Info, feature: %d call_ctx_cnt: %llu irq: %llu\n",
 		scm->waitq.wq_feature, scm->waitq.call_ctx_cnt, scm->waitq.irq);

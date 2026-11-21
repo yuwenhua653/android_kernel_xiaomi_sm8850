@@ -92,6 +92,7 @@
 	FN(PACKET_SOCK_ERROR)		\
 	FN(TC_CHAIN_NOTFOUND)		\
 	FN(TC_RECLASSIFY_LOOP)		\
+	FN(SKB_BAD_GSO)			\
 	FNe(MAX)
 
 /**
@@ -422,6 +423,7 @@ enum skb_drop_reason {
 	 * @SKB_DROP_REASON_MAX: the maximum of core drop reasons, which
 	 * shouldn't be used as a real 'reason' - only for tracing code gen
 	 */
+	SKB_DROP_REASON_SKB_BAD_GSO,
 	SKB_DROP_REASON_MAX,
 
 	/**

@@ -44,6 +44,8 @@
 #include <linux/ramfs.h>
 #include <linux/page_idle.h>
 #include <linux/page_size_compat.h>
+#include <linux/pgsize_migration.h>
+#include <linux/vma_readahead_boundary.h>
 #include <linux/migrate.h>
 #include <linux/pipe_fs_i.h>
 #include <linux/splice.h>
@@ -150,15 +152,6 @@ EXPORT_SYMBOL_GPL(_trace_android_rvh_mapping_shrinkable);
 /* Export tracepoints that act as a bare tracehook */
 EXPORT_TRACEPOINT_SYMBOL_GPL(mm_filemap_delete_from_page_cache);
 EXPORT_TRACEPOINT_SYMBOL_GPL(mm_filemap_add_to_page_cache);
-
-static void mapping_set_update(struct xa_state *xas,
-		struct address_space *mapping)
-{
-	if (dax_mapping(mapping) || shmem_mapping(mapping))
-		return;
-	xas_set_update(xas, workingset_update_node);
-	xas_set_lru(xas, &shadow_nodes);
-}
 
 static void page_cache_delete(struct address_space *mapping,
 				   struct folio *folio, void *shadow)
@@ -1425,10 +1418,22 @@ repeat:
 	 * return value based on that state without races.
 	 *
 	 * Also note that WQ_FLAG_WOKEN is sufficient for a non-exclusive
-	 * waiter, but an exclusive one requires WQ_FLAG_DONE.
+	 * waiter, but an exclusive one must also acquire the bit.
 	 */
-	if (behavior == EXCLUSIVE)
-		return wait->flags & WQ_FLAG_DONE ? 0 : -EINTR;
+	if (behavior == EXCLUSIVE) {
+		if (wait->flags & WQ_FLAG_DONE)
+			return 0;
+		/*
+		 * We might have just been woken up and the waker will not
+		 * wake up anybody else. If we ignore that now, the remaining
+		 * waiters may not get woken up: take the bit now if it is
+		 * still free.
+		 */
+		if ((wait->flags & WQ_FLAG_WOKEN) &&
+		    !test_and_set_bit(bit_nr, folio_flags(folio, 0)))
+			return 0;
+		return -EINTR;
+	}
 
 	return wait->flags & WQ_FLAG_WOKEN ? 0 : -EINTR;
 }
@@ -3261,11 +3266,11 @@ unlock:
  * @folio - the folio to lock.
  * @fpin - the pointer to the file we may pin (or is already pinned).
  *
- * This works similar to lock_folio_or_retry in that it can drop the
- * mmap_lock.  It differs in that it actually returns the folio locked
- * if it returns 1 and 0 if it couldn't lock the folio.  If we did have
- * to drop the mmap_lock then fpin will point to the pinned file and
- * needs to be fput()'ed at a later point.
+ * Returns 1 with the folio locked, or 0 if locking failed.
+ *
+ * On both entry and return, a non-NULL *fpin means the fault lock has
+ * already been dropped and the caller must eventually fput() the file.
+ * Otherwise the fault lock is still held, including on failure.
  */
 static int lock_folio_maybe_drop_mmap(struct vm_fault *vmf, struct folio *folio,
 				     struct file **fpin)
@@ -3287,15 +3292,6 @@ static int lock_folio_maybe_drop_mmap(struct vm_fault *vmf, struct folio *folio,
 	trace_android_vh_lock_folio_drop_mmap_start(&tsk, vmf, folio, *fpin);
 	if (vmf->flags & FAULT_FLAG_KILLABLE) {
 		if (__folio_lock_killable(folio)) {
-			/*
-			 * We didn't have the right flags to drop the
-			 * fault lock, but all fault_handlers only check
-			 * for fatal signals if we return VM_FAULT_RETRY,
-			 * so we need to drop the fault lock here and
-			 * return 0 if we don't have a fpin.
-			 */
-			if (*fpin == NULL)
-				release_fault_lock(vmf);
 			trace_android_vh_lock_folio_drop_mmap_end(false, &tsk, vmf, folio, *fpin);
 			return 0;
 		}
@@ -3328,6 +3324,9 @@ static struct file *do_sync_mmap_readahead(struct vm_fault *vmf)
 	trace_android_vh_do_sync_mmap_readahead(vmf, &skip);
 	if (skip)
 		return fpin;
+
+	if (is_vma_readahead_boundary_enabled())
+		ractl._max_index = vmf->vma->vm_pgoff + vma_data_pages(vmf->vma) - 1;
 
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	/* Use the readahead code, even if readahead is disabled */
@@ -3392,7 +3391,7 @@ static struct file *do_sync_mmap_readahead(struct vm_fault *vmf)
 		 */
 		struct vm_area_struct *vma = vmf->vma;
 		unsigned long start = vma->vm_pgoff;
-		unsigned long end = start + vma_pages(vma);
+		unsigned long end = start + vma_data_pages(vma);
 		unsigned long ra_end;
 		unsigned int order = exec_folio_order();
 
@@ -3410,6 +3409,8 @@ static struct file *do_sync_mmap_readahead(struct vm_fault *vmf)
 		 * mmap read-around
 		 */
 		ra->start = max_t(long, 0, vmf->pgoff - ra->ra_pages / 2);
+		if (is_vma_readahead_boundary_enabled())
+			ra->start = max(ra->start, vmf->vma->vm_pgoff);
 		ra->size = ra->ra_pages;
 		ra->async_size = ra->ra_pages / 4;
 		ra_mmap_miss->order = 0;
@@ -3457,6 +3458,8 @@ static struct file *do_async_mmap_readahead(struct vm_fault *vmf,
 		WRITE_ONCE(ra_mmap_miss->mmap_miss, --mmap_miss);
 
 	if (folio_test_readahead(folio)) {
+		if (is_vma_readahead_boundary_enabled())
+			ractl._max_index = vmf->vma->vm_pgoff + vma_data_pages(vmf->vma) - 1;
 		fpin = maybe_unlock_mmap_for_io(vmf, fpin);
 		trace_android_vh_page_cache_readahead_start(file, vmf->pgoff,
 				ra->ra_pages, false);
@@ -3523,7 +3526,7 @@ static vm_fault_t filemap_fault_recheck_pte_none(struct vm_fault *vmf)
  * vma->vm_mm->mmap_lock must be held on entry.
  *
  * If our return value has VM_FAULT_RETRY set, it's because the mmap_lock
- * may be dropped before doing I/O or by lock_folio_maybe_drop_mmap().
+ * may be dropped before doing I/O or when aborting an interrupted wait.
  *
  * If our return value does not have VM_FAULT_RETRY set, the mmap_lock
  * has not been released.
@@ -3686,9 +3689,8 @@ page_not_uptodate:
 
 out_retry:
 	/*
-	 * We dropped the mmap_lock, we need to return to the fault handler to
-	 * re-find the vma and come back and find our hopefully still populated
-	 * page.
+	 * With fpin set, the fault lock was already dropped. Otherwise it is
+	 * still held. Release invalidate_lock before dropping either protection.
 	 */
 	if (!IS_ERR(folio))
 		folio_put(folio);
@@ -3696,6 +3698,8 @@ out_retry:
 		filemap_invalidate_unlock_shared(mapping);
 	if (fpin)
 		fput(fpin);
+	else if (!(vmf->flags & FAULT_FLAG_RETRY_NOWAIT))
+		release_fault_lock(vmf);
 	return ret | VM_FAULT_RETRY;
 }
 EXPORT_SYMBOL(filemap_fault);
@@ -4232,11 +4236,14 @@ void kiocb_invalidate_post_direct_write(struct kiocb *iocb, size_t count)
 {
 	struct address_space *mapping = iocb->ki_filp->f_mapping;
 
-	if (mapping->nrpages &&
-	    invalidate_inode_pages2_range(mapping,
-			iocb->ki_pos >> PAGE_SHIFT,
-			(iocb->ki_pos + count - 1) >> PAGE_SHIFT))
-		dio_warn_stale_pagecache(iocb->ki_filp);
+	if (mapping->nrpages) {
+		if (invalidate_inode_pages2_range(mapping,
+				iocb->ki_pos >> PAGE_SHIFT,
+				(iocb->ki_pos + count - 1) >> PAGE_SHIFT))
+			dio_warn_stale_pagecache(iocb->ki_filp);
+	} else {
+		cleancache_invalidate_inode(mapping);
+	}
 }
 
 ssize_t

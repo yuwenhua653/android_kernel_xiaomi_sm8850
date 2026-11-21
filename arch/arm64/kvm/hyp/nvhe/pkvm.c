@@ -15,6 +15,7 @@
 #include <hyp/adjust_pc.h>
 
 #include <nvhe/alloc.h>
+#include <nvhe/arm-smccc.h>
 #include <nvhe/ffa.h>
 #include <nvhe/mem_protect.h>
 #include <nvhe/memory.h>
@@ -278,6 +279,45 @@ void pkvm_hyp_vm_table_init(void *tbl)
 {
 	WARN_ON(vm_table);
 	vm_table = tbl;
+}
+
+static struct pkvm_hyp_vm *pkvm_get_loaded_hyp_vm(struct kvm_vcpu *vcpu)
+{
+	struct pkvm_hyp_vcpu *hyp_vcpu = pkvm_get_loaded_hyp_vcpu();
+
+	if (!hyp_vcpu)
+		return NULL;
+
+	if (vcpu == &hyp_vcpu->vcpu || vcpu == hyp_vcpu->host_vcpu)
+		return pkvm_hyp_vcpu_to_hyp_vm(hyp_vcpu);
+
+	return NULL;
+}
+
+/*
+ * A loaded vCPU's VM is the hyp VM. An unloaded host vCPU's is mapped at
+ * EL2 only while pinned, so it's read once and pinned; the pin fails for
+ * memory the host isn't sharing.
+ */
+struct kvm *pkvm_vcpu_get_kvm(struct kvm_vcpu *vcpu)
+{
+	struct pkvm_hyp_vm *hyp_vm = pkvm_get_loaded_hyp_vm(vcpu);
+	struct kvm *kvm;
+
+	if (hyp_vm)
+		return &hyp_vm->kvm;
+
+	kvm = kern_hyp_va(READ_ONCE(vcpu->kvm));
+	if (hyp_pin_shared_mem(kvm, kvm + 1))
+		return NULL;
+
+	return kvm;
+}
+
+void pkvm_vcpu_put_kvm(struct kvm_vcpu *vcpu, struct kvm *kvm)
+{
+	if (kvm && !pkvm_get_loaded_hyp_vm(vcpu))
+		hyp_unpin_shared_mem(kvm, kvm + 1);
 }
 
 static void *map_donated_memory_noclear(unsigned long host_va, size_t size)
@@ -1603,7 +1643,7 @@ static bool pkvm_handle_psci(struct pkvm_hyp_vcpu *hyp_vcpu)
 	return pvm_psci_not_supported(hyp_vcpu);
 }
 
-static int pkvm_request_vcpu_memcache(struct pkvm_hyp_vcpu *hyp_vcpu, u64 *exit_code)
+static int pkvm_request_vcpu_memcache(struct pkvm_hyp_vcpu *hyp_vcpu, u64 *exit_code, bool rewind)
 {
 	struct kvm_hyp_req *req = pkvm_hyp_req_reserve(hyp_vcpu, KVM_HYP_REQ_TYPE_MEM);
 
@@ -1613,7 +1653,8 @@ static int pkvm_request_vcpu_memcache(struct pkvm_hyp_vcpu *hyp_vcpu, u64 *exit_
 	req->mem.dest = REQ_MEM_DEST_VCPU_MEMCACHE;
 	req->mem.nr_pages = kvm_mmu_cache_min_pages(&hyp_vcpu->vcpu.kvm->arch.mmu);
 
-	write_sysreg_el2(read_sysreg_el2(SYS_ELR) - 4, SYS_ELR);
+	if (rewind)
+		write_sysreg_el2(read_sysreg_el2(SYS_ELR) - 4, SYS_ELR);
 	*exit_code = ARM_EXCEPTION_HYP_REQ;
 
 	return 0;
@@ -1769,7 +1810,7 @@ static bool pkvm_install_ioguard_page(struct pkvm_hyp_vcpu *hyp_vcpu,
 		goto out_guest_err;
 
 	ret = __pkvm_install_ioguard_page(hyp_vcpu, ipa, nr_pages, &nr_guarded);
-	if (ret == -ENOMEM && !pkvm_request_vcpu_memcache(hyp_vcpu, exit_code))
+	if (ret == -ENOMEM && !pkvm_request_vcpu_memcache(hyp_vcpu, exit_code, true))
 		return false;
 
 out_guest_err:
@@ -1979,7 +2020,7 @@ static bool is_standard_secure_service_call(u32 func_id)
 
 bool kvm_handle_pvm_smc64(struct kvm_vcpu *vcpu, u64 *exit_code)
 {
-	bool handled = false;
+	enum pkvm_smc_handler_ret handler_ret;
 	struct kvm_cpu_context *ctxt = &vcpu->arch.ctxt;
 	struct pkvm_hyp_vm *vm;
 	struct pkvm_hyp_vcpu *hyp_vcpu;
@@ -1997,15 +2038,26 @@ bool kvm_handle_pvm_smc64(struct kvm_vcpu *vcpu, u64 *exit_code)
 		return false;
 
 	memcpy(&regs, &ctxt->regs, sizeof(regs));
-	handled = module_handle_guest_smc(&regs, &res, vm->kvm.arch.pkvm.handle);
-	if (handled)
+	handler_ret = module_handle_guest_smc(&regs, &res, vm->kvm.arch.pkvm.handle);
+	switch (handler_ret) {
+	case GUEST_SMC_HANDLED:
 		memcpy(&ctxt->regs.regs[0], &res, sizeof(res));
-	else
-		ctxt->regs.regs[0] = -1;
+		break;
+	case GUEST_SMC_NOT_HANDLED:
+		ctxt->regs.regs[0] = SMCCC_RET_NOT_SUPPORTED;
+		break;
+	case GUEST_SMC_NEED_TOPUP:
+		if (!pkvm_request_vcpu_memcache(hyp_vcpu, exit_code, false))
+			return false;
+		smccc_set_retval(vcpu, SMCCC_RET_INVALID_PARAMETER, 0, 0, 0);
+		break;
+	default:
+		WARN_ON(1);
+	}
 
 	__kvm_skip_instr(vcpu);
 
-	return handled;
+	return true;
 }
 
 /*

@@ -98,6 +98,7 @@ struct adsp_data {
 	int pas_id;
 	int dtb_pas_id;
 	int lite_pas_id;
+	int lite_dtb_pas_id;
 	unsigned int minidump_id;
 	bool both_dumps;
 	bool uses_elf64;
@@ -147,6 +148,7 @@ struct qcom_adsp {
 	int pas_id;
 	int dtb_pas_id;
 	int lite_pas_id;
+	int lite_dtb_pas_id;
 	unsigned int minidump_id;
 	bool both_dumps;
 	int crash_reason_smem;
@@ -441,6 +443,8 @@ static int adsp_load(struct rproc *rproc, const struct firmware *fw)
 
 	if (adsp->lite_pas_id)
 		ret = qcom_scm_pas_shutdown(adsp->lite_pas_id);
+	if (adsp->lite_dtb_pas_id)
+		qcom_scm_pas_shutdown(adsp->lite_dtb_pas_id);
 
 	qcom_q6v5_pas_set_bw(&adsp->q6v5, UINT_MAX, UINT_MAX);
 	if (adsp->dtb_pas_id) {
@@ -1564,24 +1568,15 @@ static const struct rproc_ops adsp_minidump_ops = {
 
 static int adsp_init_clock(struct qcom_adsp *adsp)
 {
-	int ret;
-
 	adsp->xo = devm_clk_get(adsp->dev, "xo");
-	if (IS_ERR(adsp->xo)) {
-		ret = PTR_ERR(adsp->xo);
-		if (ret != -EPROBE_DEFER)
-			dev_err(adsp->dev, "failed to get xo clock");
-		return ret;
-	}
+	if (IS_ERR(adsp->xo))
+		return dev_err_probe(adsp->dev, PTR_ERR(adsp->xo),
+				     "failed to get xo clock");
 
 	adsp->aggre2_clk = devm_clk_get_optional(adsp->dev, "aggre2");
-	if (IS_ERR(adsp->aggre2_clk)) {
-		ret = PTR_ERR(adsp->aggre2_clk);
-		if (ret != -EPROBE_DEFER)
-			dev_err(adsp->dev,
-				"failed to get aggre2 clock");
-		return ret;
-	}
+	if (IS_ERR(adsp->aggre2_clk))
+		return dev_err_probe(adsp->dev, PTR_ERR(adsp->aggre2_clk),
+				     "failed to get aggre2 clock");
 
 	return 0;
 }
@@ -2129,6 +2124,7 @@ static int adsp_probe(struct platform_device *pdev)
 	adsp->minidump_id = desc->minidump_id;
 	adsp->pas_id = desc->pas_id;
 	adsp->lite_pas_id = desc->lite_pas_id;
+	adsp->lite_dtb_pas_id = desc->lite_dtb_pas_id;
 	adsp->info_name = desc->sysmon_name;
 	adsp->smem_host_id = desc->smem_host_id;
 	adsp->decrypt_shutdown = desc->decrypt_shutdown;
@@ -2551,6 +2547,8 @@ static const struct adsp_data x1e80100_adsp_resource = {
 	.firmware_name = "adsp.mdt",
 	.dtb_firmware_name = "adsp_dtb.mdt",
 	.pas_id = 1,
+	.lite_pas_id = 0x1f,
+	.lite_dtb_pas_id = 0x29,
 	.dtb_pas_id = 0x24,
 	.minidump_id = 5,
 	.load_state = "adsp",
@@ -3881,7 +3879,7 @@ MODULE_DEVICE_TABLE(of, adsp_of_match);
 
 static struct platform_driver adsp_driver = {
 	.probe = adsp_probe,
-	.remove_new = adsp_remove,
+	.remove = adsp_remove,
 	.driver = {
 		.name = "qcom_q6v5_pas",
 		.of_match_table = adsp_of_match,

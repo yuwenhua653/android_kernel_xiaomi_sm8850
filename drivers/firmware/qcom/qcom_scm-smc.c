@@ -49,7 +49,7 @@ static void __scm_smc_do_quirk(const struct arm_smccc_args *smc,
 		scm_call_qcpe(smc, res, atomic);
 	} else {
 		do {
-			trace_scm_smc_request(smc);
+			trace_scm_smc_request(a0, smc);
 			arm_smccc_smc_quirk(a0, smc->args[1], smc->args[2],
 					smc->args[3], smc->args[4], smc->args[5],
 					quirk.state.a6, smc->args[7], res, &quirk);

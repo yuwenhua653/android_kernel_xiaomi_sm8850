@@ -107,8 +107,14 @@ static int __init set_permissions(pte_t *ptep, unsigned long addr, void *data)
 	const efi_memory_desc_t *md = spd->md;
 	pte_t pte = __ptep_get(ptep);
 
+	/*
+	 * Clear PTE_WRITE as well: it doubles as the DBM bit, and leaving it
+	 * set would permit the hardware to make the mapping writable again
+	 * when TCR_EL1.HD is set.
+	 */
 	if (md->attribute & EFI_MEMORY_RO)
-		pte = set_pte_bit(pte, __pgprot(PTE_RDONLY));
+		pte = set_pte_bit(clear_pte_bit(pte, __pgprot(PTE_WRITE)),
+				  __pgprot(PTE_RDONLY));
 	if (md->attribute & EFI_MEMORY_XP)
 		pte = set_pte_bit(pte, __pgprot(PTE_PXN));
 	else if (system_supports_bti_kernel() && spd->has_bti)
@@ -161,14 +167,14 @@ static DEFINE_RAW_SPINLOCK(efi_rt_lock);
 void arch_efi_call_virt_setup(void)
 {
 	efi_virtmap_load();
-	__efi_fpsimd_begin();
 	raw_spin_lock(&efi_rt_lock);
+	__efi_fpsimd_begin();
 }
 
 void arch_efi_call_virt_teardown(void)
 {
-	raw_spin_unlock(&efi_rt_lock);
 	__efi_fpsimd_end();
+	raw_spin_unlock(&efi_rt_lock);
 	efi_virtmap_unload();
 }
 

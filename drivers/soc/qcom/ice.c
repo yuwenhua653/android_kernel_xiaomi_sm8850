@@ -84,6 +84,7 @@ struct qcom_ice {
 	struct device_link *link;
 
 	struct clk *core_clk;
+	struct clk *iface_clk;
 	u8 hwkm_version;
 	bool use_hwkm;
 	bool hwkm_init_complete;
@@ -309,6 +310,11 @@ int qcom_ice_resume(struct qcom_ice *ice)
 				err);
 			return err;
 		}
+		err = clk_prepare_enable(ice->iface_clk);
+		if (err) {
+			clk_disable_unprepare(ice->core_clk);
+			return err;
+		}
 	}
 
 	qcom_ice_enable_standard_mode(ice);
@@ -319,8 +325,10 @@ EXPORT_SYMBOL_GPL(qcom_ice_resume);
 
 int qcom_ice_suspend(struct qcom_ice *ice)
 {
-	if (ice->handle_clks)
+	if (ice->handle_clks) {
+		clk_disable_unprepare(ice->iface_clk);
 		clk_disable_unprepare(ice->core_clk);
+	}
 
 	return 0;
 }
@@ -596,7 +604,11 @@ static struct qcom_ice *qcom_ice_create(struct device *dev,
 	if (engine->handle_clks) {
 		engine->core_clk = devm_clk_get_optional_enabled(dev, "core_clk_ice");
 		if (!engine->core_clk)
+			engine->core_clk = devm_clk_get_optional_enabled(dev, "ice_core_clk");
+		if (!engine->core_clk)
 			engine->core_clk = devm_clk_get_optional_enabled(dev, "ice");
+		if (!engine->core_clk)
+			engine->core_clk = devm_clk_get_optional_enabled(dev, "core");
 		if (!engine->core_clk)
 			engine->core_clk = devm_clk_get_enabled(dev, NULL);
 		if (IS_ERR(engine->core_clk))
@@ -605,6 +617,12 @@ static struct qcom_ice *qcom_ice_create(struct device *dev,
 
 	engine->use_hwkm = of_property_read_bool(dev->of_node,
 						 "qcom,ice-use-hwkm");
+
+	if (engine->handle_clks) {
+		engine->iface_clk = devm_clk_get_optional_enabled(dev, "iface");
+		if (IS_ERR(engine->iface_clk))
+			return ERR_CAST(engine->iface_clk);
+	}
 
 	if (!qcom_ice_check_supported(engine))
 		return ERR_PTR(-EOPNOTSUPP);

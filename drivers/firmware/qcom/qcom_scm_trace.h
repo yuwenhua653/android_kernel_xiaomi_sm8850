@@ -14,9 +14,9 @@
 
 TRACE_EVENT(scm_smc_request,
 
-	TP_PROTO(const struct arm_smccc_args *smc),
+	TP_PROTO(unsigned long a0, const struct arm_smccc_args *smc),
 
-	TP_ARGS(smc),
+	TP_ARGS(a0, smc),
 
 	TP_STRUCT__entry(
 		__field(u64, smc_id)
@@ -28,7 +28,7 @@ TRACE_EVENT(scm_smc_request,
 	),
 
 	TP_fast_assign(
-		__entry->smc_id = smc->args[0];
+		__entry->smc_id = a0;
 		__entry->svc_id = (smc->args[0] >> 8) & 0xFF;
 		__entry->cmd_id = smc->args[0] & 0xFF;
 		u8 n = min_t(u8, (smc->args[1] & 0xF), (u8)6);
