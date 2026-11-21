@@ -8,6 +8,12 @@ config TARGET_PRODUCT_MYRON
 	help
 	  Build only the Myron base trees and their required overlays.
 
+config TARGET_PRODUCT_NEZHA
+	bool "Xiaomi 17 Ultra (nezha) device trees"
+	depends on ARCH_CANOE && !TARGET_PRODUCT_MYRON
+	help
+	  Select Canoe base trees and the Nezha board overlays for native Kbuild.
+
 config ARCH_ACTIONS
 	bool "Actions Semi Platforms"
 	select OWL_TIMER

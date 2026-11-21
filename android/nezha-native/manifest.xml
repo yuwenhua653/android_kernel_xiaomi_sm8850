@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote name="nezha-kernel" fetch="https://github.com/" />
+  <project name="yuwenhua653/android_kernel_xiaomi_sm8850" path="kernel/xiaomi/sm8850"
+           remote="nezha-kernel" revision="refs/heads/nazha" />
+  <project name="yuwenhua653/android_kernel_xiaomi_sm8850-modules" path="kernel/xiaomi/sm8850-modules"
+           remote="nezha-kernel" revision="56a86929e5154798a9530cce19c444833145d438" upstream="refs/heads/nazha" />
+  <project name="yuwenhua653/android_kernel_xiaomi_sm8850-devicetrees" path="kernel/xiaomi/sm8850-devicetrees"
+           remote="nezha-kernel" revision="40475747d7e37fbc71fc732ea30c5b0aac5bf010" upstream="refs/heads/nazha" />
+</manifest>
