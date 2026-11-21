@@ -169,3 +169,13 @@ obj-$(CONFIG_QCOM_GDSC_REGULATOR) += gdsc-regulator.o
 obj-$(CONFIG_SM_GPUCC_CANOE) += gpucc-canoe.o
 obj-$(CONFIG_SM_TCSRCC_CANOE) += tcsrcc-canoe.o
 obj-$(CONFIG_SM_VIDEOCC_CANOE) += videocc-canoe.o
+
+obj-$(CONFIG_SM_CAMCC_CHORA) += camcc-chora.o
+obj-$(CONFIG_SM_DEBUGCC_ALOR) += debugcc-alor.o
+obj-$(CONFIG_SM_DEBUGCC_CHORA) += debugcc-chora.o
+obj-$(CONFIG_SM_DEBUGCC_4450) += debugcc-sm4450.o
+obj-$(CONFIG_SM_DISPCC_CHORA) += dispcc-chora.o
+obj-$(CONFIG_SM_GCC_CHORA) += gcc-chora.o
+obj-$(CONFIG_SM_GPUCC_CHORA) += gpucc-chora.o
+obj-$(CONFIG_SM_TCSRCC_CHORA) += tcsrcc-chora.o
+obj-$(CONFIG_SM_VIDEOCC_CHORA) += videocc-chora.o

@@ -32,3 +32,5 @@ ccflags-y += -I$(srctree)/drivers/phy/qualcomm
 obj-$(CONFIG_PHY_QCOM_UFS) += phy-qcom-ufs.o
 obj-$(CONFIG_PHY_QCOM_UFS_V4_CANOE) += phy-qcom-ufs-qmp-v4-canoe.o
 obj-$(CONFIG_PHY_QCOM_UFS_QRBTC_SDM845) += phy-qcom-ufs-qrbtc-sdm845.o
+
+obj-$(CONFIG_PHY_QCOM_UFS_V4_CROW) += phy-qcom-ufs-qmp-v4-crow.o

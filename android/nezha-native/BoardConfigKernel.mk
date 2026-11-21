@@ -8,6 +8,24 @@ TARGET_KERNEL_EXT_MODULE_ROOT := kernel/xiaomi/sm8850-modules
 nezha_display_modules := $(addprefix qcom/opensource/, \
     mm-drivers/msm_ext_display mm-drivers/sync_fence mm-drivers/hfi_core \
     mm-drivers/hw_fence securemsm-kernel synx-kernel display-drivers)
-nezha_native_modules := $(nezha_display_modules) xiaomi/nezha-touch
+nezha_native_modules := $(nezha_display_modules) xiaomi/nezha-touch \
+    qcom/opensource/datarmnet-ext/mem \
+    qcom/opensource/dataipa \
+    qcom/opensource/datarmnet \
+    qcom/opensource/datarmnet-ext/shs \
+    qcom/opensource/datarmnet-ext/perf \
+    qcom/opensource/data-kernel/drivers/smem-mailbox \
+    qcom/opensource/mmrm-driver \
+    qcom/opensource/video-driver \
+    qcom/opensource/spu-kernel \
+    qcom/opensource/graphics-kernel \
+    nxp/opensource/driver \
+    qcom/opensource/dsp-kernel \
+    qcom/opensource/audio-kernel \
+    qcom/opensource/wlan/platform \
+    qcom/opensource/bt-kernel \
+    qcom/opensource/eva-kernel \
+    qcom/opensource/camera-kernel \
+    qcom/opensource/wlan/qcacld-3.0
 TARGET_KERNEL_EXT_MODULES := $(nezha_native_modules) \
     $(filter-out $(nezha_native_modules) $(addsuffix :kbuild,$(nezha_native_modules)),$(TARGET_KERNEL_EXT_MODULES))

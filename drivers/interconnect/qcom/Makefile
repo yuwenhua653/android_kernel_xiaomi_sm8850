@@ -87,3 +87,8 @@ qnoc-alor-y := alor.o
 obj-$(CONFIG_INTERCONNECT_QCOM_CANOE) += qnoc-canoe.o
 qnoc-canoe-y := canoe.o
 obj-$(CONFIG_INTERCONNECT_QCOM_QOS) += qnoc-qos.o
+
+obj-$(CONFIG_INTERCONNECT_QCOM_CHORA) += qnoc-chora.o
+qnoc-chora-objs += chora.o
+obj-$(CONFIG_INTERCONNECT_QCOM_RAVELIN) += qnoc-ravelin.o
+qnoc-ravelin-objs += ravelin.o

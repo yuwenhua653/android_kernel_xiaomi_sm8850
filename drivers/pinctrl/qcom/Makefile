@@ -71,3 +71,5 @@ obj-$(CONFIG_PINCTRL_CANOE) += pinctrl-canoe.o
 obj-$(CONFIG_PINCTRL_CHORA) += pinctrl-chora.o
 obj-$(CONFIG_PINCTRL_MSM) += pinctrl-msm.o
 obj-$(CONFIG_PINCTRL_QCOM_SPMI_PMIC) += pinctrl-spmi-gpio.o
+
+obj-$(CONFIG_PINCTRL_RAVELIN) += pinctrl-ravelin.o

@@ -7,12 +7,11 @@ Its module ABI must be checked separately for any retained stock driver.
 
 Use the three sibling project paths in manifest.xml. Include
 `kernel/xiaomi/sm8850/android/nezha-native/BoardConfigKernel.mk` in the
-nezha device BoardConfig for a source build. This fragment builds the display providers, MSM DRM and touch drivers
-before the product's remaining external modules.
+nezha device BoardConfig for a source build. This fragment builds the native external module groups in dependency order.
 The device tree still owns image assembly, first-stage fstab, vendor
-ramdisk, module load lists, and any FORCE_PREBUILT settings.
+ramdisk and any FORCE_PREBUILT settings. The optional OS4 module split is described below.
 
-In an Android kernel toolchain Bash shell, from kernel/xiaomi/sm8850:
+To build the kernel and its display/input subset in an Android kernel toolchain Bash shell, from kernel/xiaomi/sm8850:
 
 ```sh
 out="$PWD/../../../out/nezha/kernel"
@@ -39,7 +38,7 @@ The five extracted images matched the SHA-256 values in the full OTA payload.
 
 The v4 vendor_boot has one platform ramdisk fragment (22246717 bytes),
 first_stage_ramdisk/fstab.qcom and 12 concatenated base DTBs. The early
-ramdisk contains 471 modules, vendor_dlkm 404 and system_dlkm 206. These
+ramdisk contains 471 modules, vendor_dlkm 404 and system_dlkm 103 distinct modules in two layouts (206 files). These
 counts describe separate partitions and can include the same module name.
 
 ## Device trees
@@ -131,3 +130,52 @@ The combined board overlay covers display and input. The Android product
 still needs the other board subsystems, partition packaging and first-stage
 load lists. Output here is for host integration. Hardware panel selection,
 display power transitions, brightness, fingerprint and boot remain untested.
+
+## OS4.0.7 native module partitions
+
+For a source bring-up product, include `BoardConfigModules.mk` immediately
+after `BoardConfigKernel.mk` in the device BoardConfig. In the product
+makefile use the normal Android product include:
+
+```make
+$(call inherit-product,kernel/xiaomi/sm8850/android/nezha-native/device.mk)
+```
+
+Select a source kernel, source-built system_dlkm and vendor_dlkm, and the
+platform vendor ramdisk in the product. Remove conflicting prebuilt module
+lists, prebuilt image selections and duplicate copy destinations when switching.
+The stock OS4 platform ramdisk contains both load lists. The normal list
+keeps first-stage order. Recovery adds xiaomi_touch ahead of synaptics_tcm2.
+The staging list also includes their shared recovery/display providers.
+Keep the product's first-stage fstab, firmware, AVB and partition settings.
+The full Android product build and device boot still need validation.
+
+| Load list | Unique factory entries | Matching modules in the host build | Entries shipped in native load list |
+| --- | ---: | ---: | ---: |
+| Normal first stage | 172 | 128 | 128 |
+| Recovery | 465 | 242 | 244, including the native touch pair |
+| vendor_dlkm | 404 | 181 | 181 |
+| system_dlkm | 82 | 81 | 80, including production rust_binder |
+
+The factory blocklist gives vendor ownership of zram and zsmalloc. The
+native split packages them there only. The Android Rust-enabled config
+also requires rust_binder in system_dlkm. The host used built-in C Binder
+and validated 79 system load entries. Counts compare module basenames.
+They do not establish which optional SoC variants or OEM hooks the phone uses.
+
+The 6.12.118 build produced 352 in-tree and 75 external modules. All 8,098
+external symbol version records matched same-build exports. Core Kbuild
+rules and 15 platform drivers were restored from LineageOS/android_kernel_qcom_sm8850
+commit `557159b6a0d06f1c6f07ec4c1f22bc9309a113e4`, using local EDAC headers.
+The external build now includes IPA/RMNET, KGSL, audio, camera, video/EVA,
+FastRPC, SPU, NFC, Bluetooth, CNSS and Peach v2 WLAN.
+
+Host image readback verified 246 modules in the shared platform ramdisk,
+100 in system_dlkm and 327 in vendor_dlkm. The two DLKM images used EROFS.
+Every extracted module matched its staged ELF. The v4 vendor_boot round
+trip preserved the stock fstab, concatenated DTB section and bootconfig
+and contained one nonempty platform table entry. This packaging test uses
+the factory base DTB section and does not qualify a production Android
+image, module signing, firmware or hardware. Remaining stock entries
+include the ET5907MV and HL7603 regulators, Xiaomi MCA charging drivers
+and additional WLAN variants.
