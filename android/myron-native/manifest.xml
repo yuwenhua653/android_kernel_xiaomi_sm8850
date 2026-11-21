@@ -2,12 +2,12 @@
 <!-- Paired native kernel sources. See source-release-6.12.118.md for validation scope. -->
 <manifest>
   <remote name="myron-native" fetch="https://github.com/" />
-  <project name="yuwenhua653/oppo_oplus_realme_sm8850" path="kernel/xiaomi/sm8850"
-    remote="myron-native" revision="refs/heads/myron/native-kbuild" clone-depth="1" />
-  <project name="yuwenhua653/oppo_oplus_realme_sm8850" path="kernel/xiaomi/sm8850-modules"
+  <project name="yuwenhua653/android_kernel_xiaomi_sm8850" path="kernel/xiaomi/sm8850"
+    remote="myron-native" revision="refs/heads/lineage-24.0" clone-depth="1" />
+  <project name="yuwenhua653/android_kernel_xiaomi_sm8850-modules" path="kernel/xiaomi/sm8850-modules"
     remote="myron-native" revision="2b4ac3715ae0c153617ea929642ae6550bcd1502"
-    upstream="refs/heads/myron/native-modules" clone-depth="1" />
-  <project name="yuwenhua653/oppo_oplus_realme_sm8850" path="kernel/xiaomi/sm8850-devicetrees"
+    upstream="refs/heads/lineage-24.0" clone-depth="1" />
+  <project name="yuwenhua653/android_kernel_xiaomi_sm8850-devicetrees" path="kernel/xiaomi/sm8850-devicetrees"
     remote="myron-native" revision="fb892731a9b9df5ecd076409536d172e564b6850"
-    upstream="refs/heads/myron/native-devicetrees" clone-depth="1" />
+    upstream="refs/heads/lineage-24.0" clone-depth="1" />
 </manifest>

@@ -6,8 +6,8 @@ source manifest and this note, pairing the kernel with:
 
 | Checkout | Branch | Commit |
 | --- | --- | --- |
-| `kernel/xiaomi/sm8850-modules` | `myron/native-modules` | `2b4ac3715ae0c153617ea929642ae6550bcd1502` |
-| `kernel/xiaomi/sm8850-devicetrees` | `myron/native-devicetrees` | `fb892731a9b9df5ecd076409536d172e564b6850` |
+| `kernel/xiaomi/sm8850-modules` | `lineage-24.0` | `2b4ac3715ae0c153617ea929642ae6550bcd1502` |
+| `kernel/xiaomi/sm8850-devicetrees` | `lineage-24.0` | `fb892731a9b9df5ecd076409536d172e564b6850` |
 
 The module update retains native Canoe video/MMRM integration, HFI brightness
 transfers, deferred and incremental backlight fixes, RMNET external IPA APIs,
@@ -46,3 +46,17 @@ and all external modules together; do not reuse modules from 6.12.97.
 The companion revisions in `manifest.xml` are pinned. A ROM checkout whose
 local manifest still pins older commits must update those pins before syncing;
 updating a GitHub branch alone does not override an existing manifest revision.
+
+## Standard repository split
+
+The three source histories are now published independently under
+`yuwenhua653/android_kernel_xiaomi_sm8850`,
+`yuwenhua653/android_kernel_xiaomi_sm8850-modules`, and
+`yuwenhua653/android_kernel_xiaomi_sm8850-devicetrees`. Use `lineage-24.0`
+explicitly, as the repository default branch is currently the migration-only
+`main` branch. The original `myron/native-*` branches remain available.
+
+The new kernel repository starts from `3bc662f2695f21c7c4047826cd65b9a60d5408f9`.
+This manifest migration changes repository addresses and branch references only;
+checkout paths and pinned companion commits are preserved. The original
+`oppo_oplus_realme_sm8850` repository remains intact.
