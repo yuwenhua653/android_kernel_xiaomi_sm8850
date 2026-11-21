@@ -15,7 +15,6 @@ ramdisk, module load lists, and any FORCE_PREBUILT settings.
 In an Android kernel toolchain Bash shell, from kernel/xiaomi/sm8850:
 
 ```sh
-python3 ../sm8850-devicetrees/tools/prepare-nezha-display.py /path/to/OS4.0.7.0.XPACNXM/dtbo.img
 out="$PWD/../../../out/nezha/kernel"
 make O="$out" ARCH=arm64 LLVM=1 gki_defconfig vendor/canoe_GKI.config vendor/nezha_GKI.config
 make O="$out" ARCH=arm64 LLVM=1 -j8 Image dtbs modules
@@ -86,11 +85,12 @@ factory module, the OS4 ROM packaging, or boot on a phone.
 
 ## OS4 display and touch
 
-Run the preparation command above once per checkout. It checks the full
-partition SHA-256 and writes a git-ignored DTS include next to the board
-source. Kbuild adds `nezha-canoe-board-overlay.dtbo` when the include is
-present. The generated file contains the panel settings from the local OTA.
-A checkout without that input can still build the input and SoC targets.
+Kbuild builds `nezha-canoe-board-overlay.dtbo` directly from the checked-in
+OS4.0.7.0.XPACNXM panel sources in
+`qcom/display/display/nezha-os4/` in the device-tree repository. A clean
+checkout contains all ten panel configurations and their DSI commands and
+timings. The OTA extraction tool is optional for comparison with the factory
+image.
 
 For a **source** Canoe base, use this overlay order with the built
 `scripts/dtc/fdtoverlay`. Example from the kernel tree after setting
