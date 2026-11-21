@@ -56,3 +56,26 @@ OS4 base canoep-tp / canoep-tp-v2 use SoC ID 0x1010295; the larger stock
 overlay's list contains 0x1000295. Both original values are preserved.
 Host fixup success alone cannot establish the bootloader selection for
 these two variants. Verify the selected board and panel on hardware.
+
+## First native build
+
+Clang 19.1.7 built a 34580992-byte arm64 4 KiB Image and all 14 DT targets.
+The test machine used DWARF module versions and CFI; Android production
+Rust and pahole were unavailable. The local Image SHA-256 was
+0a9793613f10debf190a1dd316fcf302d25203450bc28970726f35ca5d2efc83.
+
+The input overlays applied to all 12 corresponding factory bases and all
+12 source bases in host fixup tests. Applying the *full* stock Canoe overlay
+to the two CanoeP alternate thermal bases fails in libfdt. Those bases omit
+11 referenced audio/DSP symbols, including canoe_snd and spf_core_platform.
+This documents the original package combinations; successful application
+of the smaller input overlays does not resolve whole-board selection.
+
+Kbuild compiled ten in-tree dependency modules plus xiaomi_touch.ko and
+synaptics_tcm2.ko. Strict modpost, the ROM-style external-module wrapper,
+modules_install and a staged depmod check passed. All 112 version records
+of xiaomi_touch and all 176 of synaptics_tcm2 matched the same-build exports.
+Of the 15 Xiaomi framework symbols consumed by the stock controller, four
+had different CRCs with this build and two were absent. Use the paired OSS
+modules. This build covers the input stack and does not qualify every
+factory module, the OS4 ROM packaging, or boot on a phone.
