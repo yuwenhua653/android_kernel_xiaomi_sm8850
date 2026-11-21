@@ -2733,8 +2733,12 @@ static void sc96281_interrupt_work(struct work_struct *work)
 		for (i = 0; i < ARRAY_SIZE(rx_irq_map); i++) {
 			if (!(rx_irq_map[i].irq_regval & regval)) continue;
 			chip->proc_data.int_flag = rx_irq_map[i].irq_flag;
+			/* The RX strategy queues a bitmask; the TX strategy above
+			 * consumes an interrupt index instead.
+			 */
 			mca_strategy_func_process(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
-				MCA_EVENT_WIRELESS_INT_CHANGE, chip->proc_data.int_flag);
+				MCA_EVENT_WIRELESS_INT_CHANGE,
+				BIT(chip->proc_data.int_flag));
 		}
 	}
 exit:
