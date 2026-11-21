@@ -7,19 +7,23 @@ Its module ABI must be checked separately for any retained stock driver.
 
 Use the three sibling project paths in manifest.xml. Include
 `kernel/xiaomi/sm8850/android/nezha-native/BoardConfigKernel.mk` in the
-nezha device BoardConfig for a source build. This fragment adds the touch
-module directory to the product's existing external module selection.
+nezha device BoardConfig for a source build. This fragment builds the display providers, MSM DRM and touch drivers
+before the product's remaining external modules.
 The device tree still owns image assembly, first-stage fstab, vendor
 ramdisk, module load lists, and any FORCE_PREBUILT settings.
 
-In an Android kernel toolchain shell, from kernel/xiaomi/sm8850:
+In an Android kernel toolchain Bash shell, from kernel/xiaomi/sm8850:
 
 ```sh
+python3 ../sm8850-devicetrees/tools/prepare-nezha-display.py /path/to/OS4.0.7.0.XPACNXM/dtbo.img
 out="$PWD/../../../out/nezha/kernel"
 make O="$out" ARCH=arm64 LLVM=1 gki_defconfig vendor/canoe_GKI.config vendor/nezha_GKI.config
 make O="$out" ARCH=arm64 LLVM=1 -j8 Image dtbs modules
-make -C ../sm8850-modules/xiaomi/nezha-touch KERNEL_SRC="$PWD" \
-    M=../sm8850-modules/xiaomi/nezha-touch O="$out" ARCH=arm64 LLVM=1 modules
+for dir in qcom/opensource/mm-drivers/{msm_ext_display,sync_fence,hfi_core,hw_fence} \
+           qcom/opensource/{securemsm-kernel,synx-kernel,display-drivers} xiaomi/nezha-touch; do
+    make -j8 -C "../sm8850-modules/$dir" KERNEL_SRC="$PWD" \
+        M="../sm8850-modules/$dir" O="$out" ARCH=arm64 LLVM=1 modules || exit 1
+done
 ```
 
 ## OS4 image baseline
@@ -48,8 +52,7 @@ the corresponding stock entries. Each reproduces 213 stock properties
 cells and the DDIC strap GPIO descriptor. Both use Xiaomi board ID 5.
 Treat these overlays as components during bring-up: the two original
 entries include additional PMIC, charging, display, camera and audio data.
-The full display overlay adds panel phandles to the touchscreen. Preserve
-those links in a combined image. Panel firmware, trusted-touch VM, suspend
+The combined Canoe target includes the input wiring and panel references together. Panel firmware, trusted-touch VM, suspend
 and all input devices still require hardware testing.
 
 OS4 base canoep-tp / canoep-tp-v2 use SoC ID 0x1010295; the larger stock
@@ -79,3 +82,52 @@ Of the 15 Xiaomi framework symbols consumed by the stock controller, four
 had different CRCs with this build and two were absent. Use the paired OSS
 modules. This build covers the input stack and does not qualify every
 factory module, the OS4 ROM packaging, or boot on a phone.
+
+
+## OS4 display and touch
+
+Run the preparation command above once per checkout. It checks the full
+partition SHA-256 and writes a git-ignored DTS include next to the board
+source. Kbuild adds `nezha-canoe-board-overlay.dtbo` when the include is
+present. The generated file contains the panel settings from the local OTA.
+A checkout without that input can still build the input and SoC targets.
+
+For a **source** Canoe base, use this overlay order with the built
+`scripts/dtc/fdtoverlay`. Example from the kernel tree after setting
+`out` as above:
+
+```sh
+q="$out/arch/arm64/boot/dts/vendor/qcom"
+"$out/scripts/dtc/fdtoverlay" -i "$q/canoe.dtb" -o "$out/nezha-canoe-display.dtb" \
+    "$q/mm/hfi_core/canoe-hfi-core.dtbo" "$q/mm/hw_fence/canoe-hw-fence.dtbo" \
+    "$q/synx/synx/canoe-synx.dtbo" "$q/nezha-canoe-display-soc.dtbo" \
+    "$q/nezha-canoe-board-overlay.dtbo"
+```
+
+For the corresponding **factory** base, apply just the combined board overlay.
+The six verified variants are canoe, canoe-v2, canoe-tp, canoe-tp-v2,
+canoep and canoep-v2. The smaller SG/Whale entry keeps its own input target.
+The SoC display layer preserves the factory-disabled HFI node and the two
+extra unsecure SMMU reservations. The generic Canoe HFI layer enables the
+node, which can make MSM DRM defer while waiting for HFI to probe.
+
+Across the six factory and six source merges, all four screen clients
+(touch, charge, thermal and fingerprint) resolved to the same ordered
+list of ten panels as the factory result. The default was
+`dsi_p1_42_02_0a_dsc_cmd`. All 115 panel subtree nodes, including
+95 timing entries, matched in content after resolving handles. Timing order
+matched as well. The board overlay reproduced 8,515 original properties
+and the three native input additions. On each source base, 751 properties
+from the SoC display, HFI, fence and synchronization overlays also matched.
+
+The host built Image, 337 in-tree modules and 14 external modules. The
+ROM-style wrappers installed all 351 in one staging tree. Strict modpost
+and depmod passed. All external module version records matched the exports
+from this build, including all 833 for msm_drm. Full module compilation
+required restoring shared floor-rate clock operations and aligning CoreSight
+registration and source callbacks with the APIs used on this branch.
+
+The combined board overlay covers display and input. The Android product
+still needs the other board subsystems, partition packaging and first-stage
+load lists. Output here is for host integration. Hardware panel selection,
+display power transitions, brightness, fingerprint and boot remain untested.
