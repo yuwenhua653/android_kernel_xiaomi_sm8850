@@ -187,7 +187,9 @@ mca_platform_bc12_class.ko
 mca_platform_cp_class.ko
 mca_platform_loadsw_class.ko
 mca_protocol_class.ko
+mca_adsp_glink.ko
 mca_qcom_panel.ko
+qcom_adsp_pd_protocol.ko
 mca_protocol_pd_class.ko
 mca_protocol_qc_class.ko
 qti_battery_charger.ko

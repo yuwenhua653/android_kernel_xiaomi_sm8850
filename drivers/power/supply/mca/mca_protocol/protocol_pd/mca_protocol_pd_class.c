@@ -60,6 +60,7 @@ enum mca_apdo_max {
 struct protocol_class_pd_ops_data {
 	void *data;
 	struct protocol_class_pd_ops *ops;
+	const struct protocol_pd_identity_ops *identity;
 };
 
 static struct protocol_class_pd_ops_data __rcu *g_protocol_pd_data[TYPEC_PORT_MAX];
@@ -910,13 +911,55 @@ int protocol_class_pd_get_zimi_cypress_flag(unsigned int port_num, int *zimi_cyp
 }
 EXPORT_SYMBOL(protocol_class_pd_get_zimi_cypress_flag);
 
+int protocol_class_pd_get_usb_vendor_id(unsigned int port_num, unsigned int *usb_vendor_id)
+{
+	struct protocol_class_pd_ops_data *entry;
+	int idx, ret;
+
+	if (port_num >= TYPEC_PORT_MAX || !usb_vendor_id)
+		return -EINVAL;
+	idx = srcu_read_lock(&g_pd_provider_srcu);
+	entry = srcu_dereference(g_protocol_pd_data[port_num], &g_pd_provider_srcu);
+	if (!entry)
+		ret = -ENODEV;
+	else if (!entry->identity || !entry->identity->get_usb_vendor_id)
+		ret = -EOPNOTSUPP;
+	else
+		ret = entry->identity->get_usb_vendor_id(usb_vendor_id, entry->data);
+	srcu_read_unlock(&g_pd_provider_srcu, idx);
+	return ret;
+}
+EXPORT_SYMBOL(protocol_class_pd_get_usb_vendor_id);
+
+int protocol_class_pd_get_product_vdo(unsigned int port_num, unsigned int *product_vdo)
+{
+	struct protocol_class_pd_ops_data *entry;
+	int idx, ret;
+
+	if (port_num >= TYPEC_PORT_MAX || !product_vdo)
+		return -EINVAL;
+	idx = srcu_read_lock(&g_pd_provider_srcu);
+	entry = srcu_dereference(g_protocol_pd_data[port_num], &g_pd_provider_srcu);
+	if (!entry)
+		ret = -ENODEV;
+	else if (!entry->identity || !entry->identity->get_product_vdo)
+		ret = -EOPNOTSUPP;
+	else
+		ret = entry->identity->get_product_vdo(product_vdo, entry->data);
+	srcu_read_unlock(&g_pd_provider_srcu, idx);
+	return ret;
+}
+EXPORT_SYMBOL(protocol_class_pd_get_product_vdo);
+
 int protocol_class_pd_get_port_num(void)
 {
 	return READ_ONCE(g_cur_port);
 }
 EXPORT_SYMBOL(protocol_class_pd_get_port_num);
 
-int protocol_class_pd_register_ops(unsigned int port_num, struct protocol_class_pd_ops *ops, void *data)
+int protocol_class_pd_register_identity_ops(unsigned int port_num,
+		struct protocol_class_pd_ops *ops, void *data,
+		const struct protocol_pd_identity_ops *identity)
 {
 	struct protocol_class_pd_ops_data *entry, *old;
 
@@ -926,6 +969,7 @@ int protocol_class_pd_register_ops(unsigned int port_num, struct protocol_class_
 	if (!entry)
 		return -ENOMEM;
 	entry->ops = ops;
+	entry->identity = identity;
 	entry->data = data;
 	mutex_lock(&g_pd_provider_lock);
 	old = rcu_replace_pointer(g_protocol_pd_data[port_num], entry,
@@ -934,6 +978,12 @@ int protocol_class_pd_register_ops(unsigned int port_num, struct protocol_class_
 	synchronize_srcu(&g_pd_provider_srcu);
 	kfree(old);
 	return 0;
+}
+EXPORT_SYMBOL(protocol_class_pd_register_identity_ops);
+
+int protocol_class_pd_register_ops(unsigned int port_num, struct protocol_class_pd_ops *ops, void *data)
+{
+	return protocol_class_pd_register_identity_ops(port_num, ops, data, NULL);
 }
 EXPORT_SYMBOL(protocol_class_pd_register_ops);
 

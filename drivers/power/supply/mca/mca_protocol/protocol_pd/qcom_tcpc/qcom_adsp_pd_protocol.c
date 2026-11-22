@@ -69,6 +69,18 @@ enum adsp_pd_prop {
 #define ADSP_PD_TYPE_PD 0x0b
 #define ADSP_PD_TYPE_PD_PPS 0x0c
 
+/* OS4.0.7 / Nezha inserts USB VID and Product VDO before adapter SVID. */
+enum nezha_pd_read_prop {
+	NEZHA_PD_USB_VENDOR_ID = 0x21010,
+	NEZHA_PD_PRODUCT_VDO = 0x21011,
+	NEZHA_PD_ADAPTER_SVID = 0x21012,
+	NEZHA_PD_PDOS = 0x21014,
+	NEZHA_PD_PPS_MAX_CUR = 0x21016,
+	NEZHA_PD_TYPEC_MODE = 0x21018,
+	NEZHA_PD_CC_ORIENT = 0x21019,
+	NEZHA_PD_PPS_STATUS = 0x2101c,
+};
+
 struct adsp_pd_protocol {
 	struct device *dev;
 	int pd_active;
@@ -125,6 +137,12 @@ static int adsp_pd_read_prop(int prop, void *buf, size_t size)
 
 	adsp_pd_record_io(prop, false, rc);
 	return rc;
+}
+
+static int adsp_pd_read_profile_prop(int myron_id, int nezha_id, void *buf, size_t len)
+{
+	return adsp_pd_read_prop(IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA) ?
+				 nezha_id : myron_id, buf, len);
 }
 
 static int adsp_pd_write_prop(int prop, void *buf, size_t size)
@@ -213,8 +231,8 @@ static int adsp_pd_protocol_set_gear_shift(int gear_shift, void *data)
 
 static int adsp_pd_protocol_get_pps_max_cur(unsigned int *curr, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_PPS_MAX_CUR, curr,
-					sizeof(*curr));
+	return adsp_pd_read_profile_prop(PD_PROP_PPS_MAX_CUR, NEZHA_PD_PPS_MAX_CUR,
+					 curr, sizeof(*curr));
 }
 
 static int adsp_pd_protocol_get_pps_status(unsigned int *volt, unsigned int *curr, void *data)
@@ -222,7 +240,8 @@ static int adsp_pd_protocol_get_pps_status(unsigned int *volt, unsigned int *cur
 	u32 val = 0;
 	int ret;
 
-	ret = adsp_pd_read_prop(PD_PROP_PPS_STATUS, &val, sizeof(val));
+	ret = adsp_pd_read_profile_prop(PD_PROP_PPS_STATUS, NEZHA_PD_PPS_STATUS,
+					 &val, sizeof(val));
 	if (ret == 0) {
 		*curr = (val & 0xffff) * 50;
 		*volt = (val >> 16) * 20;
@@ -243,8 +262,8 @@ static int adsp_pd_protocol_get_pdos(struct pd_pdo *pdos, int count, void *data)
 
 	if (!pdos || count <= 0 || count > PROTOCOL_PD_MAX_PDO_NUMS)
 		return -EINVAL;
-	ret = adsp_pd_read_prop(PD_PROP_PDOS, pdos,
-				       count * sizeof(struct pd_pdo));
+	ret = adsp_pd_read_profile_prop(PD_PROP_PDOS, NEZHA_PD_PDOS,
+					 pdos, count * sizeof(struct pd_pdo));
 	spin_lock_irqsave(&adsp_pd_status_lock, flags);
 	adsp_pd_status.pdo_count = count;
 	adsp_pd_status.pdo_errno = ret;
@@ -378,15 +397,15 @@ static int adsp_pd_protocol_get_pd_verifed(int *pd_verifed, void *data)
 
 static int adsp_pd_protocol_get_typec_mode(int *typec_mode, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_TYPEC_MODE, typec_mode,
-					sizeof(*typec_mode));
+	return adsp_pd_read_profile_prop(PD_PROP_TYPEC_MODE, NEZHA_PD_TYPEC_MODE,
+					 typec_mode, sizeof(*typec_mode));
 }
 
 static int adsp_pd_protocol_get_typec_cc_orientation(int *cc_orientation,
 						     void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_TYPEC_CC_ORIENT, cc_orientation,
-					sizeof(*cc_orientation));
+	return adsp_pd_read_profile_prop(PD_PROP_TYPEC_CC_ORIENT, NEZHA_PD_CC_ORIENT,
+					 cc_orientation, sizeof(*cc_orientation));
 }
 
 static int adsp_pd_protocol_get_adapter_id(unsigned int *adapter_id, void *data)
@@ -398,8 +417,8 @@ static int adsp_pd_protocol_get_adapter_id(unsigned int *adapter_id, void *data)
 static int adsp_pd_protocol_get_adapter_svid(unsigned int *adapter_svid,
 					     void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_ADAPTER_SVID, adapter_svid,
-					sizeof(*adapter_svid));
+	return adsp_pd_read_profile_prop(PD_PROP_ADAPTER_SVID, NEZHA_PD_ADAPTER_SVID,
+					 adapter_svid, sizeof(*adapter_svid));
 }
 
 static int adsp_pd_protocol_get_has_dp(bool *has_dp, void *data)
@@ -668,6 +687,32 @@ static struct protocol_class_pd_ops g_adsp_pd_ops = {
 	.protocol_pd_get_support_keep_pdo = adsp_pd_protocol_get_support_keep_pdo,
 };
 
+static int nezha_pd_get_usb_vendor_id(unsigned int *value, void *data)
+{
+	return adsp_pd_read_prop(NEZHA_PD_USB_VENDOR_ID, value, sizeof(*value));
+}
+
+static int nezha_pd_get_product_vdo(unsigned int *value, void *data)
+{
+	return adsp_pd_read_prop(NEZHA_PD_PRODUCT_VDO, value, sizeof(*value));
+}
+
+static const struct protocol_pd_identity_ops nezha_identity_ops = {
+	.get_usb_vendor_id = nezha_pd_get_usb_vendor_id,
+	.get_product_vdo = nezha_pd_get_product_vdo,
+};
+
+/* Only expose operations with verified firmware IDs and payload formats. */
+static struct protocol_class_pd_ops nezha_pd_ops = {
+	.protocol_pd_get_adapter_id = adsp_pd_protocol_get_adapter_id,
+	.protocol_pd_get_adapter_svid = adsp_pd_protocol_get_adapter_svid,
+	.protocol_pd_get_typec_mode = adsp_pd_protocol_get_typec_mode,
+	.protocol_pd_get_typec_cc_orientation = adsp_pd_protocol_get_typec_cc_orientation,
+	.protocol_pd_get_pdos = adsp_pd_protocol_get_pdos,
+	.protocol_pd_get_pps_max_cur = adsp_pd_protocol_get_pps_max_cur,
+	.protocol_pd_get_pps_status = adsp_pd_protocol_get_pps_status,
+};
+
 static int adsp_pd_protocol_event_cb(struct notifier_block *nb,
 				     unsigned long action, void *data)
 {
@@ -729,7 +774,11 @@ static int adsp_pd_protocol_probe(struct platform_device *pdev)
 		goto unregister_event;
 
 	/* Publish callbacks only after both event listeners are ready. */
-	rc = protocol_class_pd_register_ops(0, &g_adsp_pd_ops, pd);
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA))
+		rc = protocol_class_pd_register_identity_ops(0, &nezha_pd_ops, pd,
+							    &nezha_identity_ops);
+	else
+		rc = protocol_class_pd_register_ops(0, &g_adsp_pd_ops, pd);
 	if (rc)
 		goto unregister_abnormal;
 
@@ -754,7 +803,8 @@ static void adsp_pd_protocol_remove(struct platform_device *pdev)
 	unsigned long flags;
 
 	/* The class waits for in-flight SRCU callbacks before freeing pd. */
-	protocol_class_pd_unregister_ops(0, &g_adsp_pd_ops, pd);
+	protocol_class_pd_unregister_ops(0, IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA) ?
+					 &nezha_pd_ops : &g_adsp_pd_ops, pd);
 	mca_event_block_notify_unregister(MCA_EVENT_CHARGE_STATUS,
 					  &pd->abnormal_nb);
 	mca_event_block_notify_unregister(MCA_EVENT_TYPE_CHARGER_CONNECT,

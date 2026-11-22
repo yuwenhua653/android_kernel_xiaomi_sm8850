@@ -4,7 +4,7 @@
 # Platform drivers reference private in-tree headers by source-root paths.
 ccflags-y += -I$(srctree)
 ccflags-y += -I$(srctree)/drivers/misc/hwid -I$(srctree)/drivers/power/supply/mca/include -I$(srctree)/drivers/power/supply/mca/mca_common -I$(srctree)/include
-obj-$(CONFIG_MYRON_MCA_SERVICES) += mca_adsp_glink.o
+obj-$(CONFIG_XIAOMI_MCA_ADSP_PD) += mca_adsp_glink.o
 obj-$(CONFIG_MYRON_MCA_INTERFACE) += mca_charge_interface.o
 obj-$(CONFIG_MYRON_MCA_PLATFORM) += mca_charge_mievent.o
 obj-$(CONFIG_XIAOMI_MCA_CORE) += mca_event.o

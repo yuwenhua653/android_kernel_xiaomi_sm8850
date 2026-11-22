@@ -1035,4 +1035,11 @@ config XIAOMI_MCA_CLASSES
 	  QC class interfaces. Hardware drivers register their operations
 	  separately.
 
+config XIAOMI_MCA_ADSP_PD
+	tristate "Xiaomi MCA Qualcomm ADSP Power Delivery provider"
+	depends on XIAOMI_MCA_CLASSES && QTI_PMIC_GLINK
+	default MYRON_MCA_SERVICES
+	help
+	  Build the MCA GLINK transport and the USB PD protocol provider.
+
 endif # POWER_SUPPLY

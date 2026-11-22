@@ -110,6 +110,16 @@ struct protocol_class_pd_ops {
 	int (*protocol_pd_get_support_keep_pdo)(int *support, void *data);
 };
 
+struct protocol_pd_identity_ops {
+	int (*get_usb_vendor_id)(unsigned int *value, void *data);
+	int (*get_product_vdo)(unsigned int *value, void *data);
+};
+
+int protocol_class_pd_register_identity_ops(unsigned int port_num,
+		struct protocol_class_pd_ops *ops, void *data,
+		const struct protocol_pd_identity_ops *identity);
+int protocol_class_pd_get_usb_vendor_id(unsigned int port_num, unsigned int *usb_vendor_id);
+int protocol_class_pd_get_product_vdo(unsigned int port_num, unsigned int *product_vdo);
 int protocol_class_pd_register_ops(unsigned int port_num, struct protocol_class_pd_ops *ops, void *data);
 int protocol_class_pd_get_pps_max_power(unsigned int port_num, unsigned int *max_power);
 int protocol_class_pd_set_pps_pdo_select(unsigned int port_num, int volt, int curr);
