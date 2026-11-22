@@ -431,6 +431,20 @@ config REGULATOR_GPIO
 	  and the platform has to provide a mapping of GPIO-states
 	  to target volts/amps.
 
+config REGULATOR_ET5907MV
+	tristate "Etek ET5907MV satellite LDO bank"
+	depends on I2C && OF && PINCTRL
+	select REGMAP_I2C
+	help
+	  Support the seven satellite regulator outputs on Xiaomi Tiantong boards.
+
+config REGULATOR_HL7603
+	tristate "Halo HL7603 Tiantong buck-boost regulator"
+	depends on I2C && OF
+	select REGMAP_I2C
+	help
+	  Support the satellite power amplifier supply on Xiaomi Tiantong boards.
+
 config REGULATOR_HI6421
 	tristate "HiSilicon Hi6421 PMIC voltage regulator support"
 	depends on MFD_HI6421_PMIC && OF

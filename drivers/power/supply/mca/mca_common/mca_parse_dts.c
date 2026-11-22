@@ -63,6 +63,22 @@ int mca_parse_dts_u32(const struct device_node *np, const char *prop, u32 *data,
 }
 EXPORT_SYMBOL(mca_parse_dts_u32);
 
+int mca_parse_dts_s32(const struct device_node *np, const char *prop, s32 *data,
+		      s32 default_value)
+{
+	if (!np || !prop || !data)
+		return -EINVAL;
+
+	if (of_property_read_s32(np, prop, data)) {
+		*data = default_value;
+		return -EINVAL;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(mca_parse_dts_s32);
+
+
 int mca_parse_dts_u8_array(const struct device_node *np, const char *prop,
 			   u8 *data, u16 len)
 {

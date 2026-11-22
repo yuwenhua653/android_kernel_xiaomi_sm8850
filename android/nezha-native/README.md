@@ -176,6 +176,55 @@ Every extracted module matched its staged ELF. The v4 vendor_boot round
 trip preserved the stock fstab, concatenated DTB section and bootconfig
 and contained one nonempty platform table entry. This packaging test uses
 the factory base DTB section and does not qualify a production Android
-image, module signing, firmware or hardware. Remaining stock entries
-include the ET5907MV and HL7603 regulators, Xiaomi MCA charging drivers
-and additional WLAN variants.
+image, module signing, firmware or hardware. That build preceded the regulator and MCA integration below. Other WLAN
+variants remain to be ported.
+
+## OS4 satellite supplies and MCA framework
+
+The two board overlays use the same SE10 I2C bus, seven ET5907MV
+outputs at address 0x35 and one HL7603 PA supply at 0x55. The latter
+matches `tiantong,dcdc`. The separate MCA HL7603 boost chip has a
+different binding. GPIO160 controls the shared PMIC enable and GPIO172
+is the interrupt input. ET5907MV initializes the LDO selectors and
+returns the shared pin to idle. The HL7603 driver leaves that pin under
+board control. Its PA enable programs ILIM before setting bit 6. The
+native drivers provide the Linux regulator interface. The factory
+satellite character devices and their diagnostic sysfs ABI are still
+outside this bring-up.
+
+The Qualcomm MCA panel bridge and 15 core and class modules now build
+for nezha. The PD node uses the factory 90 W parameter and the load
+switch node stays disabled. These parameters describe the board. Actual
+charging depends on the matching IC drivers, policy and firmware.
+Register and voltage checks are offline. On the two low-voltage LDOs
+the 800000 and 1300000 uV initial requests select 804000 and 1302000 uV
+on the hardware grid. The future DXS702 consumer must allow these actual
+voltages when using the Linux regulator API.
+
+For Canoe use the overlay order above. For SG/Whale use
+`nezha-sg-whale-board-overlay.dtbo` on its corresponding base. Both
+include the supply wiring and MCA class nodes. The panel bridge needs an
+active panel in the sibling charge-screen node before it can bind. Host checks merged the
+board changes onto all 12 factory and 12 source bases. Across each merge
+106 node properties for the regulators, pin states and MCA interfaces
+matched the corresponding factory overlay, including the referenced pins.
+This does not qualify bootloader selection on CanoeP thermal variants.
+
+Normal first-stage coverage is now 130/172 factory module names.
+Recovery covers 260/465 plus the two native touch modules. Vendor DLKM
+covers 197/404. The `gpio-tiantong-dxs702` satellite GPIO consumer and OEM charging
+policy still need source integration. The common MCA
+symbols also differ between the native and factory stacks. Use matched
+source-built consumers. In particular the fuel-gauge, charge-pump, buck
+charger and PD operations still have factory-only interfaces.
+
+The complete host build produced 370 in-tree and 75 external modules.
+Readback found 264 matching ELFs in the v4 platform ramdisk, 100 in
+system_dlkm and 345 in vendor_dlkm. All 360 imported symbol versions
+on the 18 added modules and 8,098 on the external modules matched the
+build's exports. The panel screen/HBM getters match the factory CRCs
+and report primary-panel notifier state. The signed DT helper uses
+the source kernel's device-node ABI. Across the 16 MCA modules, 17
+factory-exported names are still missing, in addition to CRC differences.
+The native regulator interface still needs testing with the DXS702
+consumer on hardware. No production Rust/AVB or device boot was tested.

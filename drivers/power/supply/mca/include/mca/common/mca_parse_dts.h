@@ -8,6 +8,8 @@ int mca_parse_dts_u8(const struct device_node *np, const char *prop, u8 *data,
 		     u8 default_value);
 int mca_parse_dts_u32(const struct device_node *np, const char *prop, u32 *data,
 		      u32 default_value);
+int mca_parse_dts_s32(const struct device_node *np, const char *prop, s32 *data,
+		      s32 default_value);
 int mca_parse_dts_u8_array(const struct device_node *np, const char *prop,
 			   u8 *data, u16 len);
 int mca_parse_dts_u32_array(const struct device_node *np, const char *prop,

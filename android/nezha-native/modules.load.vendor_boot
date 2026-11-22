@@ -122,6 +122,8 @@ gh_rm_heap_manager.ko
 gh_msgq.ko
 gh_rm_drv.ko
 gh_vcpu_mgr.ko
+et5907mv-regulator.ko
+hl7603-regulator.ko
 sched-walt.ko
 qcom_ipc_logging.ko
 qrtr.ko

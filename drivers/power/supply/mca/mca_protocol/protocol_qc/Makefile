@@ -4,4 +4,4 @@
 # Platform drivers reference private in-tree headers by source-root paths.
 ccflags-y += -I$(srctree)
 ccflags-y += -I$(srctree)/drivers/power/supply/mca/include -I$(srctree)/drivers/power/supply/mca/mca_protocol/protocol_qc
-obj-$(CONFIG_MYRON_MCA_PLATFORM) += mca_protocol_qc_class.o
+obj-$(CONFIG_XIAOMI_MCA_CLASSES) += mca_protocol_qc_class.o

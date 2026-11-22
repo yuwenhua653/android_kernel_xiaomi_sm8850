@@ -1018,4 +1018,21 @@ config FUEL_GAUGE_MM8013
 	  the state of charge, temperature, cycle count, actual and design
 	  capacity, etc.
 
+config XIAOMI_MCA_CORE
+	tristate "Xiaomi MCA charging framework"
+	depends on SYSFS && OF && MI_HARDWARE_ID
+	default MYRON_MCA_BASE
+	help
+	  Build the MCA sysfs, notifier, hardware identification, logging,
+	  device tree, voting and workqueue modules.
+
+config XIAOMI_MCA_CLASSES
+	tristate "Xiaomi MCA charger and protocol classes"
+	depends on XIAOMI_MCA_CORE && TREE_SRCU
+	default MYRON_MCA_PLATFORM
+	help
+	  Build the charger, charge pump, gauge, load switch, BC1.2, PD and
+	  QC class interfaces. Hardware drivers register their operations
+	  separately.
+
 endif # POWER_SUPPLY

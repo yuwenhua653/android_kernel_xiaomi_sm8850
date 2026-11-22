@@ -9,9 +9,10 @@
 #include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/rcupdate.h>
 #include <linux/soc/qcom/panel_event_notifier.h>
 
-#include <mca/common/mca_event.h>
+#include <mca/common/mca_panel.h>
 
 struct mca_panel_dev {
 	/* Serialize duplicate detection and publication across panel events. */
@@ -19,6 +20,35 @@ struct mca_panel_dev {
 	int screen_state;
 	int hbm_state;
 };
+
+/* The primary battery-charger notifier has one owner at a time. */
+static struct mca_panel_dev __rcu *active_panel;
+
+int mca_panel_get_screen_state(void)
+{
+	struct mca_panel_dev *panel;
+	int state;
+
+	rcu_read_lock();
+	panel = rcu_dereference(active_panel);
+	state = panel && READ_ONCE(panel->screen_state) > 0;
+	rcu_read_unlock();
+	return state;
+}
+EXPORT_SYMBOL(mca_panel_get_screen_state);
+
+int mca_panel_get_hbm_state(void)
+{
+	struct mca_panel_dev *panel;
+	int state;
+
+	rcu_read_lock();
+	panel = rcu_dereference(active_panel);
+	state = panel && READ_ONCE(panel->hbm_state) > 0;
+	rcu_read_unlock();
+	return state;
+}
+EXPORT_SYMBOL(mca_panel_get_hbm_state);
 
 static void mca_panel_event_notifier_callback(
 		enum panel_event_notifier_tag tag,
@@ -50,7 +80,7 @@ static void mca_panel_event_notifier_callback(
 	/* Early/late notifications can repeat the same state. Publish once. */
 	mutex_lock(&panel_dev->lock);
 	if (*previous != value) {
-		*previous = value;
+		WRITE_ONCE(*previous, value);
 		mca_event_block_notify(MCA_EVENT_TYPE_PANEL, event, &value);
 	}
 	mutex_unlock(&panel_dev->lock);
@@ -94,7 +124,9 @@ static struct drm_panel *mca_panel_find_active(struct device *dev)
 static void mca_panel_unregister(void *cookie)
 {
 	/* The notifier core waits for in-flight callbacks before returning. */
+	RCU_INIT_POINTER(active_panel, NULL);
 	panel_event_notifier_unregister(cookie);
+	synchronize_rcu();
 }
 
 static int mca_panel_probe(struct platform_device *pdev)
@@ -122,6 +154,7 @@ static int mca_panel_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(cookie))
 		return dev_err_probe(dev, cookie ? PTR_ERR(cookie) : -EINVAL,
 				     "MCA panel notifier registration\n");
+	rcu_assign_pointer(active_panel, panel_dev);
 	ret = devm_add_action_or_reset(dev, mca_panel_unregister, cookie);
 	if (ret)
 		return ret;

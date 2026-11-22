@@ -50,9 +50,9 @@ config MYRON_MCA_BASE
       and current/voltage/thermal policy drivers are not included.
 config MCA_QCOM_PANEL
 	tristate "MCA Qualcomm panel event bridge"
-	depends on MYRON_MCA_BASE && DRM_PANEL && QCOM_PANEL_EVENT_NOTIFIER
+	depends on XIAOMI_MCA_CORE && DRM_PANEL && QCOM_PANEL_EVENT_NOTIFIER
 	help
-	  Forward Myron charge-screen blank/unblank and HBM events to MCA
+	  Forward charge-screen blank/unblank and HBM events to MCA
 	  charging strategies. Uses deferred probe while the panel is unavailable.
 	  The panel list is supplied by the sibling charge-screen DT node.
 	  This restores the event source consumed by the battery gauge and
