@@ -330,7 +330,8 @@ static int batt_psy_get_prop(struct power_supply *psy,
 	}
 
 	if (rc) {
-		mca_log_err("Couldn't get prop %d rc = %d\n", psp, rc);
+		if (rc != -ENODATA)
+			mca_log_err("Couldn't get prop %d rc = %d\n", psp, rc);
 		return rc;
 	}
 

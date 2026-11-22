@@ -30,23 +30,12 @@
 #include <mca/common/mca_log.h>
 #include <mca/strategy/strategy_class.h>
 #include "inc/mca_charger_wireless_psy.h"
-#include <mca/strategy/strategy_fg_class.h>
+#include <mca/platform/platform_wireless_class.h>
 #include <mca/strategy/strategy_wireless_class.h>
 
 #ifndef MCA_LOG_TAG
 #define MCA_LOG_TAG "mca_charger_wireless_psy"
 #endif
-
-static bool is_batt_available(struct wireless_psy_info *info)
-{
-	if (!info->batt_psy)
-		info->batt_psy = power_supply_get_by_name("battery");
-
-	if (!info->batt_psy)
-		return false;
-
-	return true;
-}
 
 static enum power_supply_property wireless_psy_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
@@ -64,59 +53,53 @@ static int wireless_psy_get_prop(struct power_supply *psy,
 				 enum power_supply_property psp,
 				 union power_supply_propval *val)
 {
-	int rc = 0;
 	struct wireless_psy_info *info = power_supply_get_drvdata(psy);
-
-	if (!is_batt_available(info)) {
-		mca_log_err("get batt psy fail\n");
-		return 0;
-	}
+	int sample = 0;
+	int rc;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_PRESENT:
-		(void)mca_strategy_func_get_status(
+		rc = mca_strategy_func_get_status(
 			STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
-			STRATEGY_STATUS_TYPE_ONLINE, &info->present);
-		val->intval = info->present;
+			STRATEGY_STATUS_TYPE_ONLINE, &sample);
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
-		val->intval = info->online;
-		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+		sample = info->online;
+		rc = 0;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		strategy_class_fg_ops_get_voltage(&info->vbat);
-		val->intval = info->vbat;
+		rc = platform_class_wireless_get_vout(WIRELESS_ROLE_MASTER,
+						      &sample);
+		if (!rc)
+			sample *= 1000; /* RX mV -> power_supply uV */
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		strategy_class_fg_ops_get_current(&info->ibat);
-		val->intval = info->ibat;
+		rc = platform_class_wireless_get_iout(WIRELESS_ROLE_MASTER,
+						      &sample);
+		if (!rc)
+			sample *= 1000; /* RX mA -> power_supply uA */
 		break;
+	case POWER_SUPPLY_PROP_TEMP:
+		rc = platform_class_wireless_get_temp(WIRELESS_ROLE_MASTER,
+						      &sample);
+		if (!rc)
+			sample *= 10; /* RX Celsius -> tenths of a degree */
+		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		break;
-	case POWER_SUPPLY_PROP_TYPE:
-		break;
-	case POWER_SUPPLY_PROP_SCOPE:
-		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
-		break;
-	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
-		break;
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT_MAX:
-		break;
-	default:
-		mca_log_err("Get prop %d is not supported in wireless\n", psp);
-		rc = -EINVAL;
-		break;
-	}
-
-	if (rc < 0) {
-		mca_log_err("Couldn't get prop %d rc = %d\n", psp, rc);
+		/* No qualified capability/limit provider; do not invent a value. */
 		return -ENODATA;
+	default:
+		return -EINVAL;
 	}
 
+	/* Offline RX and failed I2C reads are unavailable, never stale samples. */
+	if (rc < 0)
+		return -ENODATA;
+
+	val->intval = sample;
 	return 0;
 }
 

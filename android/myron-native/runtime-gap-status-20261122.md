@@ -1,0 +1,123 @@
+# Myron runtime gap follow-up, 2026-11-22
+
+This source update follows review of a device running 6.12.97 #10. It does
+not establish runtime results for 6.12.118. The Android device repositories
+and libperfmgr migration are deferred until the owner's local device trees
+are exported. No EvolutionX shared build source is changed.
+
+## Implemented source corrections
+
+- The MCA wireless power_supply now reports RX voltage/current/temperature
+  through the wireless platform provider, in uV/uA/tenths of Celsius.
+  Previously it reported fuel-gauge voltage/current (including mV as uV),
+  omitted TEMP, and returned success without a value for several properties.
+  Unavailable providers and unsupported limits return ENODATA without
+  publishing a stale or invented sample. These telemetry changes do not
+  establish that negotiated wireless input power is adequate.
+- Optional battery/USB ENODATA results no longer produce error-level spam.
+  Other provider errors remain visible. Missing property implementations
+  are not represented as completed merely because expected errors are quiet.
+- Successfully parsed wireless voltage/temperature rows use debug logging;
+  actual parse failures still use error logging.
+- Charger storage with an unspecified, immutable header-version parameter
+  no longer scans/wakes UFS 21 times. Storage remains unavailable and writes
+  remain gated; neither the partition format nor a safe write policy is guessed.
+- The companion modules update prevents periodic WLAN IPA performance votes
+  before uC pipe setup has registered its PM client. The synchronous setup
+  path now records completion too. Bandwidth-based voting uses the same
+  completed-setup condition. Actual IPA failures include handle and bandwidth.
+  This prevents premature requests; it does not fix an absent firmware-ready
+  notification or certify working offload/suspend.
+
+## Thermal drivers and provenance
+
+The following missing implementation files are imported from
+LineageOS/android_kernel_qcom_sm8850 at
+`557159b6a0d06f1c6f07ec4c1f22bc9309a113e4`, retaining their licenses:
+
+- drivers/thermal/qcom/qti_cpufreq_cdev.c
+- drivers/thermal/qcom/qti_devfreq_cdev.c
+- drivers/thermal/qcom/qti_dynamic_hw_trip.c
+- drivers/thermal/qcom/qti_userspace_cdev.c
+- drivers/cpuidle/governors/{qcom-lpm.c,qcom-lpm.h,qcom-cluster-lpm.c,
+  qcom-lpm-sysfs.c,trace-cluster-lpm.h,trace-qcom-lpm.h}
+
+Thermal adaptation checks frequency-table entries/order, QoS registration
+errors, GPU supplier/OPP readiness, SCMI read failures, cooling-device
+registration errors, DT references, and cancellation of pending CPU work
+before removal. OF module aliases are provided. Native Makefiles build the
+four thermal drivers and the existing PMIC temperature alarm as modules.
+
+**Runtime integration is still pending:** the Android device load lists must
+include the required modules and final images must contain them. An additional
+compiled module is not proof that Android loads it. Verify cpu-cluster0,
+cpu-cluster1, gpu, display-fps, PMIC thermal zones and cpu-hw-trip-* against
+the actual vendor policy, including cooling-state effects and recovery.
+Existing generic CPU/GPU cooling stays intact. No thermal threshold is raised.
+`thermal_config` is a debug interface and remains disabled.
+
+## LPM is available for qualification, not switched on
+
+The Qualcomm LPM source and native build rule are restored, but the ordinary
+Myron fragment still disables it and the matching DT remains generic-PSCI-v2.
+Upstream initializes `sleep_disabled=true`; the vendor userspace normally
+changes this. The governor also depends on WALT interfaces when WALT is a
+module. Enabling it or its auxiliary cluster nodes without the paired load
+order and initialization would risk regressing deep sleep and fw_devlink.
+
+The qualification build explicitly enables CPU_IDLE_GOV_QCOM_LPM=m only in
+its output .config. This is not a shipped default. Restore cluster-device0/1/2
+only with the corresponding device integration, then compare PSCI/domain
+residency and suspend statistics; disappearance of pending messages alone
+does not qualify the vendor policy.
+
+## Remaining checklist
+
+| Item | State / next evidence |
+| --- | --- |
+| libperfmgr and Perf HAL node mismatches | Deferred by owner; needs actual Android device tree and runtime node inventory. |
+| skin reporting and mi_thermald policy | HAL runs, but skin is absent from captured output; verify installed HAL/SKU and sensor mapping. |
+| Wireless effective charging | Retain prior RX IRQ fix; verify final DT and RX/input/battery measurements on the same device/charger. |
+| GLINK owner 32778 | QTI battery client; generic battery-charger node is disabled while MCA is enabled. Do not enable duplicate battery/USB supplies just to consume a message. Firmware/client routing remains to be qualified. |
+| CNSS suspend | One explicit driver failure in this capture, not all four failures. WoW handshake and firmware readiness remain open. |
+| CWB/RGB off-screen retry | Userspace sampling lifecycle needs device/vendor source; no kernel workaround added. |
+| VPP/CDSP session crash | Needs matching userspace DSP clients/startup review; CDSP boot success alone is insufficient. |
+| PMIC/RPMh resources | Compare effective board DT and stock command-db; do not delete suppliers on error alone. |
+| SCMI telemetry | Firmware protocol/timeout still unverified; new thermal driver preserves error reporting. |
+| Charger persistence | Disabled until header/layout is verified; no writes enabled. |
+| RNG | Missing qcom_rng is not evidence of a broken CRNG; entropy-source audit remains separate. |
+| Audio LPI output | Unconditional error-level debug prints are not proof of a pinctrl failure. |
+
+## Validation
+
+Passed on 2026-11-22 using host LLVM/Clang 19.1.7 targeting ARM64:
+
+- `gki_defconfig vendor/canoe_GKI.config vendor/myron_GKI.config`, followed
+  by `make ARCH=arm64 LLVM=1 Image modules`, including full in-tree modpost.
+  CFI and MODVERSIONS were enabled. Rust and BTF were not enabled in this
+  host qualification environment; this is not the Android production toolchain.
+- A separate qualification of the same configuration with
+  `CPU_IDLE_GOV_QCOM_LPM=m` also passed `Image modules` and modpost. The
+  configuration was restored to the ordinary disabled setting and rebuilt
+  successfully before publication. The optional module declares its
+  `sched-walt` dependency.
+- The four restored thermal modules and `qcom-spmi-temp-alarm.ko` were
+  inspected as ARM64 ELF. Dynamic hardware trip declares dependencies on
+  `qcom_scmi_client` and `qcom_ipc_logging`.
+- Changed WLAN `wlan_ipa_main.o`, `wlan_ipa_core.o`, `wlan_ipa_rm.o`, and
+  external IPA `ipa_pm.o` compiled against this kernel. This was an object
+  check, not a complete external-module modpost/build.
+- Production-function regression harnesses passed for wireless RX units,
+  failed providers and unsupported properties; CPU/GPU cooling-state bounds,
+  failed/inactive QoS requests and release; and periodic IPA requests before
+  connection, after setup, after reset, and with genuine provider errors.
+- The existing SC96281 IRQ regression passed 4,363 cases.
+
+Reproduce the added harnesses with `python3` and `--kernel-root` for
+`tests/test_wireless_psy.py` / `tests/test_thermal_qos.py`, or
+`--modules-root` for the companion repository's
+`android/myron-native/tests/test_ipa_perf_ready.py`.
+
+These checks do not substitute for the Android Clang/Rust/BTF build, complete
+external module linkage, final image/module load-list checks, or device
+testing. No flashable artifact is qualified by this source update.

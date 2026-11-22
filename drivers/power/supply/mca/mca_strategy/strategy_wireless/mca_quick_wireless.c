@@ -2368,7 +2368,7 @@ static int mca_wireless_quick_charge_parse_volt_para(
 		}
 	}
 	for (i = 0; i < volt_info->volt_para_size; i++)
-		mca_log_err("volt_para %d %d %d\n", volt_para[i].voltage,
+		mca_log_debug("volt_para %d %d %d\n", volt_para[i].voltage,
 			    volt_para[i].current_max, volt_para[i].current_min);
 	return 0;
 error:
@@ -2505,7 +2505,7 @@ static int mca_wireless_quick_charge_parse_temp_para(
 		}
 	}
 	for (i = 0; i < batt_para_info->temp_para_size; i++)
-		mca_log_err("temp_para %d %d %d %d %d %d %d %d %d\n",
+		mca_log_debug("temp_para %d %d %d %d %d %d %d %d %d\n",
 			    temp_info[i].temp_para.temp_low,
 			    temp_info[i].temp_para.temp_high,
 			    temp_info[i].temp_para.low_temp_hysteresis,

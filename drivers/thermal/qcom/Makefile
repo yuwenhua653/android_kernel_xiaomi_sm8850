@@ -16,3 +16,9 @@ qcom_tsens-y := tsens-8960.o tsens-v0_1.o tsens-v1.o tsens-v2.o tsens.o
 obj-$(CONFIG_QTI_CPU_PAUSE_COOLING_DEVICE) += thermal_pause.o
 
 obj-$(CONFIG_QTI_DDR_COOLING_DEVICE) += ddr_cdev.o
+
+# Qualcomm thermal consumers present in the Canoe device tree.
+obj-$(CONFIG_QTI_CPUFREQ_CDEV) += qti_cpufreq_cdev.o
+obj-$(CONFIG_QTI_DEVFREQ_CDEV) += qti_devfreq_cdev.o
+obj-$(CONFIG_QTI_DYNAMIC_HW_THERMAL_TRIP) += qti_dynamic_hw_trip.o
+obj-$(CONFIG_QTI_USERSPACE_CDEV) += qti_userspace_cdev.o

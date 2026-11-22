@@ -1122,6 +1122,15 @@ static void charger_partition_work(struct work_struct *work)
 	int lun, ret = -ENODEV;
 	bool retry_needed;
 
+	/* This read-only module parameter cannot become valid during a retry.
+	 * Leave storage unavailable without repeatedly scanning and waking UFS.
+	 */
+	if (verified_header_version < 0) {
+		dev_info(part->dev,
+			 "charger storage disabled: header version is unverified\n");
+		return;
+	}
+
 	/* A retry must not replace the SCSI device during an exported transaction. */
 	mutex_lock(&partition_lock);
 	part->part_info_part_number = MYRON_CHARGER_PART_NUMBER;
