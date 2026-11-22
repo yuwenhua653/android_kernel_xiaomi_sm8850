@@ -327,7 +327,7 @@ __maybe_unused int sc96281_get_mcode(struct sc96281 *sc, uint32_t *mcode)
 	return ret;
 }
 
-int sc96281_get_tdie(struct sc96281 *sc, uint16_t *tdie)
+int sc96281_get_tdie(struct sc96281 *sc, int16_t *tdie)
 {
 	int ret;
 
@@ -1390,7 +1390,7 @@ static int sc96281_get_temp(int *temp, void *data)
 {
 	int ret = 0;
 	struct sc96281 *chip = (struct sc96281 *)data;
-	uint16_t tdie = 0;
+	int16_t tdie = 0;
 
 	if (!chip->proc_data.power_good_flag) {
 		*temp = 0;
@@ -1398,8 +1398,9 @@ static int sc96281_get_temp(int *temp, void *data)
 	}
 
 	ret = sc96281_get_tdie(chip, &tdie);
-	if (!ret)
-		*temp = (int)tdie / 10;
+	if (ret)
+		return ret;
+	*temp = (int)tdie / 10;
 	mca_log_info("wls_get_rx_temp: %d\n", *temp);
 	return ret;
 }
@@ -1831,7 +1832,8 @@ static int sc96281_send_transparent_data(uint8_t *send_data, uint8_t length,
 		mca_log_err("send transparent data %d failed\n", length);
 	} else {
 		mca_log_info("send transparent data %d success\n", length);
-		memcpy(chip->sent_pri_packet.buff, &send_data[1], length - 1);
+		/* Cache the complete zero-padded packet actually written to RX. */
+		chip->sent_pri_packet = ask;
 	}
 
 	mutex_unlock(&chip->data_transfer_lock);
@@ -2219,10 +2221,6 @@ static int sc96281_send_tx_fan_speed(int value, void *data)
 	if (value < 0 || value > 10)
 		return -1;
 
-	if (chip->proc_data.tx_speed == value)
-		return ret;
-
-	chip->proc_data.tx_speed = value;
 	ask.header = 0x38;
 	ask.msg[0] = PRIVATE_CMD_CTRL_PRI_PKT;
 	ask.msg[1] = value;
@@ -2230,13 +2228,18 @@ static int sc96281_send_tx_fan_speed(int value, void *data)
 
 	mutex_lock(&chip->data_transfer_lock);
 
+	if (chip->proc_data.tx_speed == value)
+		goto unlock;
+
 	ret = sc96281_rx_send_ask_pkt(chip, &ask, false);
 	if (ret) {
 		mca_log_err("sc96281 set fan speed %d failed\n", value);
 	} else {
+		chip->proc_data.tx_speed = value;
 		mca_log_info("sc96281 set fan speed %d success\n", value);
 	}
 
+unlock:
 	mutex_unlock(&chip->data_transfer_lock);
 
 	return ret;
@@ -2349,6 +2352,8 @@ static int sc96281_process_factory_cmd(uint8_t cmd, void *data)
 	switch (cmd) {
 	case FACTORY_TEST_CMD_RX_IOUT:
 		ret = sc96281_get_iout(&rx_iout, chip);
+		if (ret)
+			return ret;
 		data_h = ((uint32_t)rx_iout & 0x00ff);
 		data_l = ((uint32_t)rx_iout & 0xff00) >> 8;
 		index = 0;
@@ -2363,6 +2368,8 @@ static int sc96281_process_factory_cmd(uint8_t cmd, void *data)
 		break;
 	case FACTORY_TEST_CMD_RX_VOUT:
 		ret = sc96281_get_vout(&rx_vout, chip);
+		if (ret)
+			return ret;
 		data_h = ((uint32_t)rx_vout & 0x00ff);
 		data_l = ((uint32_t)rx_vout & 0xff00) >> 8;
 		index = 0;

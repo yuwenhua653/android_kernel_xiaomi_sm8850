@@ -5,6 +5,55 @@ not establish runtime results for 6.12.118. The Android device repositories
 and libperfmgr migration are deferred until the owner's local device trees
 are exported. No EvolutionX shared build source is changed.
 
+## Follow-up: RX state and IPA lifecycle (no device-tree dependency)
+
+The SC96281 register declaration defines `t_die` as signed 16-bit. Its
+reader and Celsius conversion now preserve that sign; negative values no
+longer become extremely high positive temperatures. Failed reads return
+before logging an output that was not populated. The existing integer
+Celsius API and thermal limits are unchanged.
+
+Additional RX state corrections:
+
+- Cache a transmitter fan-speed command only after successful transmission,
+  with its comparison/update under the transfer mutex. A failed request for
+  the same speed can be retried rather than silently skipped.
+- Cache the complete zero-padded transparent packet actually written to RX.
+  A shorter packet no longer retains bytes from the previous longer packet;
+  failed writes preserve the previous successful packet.
+- Stop factory current/voltage replies on sample-read failure instead of
+  serializing an uninitialized measurement and hiding the read error.
+
+IPA lifecycle corrections:
+
+- Allocate both control-message queues before initializing their work items.
+  Fail with `QDF_STATUS_E_NOMEM` at either allocation stage instead of
+  registering callbacks with missing queues. Partial unwind frees only
+  prepared queues and cancels only initialized work; freed pointers are
+  cleared and a subsequent initialization can allocate fresh queues.
+- On synchronous TX-buffer SMMU mapping failure, disconnect already connected
+  IPA pipes and tear down STA system pipes, matching the existing asynchronous
+  UC-ready failure path.
+- After draining UC work on normal teardown, clear `uc_load_handled` before
+  disconnecting the pipes. Subsequent vote calls no longer see stale readiness.
+  Teardown also clears freed queue pointers. This does not serialize an
+  already in-flight vote or establish that all UC-ready/SSR races are solved.
+
+Validation for this follow-up: host production-function tests cover all
+65,536 raw temperature values and 11 state/error cases, plus 15 IPA lifecycle
+scenarios (four allocation sites, retry, setup/mapping failures and normal
+teardown). Both harnesses reproduce a defect on the preceding source and pass
+with these changes under UBSan. Existing 32 command, 13 authentication, 4,363
+IRQ cases and the IPA vote-readiness regression also pass. Changed
+`sc96281_core.o` and `wlan_ipa_core.o` compile for ARM64 with native Myron
+configuration and host Clang 19.1.7. No new full image/external-modpost or device
+result is claimed. Actual charging power, missing UC-ready notifications and
+the captured CNSS suspend failure remain open.
+
+New harnesses: `tests/test_sc96281_state.py --kernel-root <kernel>` in this
+directory and `android/myron-native/tests/test_ipa_init_cleanup.py --modules-root
+<modules>` in the companion repository, both run with `python3`.
+
 ## Follow-up: wireless command and authentication error paths
 
 Further source review found independently reproducible failure-path defects:
