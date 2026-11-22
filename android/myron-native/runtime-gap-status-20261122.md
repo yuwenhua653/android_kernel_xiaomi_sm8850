@@ -5,6 +5,38 @@ not establish runtime results for 6.12.118. The Android device repositories
 and libperfmgr migration are deferred until the owner's local device trees
 are exported. No EvolutionX shared build source is changed.
 
+## Follow-up: IPA reinjection packet ownership
+
+Companion modules commit `f705cc47d21465eb323ee8eae7be593eb07b29cb`
+fixes two source-confirmed leaks, without extending the wireless charging
+changes already awaiting compilation/device qualification:
+
+- A dequeued reinjection packet was leaked when allocation of its dispatch
+  message failed. Free that packet and continue draining the queue, so a
+  transient allocation failure does not strand the remaining queued packets.
+- Cancelling pending work does not consume its ring. During existing queue
+  teardown, drain reinjection packet ownership before freeing the entries.
+  Filter-delete notifications carry handles, not owned packet buffers, and
+  are not treated as packets.
+
+The expanded production-function harness `test_ipa_init_cleanup.py` passes
+2,703 cases under UBSan, covering every ring position and occupancy, wrap,
+single/persistent message allocation failures, cancelled work, and the prior
+initializer/unwind checks. The preceding source fails packet ownership
+assertions; applying only the worker fix still reproduces the teardown leak.
+The existing IPA performance-readiness regression also passes. The changed
+`wlan_ipa_core.o` compiled for ARM64 with the native Myron configuration and
+host Clang 19.1.7. This is not a new complete external-module modpost or ROM
+build, and no suspend/power improvement has been measured.
+
+Scope limits: this preserves the existing producer shutdown contract; it
+does not establish that all producer-versus-teardown races are resolved.
+UC-ready callback publication/duplicate-event ordering, the missing ready
+notification in the old capture, and the CNSS suspend handshake still need
+qualification. Filter-delete notification allocation failure handling is
+also unchanged. No Android device repository, libperfmgr policy or DT was
+changed in this follow-up.
+
 ## Follow-up: RX state and IPA lifecycle (no device-tree dependency)
 
 The SC96281 register declaration defines `t_die` as signed 16-bit. Its
