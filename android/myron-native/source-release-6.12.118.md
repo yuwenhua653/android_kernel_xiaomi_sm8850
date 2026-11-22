@@ -1,12 +1,13 @@
 # Myron native source publication: Linux 6.12.118
 
-The kernel update and retained platform fixes are in commit
-`3db85f696ae6cd550912c63a6c2251dd774b50a7`. This follow-up changes only the
-source manifest and this note, pairing the kernel with:
+The Linux 6.12.118 base update and retained platform fixes were published in
+`3db85f696ae6cd550912c63a6c2251dd774b50a7`. Subsequent runtime hardening is
+recorded in [the current gap report](runtime-gap-status-20261122.md).
+The current `manifest.xml` pairs the kernel branch with:
 
 | Checkout | Branch | Commit |
 | --- | --- | --- |
-| `kernel/xiaomi/sm8850-modules` | `lineage-24.0` | `2b4ac3715ae0c153617ea929642ae6550bcd1502` |
+| `kernel/xiaomi/sm8850-modules` | `lineage-24.0` | `1500b5df54325748574deb953a87f198cf23d7b5` |
 | `kernel/xiaomi/sm8850-devicetrees` | `lineage-24.0` | `fb892731a9b9df5ecd076409536d172e564b6850` |
 
 The module update retains native Canoe video/MMRM integration, HFI brightness
@@ -16,7 +17,11 @@ update retains the wireless battery tables and generic-PSCI-v2 optional-consumer
 policy alongside the existing touch SPI suspend fix. The idle overlay assumes
 the reviewed Myron generic PSCI configuration, not the vendor LPM governor.
 
-## Validation
+## Initial publication validation
+
+The following describes the initial source publication. Existing validation
+JSON files retain the source commits they originally checked. Consult the
+current gap report for subsequent changes and their validation scope.
 
 - The previously delivered 6.12.118 kernel content passed an ARM64 Image and
   349 in-tree module build with LLVM 19.1.7 and Rust 1.85.1. The published source
@@ -56,6 +61,6 @@ The three source histories are now published independently under
 The migration-only `main` branch is retained for provenance. The original `myron/native-*` branches remain available.
 
 The new kernel repository starts from `3bc662f2695f21c7c4047826cd65b9a60d5408f9`.
-This manifest migration changes repository addresses and branch references only;
-checkout paths and pinned companion commits are preserved. The original
+The initial manifest migration changed repository addresses and branch references
+only; checkout paths and the then-pinned companion commits were preserved. The original
 `oppo_oplus_realme_sm8850` repository remains intact.

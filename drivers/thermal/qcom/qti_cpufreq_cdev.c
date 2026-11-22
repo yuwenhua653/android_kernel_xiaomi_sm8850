@@ -114,6 +114,10 @@ static void cpufreq_cdev_register(struct work_struct *work)
 	struct cpufreq_frequency_table *pos;
 	int freq_count = 0, i, ret;
 
+	/* A second online event can requeue this work while it is running. */
+	if (cdev_data->cdev)
+		return;
+
 	policy = cpufreq_cpu_get(cdev_data->cpu);
 	if (!policy) {
 		pr_err("No policy for CPU:%d\n", cdev_data->cpu);
@@ -177,7 +181,7 @@ static int cpufreq_cdev_hp_online(unsigned int online_cpu)
 
 	mutex_lock(&qti_cpufreq_cdev_lock);
 	list_for_each_entry(cdev_data, &qti_cpufreq_cdev_list, node) {
-		if (cdev_data->cpu != online_cpu || cdev_data->cdev)
+		if (cdev_data->cpu != online_cpu)
 			continue;
 		queue_work(system_highpri_wq, &cdev_data->reg_work);
 	}

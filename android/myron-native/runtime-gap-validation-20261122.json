@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-22",
+  "scope": "Host ARM64 Image/in-tree modules and linked WLAN/IPA objects; no Android ROM or device qualification",
+  "kernel_parent": "920a39e1fa8f0978ae0473a2865bd223f5b238e8",
+  "kernel_changed_driver": "drivers/thermal/qcom/qti_cpufreq_cdev.c",
+  "kernel_changed_driver_sha256": "035657f70422087483bf27bee1d93b55130359e43a5c541ddb3cbc37f038b7e7",
+  "modules_commit": "1500b5df54325748574deb953a87f198cf23d7b5",
+  "devicetrees_commit": "fb892731a9b9df5ecd076409536d172e564b6850",
+  "compiler": "Debian Clang 19.1.7",
+  "config_fragments": [
+    "gki_defconfig",
+    "vendor/canoe_GKI.config",
+    "vendor/myron_GKI.config"
+  ],
+  "config_sha256": "f5a85b793fe48caee984ffecca3396d0c09e97dd298bb1000f9a1c7e0f19445f",
+  "cfi": true,
+  "modversions": true,
+  "rust_enabled": false,
+  "btf_enabled": false,
+  "image": {
+    "bytes": 34580992,
+    "sha256": "e1843c07ed9c8cd3d35c3ec32101d95411973eb7992af010625e0ca2401bcf18"
+  },
+  "in_tree_module_count": 353,
+  "in_tree_modpost_passed_without_warning_override": true,
+  "thermal_arm64_objects_verified": [
+    "drivers/thermal/qcom/qti_cpufreq_cdev.ko",
+    "drivers/thermal/qcom/qti_devfreq_cdev.ko",
+    "drivers/thermal/qcom/qti_dynamic_hw_trip.ko",
+    "drivers/thermal/qcom/qcom-spmi-temp-alarm.ko"
+  ],
+  "linked_external_objects": {
+    "qcom/opensource/wlan/qcacld-3.0/qca_cld3_peach_v2.o": {
+      "bytes": 420026448,
+      "sha256": "0a36c48b2ed130c4f404a79b065e22a6cf3606a76e91fb85f9335a484cc8d26b"
+    },
+    "qcom/opensource/dataipa/ipam.o": {
+      "bytes": 23563672,
+      "sha256": "e1ecbd1612c3052e509f71a3d32f768701d210d2b45ce6e4e8c846f067a93ad2"
+    }
+  },
+  "external_modpost_verified": false,
+  "ubsan_cases": {
+    "ipa_init_queue": 2959,
+    "ipa_ready_publication": 4353,
+    "ipa_provider_lifetime": 519,
+    "ipa_notifications_vdev": 304,
+    "cpu_thermal_registration": 102
+  },
+  "additional_regressions": [
+    "IPA vote readiness",
+    "CPU/GPU QoS bounds/failure/release"
+  ],
+  "device_verified": false
+}

@@ -5,6 +5,97 @@ not establish runtime results for 6.12.118. The Android device repositories
 and libperfmgr migration are deferred until the owner's local device trees
 are exported. No EvolutionX shared build source is changed.
 
+## Consolidated follow-up: IPA event lifetime and CPU cooling registration
+
+Paired modules commit: `1500b5df54325748574deb953a87f198cf23d7b5`.
+
+This batch keeps the previously submitted wireless charging and kernel DT
+changes intact. Android device trees, shared EvolutionX build sources and
+libperfmgr remain outside this batch. Earlier follow-up sections below record
+historical revisions; their open source issues are superseded where addressed
+here. Runtime validation is still a separate requirement.
+
+Implemented together:
+
+- Replace the uC-ready callback's inspection of an internal work-list entry
+  with explicit publication under a spinlock and a dedicated, allocation-free
+  work item. Retain early notifications until synchronous pipe/queue setup is
+  complete; repeated notifications cannot mark an unconfigured pipe ready.
+  Actual setup completion, not notification receipt, controls idempotence.
+  Recovery and teardown still prevent new setup work.
+- Serialize the IPA provider's ready callback registration, delivery and
+  removal. WDI instance cleanup removes only its matching callback and waits
+  for an executing atomic callback before the owning context is released.
+  A second pending owner gets EBUSY instead of silently replacing the first.
+  Callbacks must remain atomic and must not register/unregister themselves;
+  the paired WLAN callback only records readiness and schedules work.
+- Track successful WDI initialization so setup-error cleanup releases a live
+  registration exactly once. Validate a cleanup handle/context before logging
+  through it, and reset the cleaned instance's endpoints rather than instance 0.
+- Dispatch queued packet/filter-delete messages synchronously from stack
+  storage. This removes the secondary allocation that could lose a filter
+  completion or strand packets. Firmware-owned allocations retain a freeing
+  wrapper; the dispatcher does not retain the borrowed message pointer.
+- Allocate the entire filter-reservation notification/SMMU pair before
+  publishing either member. Allocation failure, duplicate pending messages
+  and a closed queue free only locally owned messages. Previously failure
+  could free the SMMU message twice, or free it after publication to work.
+- Protect ordinary message slots and producer publication against duplicate
+  callbacks and queue teardown. Ready setup stops first, but ordinary control
+  responses remain enabled while pipe shutdown waits for filter acknowledgements.
+  Only then is ordinary publication closed and its work/packet queues drained.
+- Reject out-of-range vdev IDs before indexing the IPA interface map.
+- Make CPU cooling registration work idempotent. Repeated CPU-online events
+  may requeue an executing work item; the next invocation now retains the
+  registered cooling device, frequency table, policy reference and QoS request.
+  The hotplug callback no longer reads the worker-owned cdev pointer.
+
+Regression coverage: 2,959 production IPA initializer/queue cases, 4,353
+ready-publication ordering cases (including 256 concurrent publish/notify
+pairs and recovery gating), 519 provider callback/instance cases, 304 message
+ownership/vdev-bound cases, and 102 CPU registration/retry cases. These 8,237
+cases use UBSan. The readiness harness models the work executor and does not
+simulate firmware or the complete hardware pipe setup. The old CPU worker
+reproduces duplicate QoS ownership; old IPA reservation code reproduces both
+pending-message replacement/leak and double-free on allocation failure.
+Existing IPA vote-readiness and CPU/GPU QoS regression checks also pass.
+
+Build qualification for this batch: `Image modules` completed successfully
+for the native Myron configuration, including in-tree modpost and all
+353 modules from `modules.order`. CFI and MODVERSIONS were enabled; this host
+Clang 19.1.7 qualification does not enable Rust/BTF. Both complete external
+`qca_cld3_peach_v2.o` and `ipam.o` compiled and linked for ARM64. The new
+matching-owner callback removal symbol resolves inside `ipam.o`. A final
+incremental WLAN check confirmed the final sources are up to date.
+
+See [the validation record](runtime-gap-validation-20261122.json) for source
+and artifact hashes. The host kernel was built from the recorded parent plus
+the driver change, so its local release suffix contains `dirty`; this is not
+a distributed flashable image. The complete external-module modpost, Android
+Clang/Rust/BTF build, final images and runtime behavior remain unverified.
+
+### Current disposition of the original runtime checklist
+
+| Gap | Source/integration disposition |
+| --- | --- |
+| Wireless RX and power-supply reporting | Existing submitted fixes retained; await compiling/flashing 6.12.118 and measuring actual battery input. |
+| IPA premature votes and callback/queue lifetime | Source corrections and host tests completed in the paired modules; firmware readiness and power impact still require device results. |
+| CNSS suspend -11 / host -16 | Existing diagnostic branches retained; old log does not establish which WoW/host veto caused it. Do not bypass suspend vetoes or invent firmware acknowledgements. |
+| QTI CPU/GPU/userspace/dynamic-trip cooling and PMIC temperature alarm | Sources/builds restored; duplicate CPU registration fixed here. Android load lists and vendor sensor/cooling policy matching remain deferred. |
+| conn_therm and skin mapping | Requires effective DT/thermal-HAL policy; not repaired by adding another arbitrary sensor name in the kernel. |
+| Generic PSCI versus Qualcomm LPM | Optional vendor sources retained, default remains generic PSCI. Vendor governor needs paired DT/load order/userspace enablement; no speculative switch. |
+| OCP/SPSS and other supplier reports | OCP is built in and SPSS is selected as a module in qualification config. Actual module loading and supplier binding need final-image/device evidence. |
+| GLINK owner 32778 and MCA property errors | Do not enable a competing QTI battery supply to silence owner messages. Missing provider values preserve errors; expected ENODATA handling was corrected earlier. |
+| PMIC/RPMh missing resources and SCMI -110 | Effective board DT, command-db/firmware protocol evidence required. No fabricated resources or suppressed timeout. |
+| Charger partition -95 | Repeated unsupported-format probing already stopped. Storage writes remain disabled pending a verified layout. |
+| Audio LPI prints | Reviewed unconditional debug output is not proof of pinctrl failure; no new audio workaround. |
+| RNG module absent | Does not establish CRNG failure. No security/entropy claim inferred from module absence. |
+| CWB off-screen polling, VPP/CDSP session, Perf HAL nodes | Userspace/vendor integration work; libperfmgr explicitly deferred with device repositories. |
+
+No remaining row is claimed fixed on hardware from the 6.12.97 capture.
+Additional firmware filter-result/slot semantics and global-context lifetime
+outside the gated event producers are not qualified by these tests.
+
 ## Follow-up: IPA reinjection packet ownership
 
 Companion modules commit `f705cc47d21465eb323ee8eae7be593eb07b29cb`
