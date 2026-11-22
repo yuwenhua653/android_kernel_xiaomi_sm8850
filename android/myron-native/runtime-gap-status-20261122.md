@@ -5,6 +5,49 @@ not establish runtime results for 6.12.118. The Android device repositories
 and libperfmgr migration are deferred until the owner's local device trees
 are exported. No EvolutionX shared build source is changed.
 
+## Follow-up: wireless command and authentication error paths
+
+Further source review found independently reproducible failure-path defects:
+
+- Eight SC96281 parameter/packet writers issued the command trigger even
+  after the payload write failed. A successful trigger then replaced the
+  original I2C error with success. They now stop at the failed payload write
+  and preserve the error. The voltage cache updates only after both stages
+  succeed. Failed CEP reads also abort the voltage change.
+- The direct adapter read now returns an I2C failure without publishing a
+  cached adapter as a fresh reading. Authentication reads stage the required
+  adapter/UUID fields before publishing their cache, returning the first
+  read failure. The wireless strategy checks authentication, UUID and adapter
+  read errors before proceeding with that authentication event.
+- Repeated authentication events replace the assembled transmitter UUID;
+  previously `|=` retained bits from a previous value. The top-byte shift
+  explicitly uses an unsigned 32-bit value.
+
+These are error-handling corrections to the existing Xiaomi MCA/SC96281
+implementation. No authentication requirement, FOD parameter, voltage/current
+limit or thermal limit is relaxed. They do not prove that the observed
+non-charging event took one of these paths, or establish negotiated input
+power. The existing firmware/strategy recovery behavior is retained; this
+change adds no automatic authentication retry.
+
+WLAN follow-up exposes the two previously debug-only system-suspend rejection
+messages for pending RX frames and endpoint work at info level. The captured
+`-16`/`-11` failure alone cannot distinguish these branches. No suspend veto,
+return value or WoW timing was changed; this is diagnostic coverage, not a
+claim that CNSS suspend is fixed.
+
+Follow-up validation: both new regression harnesses reproduce failures on the
+preceding source. The corrected source passes 32 command/CEP/cache cases and
+13 authentication/cache/event/UUID cases (the latter with UBSan), plus the
+existing 4,363 IRQ cases. `sc96281_core.o`, `mca_basic_wireless.o` and
+`wlan_hdd_driver_ops.o` compile for ARM64 with host Clang 19.1.7 and the native
+Myron configuration. This follow-up is object-level qualification; the full
+Image/modpost result below belongs to the preceding update, not this revision.
+
+Run the new harnesses as `python3 android/myron-native/tests/test_sc96281_commands.py
+--kernel-root <kernel>` and `python3 android/myron-native/tests/test_sc96281_auth.py
+--kernel-root <kernel>` (each command on one line).
+
 ## Implemented source corrections
 
 - The MCA wireless power_supply now reports RX voltage/current/temperature

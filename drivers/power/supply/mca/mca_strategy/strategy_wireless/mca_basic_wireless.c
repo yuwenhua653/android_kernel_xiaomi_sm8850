@@ -2554,18 +2554,30 @@ static void strategy_wireless_chg_handler(struct strategy_wireless_dev *info)
 		break;
 	case RX_INT_AUTHEN_FINISH:
 		mca_log_err("RX_INT_AUTHEN_FINISH\n");
-		platform_class_wireless_get_auth_value(
+		ret = platform_class_wireless_get_auth_value(
 			WIRELESS_ROLE_MASTER, &info->proc_data.auth_data);
-		platform_class_wireless_get_tx_uuid(WIRELESS_ROLE_MASTER,
+		if (ret) {
+			mca_log_err("read wireless authentication result failed: %d\n", ret);
+			break;
+		}
+		ret = platform_class_wireless_get_tx_uuid(WIRELESS_ROLE_MASTER,
 						    info->proc_data.uuid);
-		info->proc_data.uuid_value |= (info->proc_data.uuid[0] << 24 |
+		if (ret) {
+			mca_log_err("read wireless transmitter UUID failed: %d\n", ret);
+			break;
+		}
+		info->proc_data.uuid_value = ((u32)info->proc_data.uuid[0] << 24 |
 					       info->proc_data.uuid[1] << 16 |
 					       info->proc_data.uuid[2] << 8 |
 					       info->proc_data.uuid[3]);
 		mca_log_err("uuid_value is 0x%08x\n",
 			    info->proc_data.uuid_value);
-		platform_class_wireless_get_tx_adapter(
+		ret = platform_class_wireless_get_tx_adapter(
 			WIRELESS_ROLE_MASTER, &info->proc_data.adapter_type);
+		if (ret) {
+			mca_log_err("read wireless transmitter adapter failed: %d\n", ret);
+			break;
+		}
 
 		if (info->proc_data.auth_data != AUTH_STATUS_FAILED) {
 			if (info->proc_data.auth_data >= AUTH_STATUS_UUID_OK) {

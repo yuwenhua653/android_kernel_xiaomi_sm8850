@@ -503,6 +503,7 @@ int sc96281_rx_set_Vout(struct sc96281 *sc, uint16_t vout)
 	ret = write_cust(sc, cust_rx.target_vout, &vout);
 	if (ret) {
 		mca_log_err("sc96281 set vout fail\n");
+		return ret;
 	}
 
 	ret = sc96281_rx_set_cmd(sc, AP_CMD_RX_VOUT_CHANGE);
@@ -520,6 +521,7 @@ __maybe_unused int sc96281_rx_set_Ilimit(struct sc96281 *sc, uint16_t ilimt)
 	ret = write_cust(sc, cust_rx.ilimit, &ilimt);
 	if (ret) {
 		mca_log_err("sc96281 set ilimit fail\n");
+		return ret;
 	}
 
 	ret = sc96281_rx_set_cmd(sc, AP_CMD_MAX_I_CHANGE);
@@ -537,6 +539,7 @@ __maybe_unused int sc96281_rx_set_vout_ovp(struct sc96281 *sc, uint16_t vovp)
 	ret = write_cust(sc, cust_rx.ovp, &vovp);
 	if (ret) {
 		mca_log_err("sc96281 set vout ovp fail\n");
+		return ret;
 	}
 
 	ret = sc96281_rx_set_cmd(sc, AP_CMD_OVP_CHANGE);
@@ -554,6 +557,7 @@ __maybe_unused int sc96281_rx_set_vout_ocp(struct sc96281 *sc, uint16_t iocp)
 	ret = write_cust(sc, cust_rx.ocp, &iocp);
 	if (ret) {
 		mca_log_err("sc96281 set iout ocp fail\n");
+		return ret;
 	}
 
 	ret = sc96281_rx_set_cmd(sc, AP_CMD_OCP_CHANGE);
@@ -571,6 +575,7 @@ __maybe_unused int sc96281_rx_set_otp(struct sc96281 *sc, uint16_t otp)
 	ret = write_cust(sc, cust_rx.otp, &otp);
 	if (ret) {
 		mca_log_err("sc96281 set otp fail\n");
+		return ret;
 	}
 
 	ret = sc96281_rx_set_cmd(sc, AP_CMD_OTP_CHANGE);
@@ -588,6 +593,7 @@ __maybe_unused int sc96281_rx_send_ept(struct sc96281 *sc, ept_reason_t ept_v)
 	ret = write_cust(sc, cust_rx.ept_reason, &ept_v);
 	if (ret) {
 		mca_log_err("sc96281 clear rx int fail\n");
+		return ret;
 	}
 
 	ret = sc96281_rx_set_cmd(sc, AP_CMD_RX_SEND_EPT);
@@ -618,6 +624,7 @@ int sc96281_rx_send_ask_pkt(struct sc96281 *sc, ask_pkt_t *ask, bool is_resp)
 	if (ret) {
 		mca_log_err("sc96281 write send ask pkt 0x%x fail\n",
 			    ask->header);
+		return ret;
 	}
 
 	if (is_resp)
@@ -814,6 +821,7 @@ __maybe_unused int sc96281_tx_send_fsk_pkt(struct sc96281 *sc, fsk_pkt_t *fsk)
 	if (ret) {
 		mca_log_err("sc96281 write send fsk pkt 0x%X fail\n",
 			    fsk->header);
+		return ret;
 	}
 
 	ret = sc96281_tx_set_cmd(sc, AP_CMD_SEND_PPP);
@@ -1300,6 +1308,8 @@ static int sc96281_set_vout(int vout, void *data)
 
 	if (chip->proc_data.parallel_charge == true) {
 		ret = sc96281_rx_get_ce_value(chip, &cep);
+		if (ret)
+			goto exit;
 		if (ABS(cep) > ABS_CEP_VALUE &&
 		    chip->proc_data.vout_setted <= vout) {
 			mca_log_info("vol:%d ,cep %d, not set\n", vout, cep);
@@ -1447,8 +1457,9 @@ static int sc96281_get_tx_adapter_by_i2c(int *adapter, void *data)
 
 	/* 0x01D8: TX adapter type register */
 	ret = sc96281_read_block(chip, 0x01D8, &val, 1);
-	if (!ret)
-		chip->proc_data.adapter_type = val;
+	if (ret)
+		return ret;
+	chip->proc_data.adapter_type = val;
 
 	*adapter = chip->proc_data.adapter_type;
 	mca_log_info("wls_get_adapter: %d\n", chip->proc_data.adapter_type);
@@ -1571,21 +1582,25 @@ static int sc96281_get_auth_value(int *value, void *data)
 	if (auth_data & PROJECT_FLAG_ADAPTER_TYPE) {
 		ret = read_cust(chip, cust_rx.mi_ctx.adapter_type,
 				&adapter_type);
-		if (!ret)
-			chip->proc_data.adapter_type =
-				(adapter_type != ADAPTER_NONE) ?
-					adapter_type :
-					ADAPTER_AUTH_FAILED;
+		if (ret)
+			return ret;
 	}
 
 	if (auth_data & PROJECT_FLAG_UUID) {
 		ret = read_cust(chip, cust_rx.mi_ctx.tx_uuid, &uuid);
-		if (!ret) {
-			chip->proc_data.uuid[0] = (uuid >> 24) & 0xFF;
-			chip->proc_data.uuid[1] = (uuid >> 16) & 0xFF;
-			chip->proc_data.uuid[2] = (uuid >> 8) & 0xFF;
-			chip->proc_data.uuid[3] = uuid & 0xFF;
-		}
+		if (ret)
+			return ret;
+	}
+
+	/* Publish the cache only after every required field was read. */
+	if (auth_data & PROJECT_FLAG_ADAPTER_TYPE)
+		chip->proc_data.adapter_type = adapter_type != ADAPTER_NONE ?
+			adapter_type : ADAPTER_AUTH_FAILED;
+	if (auth_data & PROJECT_FLAG_UUID) {
+		chip->proc_data.uuid[0] = (uuid >> 24) & 0xFF;
+		chip->proc_data.uuid[1] = (uuid >> 16) & 0xFF;
+		chip->proc_data.uuid[2] = (uuid >> 8) & 0xFF;
+		chip->proc_data.uuid[3] = uuid & 0xFF;
 	}
 
 	*value = auth_data;
