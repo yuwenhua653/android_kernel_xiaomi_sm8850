@@ -159,6 +159,8 @@ stm_core.ko
 stm_ftrace.ko
 stm_heartbeat.ko
 i2c-qcom-geni.ko
+bq27xxx_battery.ko
+bq27xxx_battery_i2c.ko
 qcom-spmi-adc5-gen3.ko
 qcom-vadc-common.ko
 pm8941-pwrkey.ko

@@ -224,7 +224,18 @@ system_dlkm and 345 in vendor_dlkm. All 360 imported symbol versions
 on the 18 added modules and 8,098 on the external modules matched the
 build's exports. The panel screen/HBM getters match the factory CRCs
 and report primary-panel notifier state. The signed DT helper uses
-the source kernel's device-node ABI. Across the 16 MCA modules, 17
-factory-exported names are still missing, in addition to CRC differences.
+the source kernel's device-node ABI. That build lacked 17 factory-exported names across the 16 MCA modules.
+The subsequent Nezha PD update supplied USB vendor ID and Product VDO.
 The native regulator interface still needs testing with the DXS702
 consumer on hardware. No production Rust/AVB or device boot was tested.
+
+## Main battery on Nezha
+
+Both native board overlays describe the main gauge on QUP SE5 at I2C
+address 0x55. The Linux BQ27Z561 driver publishes it as
+`/sys/class/power_supply/battery` for Android Health. The recovery and
+vendor_dlkm load lists include the core and I2C transport. SOC comes from
+the gauge's relative state of charge. Current is in µA, remaining and
+full charge are in µAh, and temperature is in tenths of a degree Celsius.
+The gauge provides battery telemetry. Charger presence, thermal policy and
+charge-pump control need their own providers.

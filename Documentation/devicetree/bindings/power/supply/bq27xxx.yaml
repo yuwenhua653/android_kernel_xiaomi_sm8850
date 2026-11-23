@@ -58,6 +58,9 @@ properties:
     maxItems: 1
     description: integer, I2C address of the fuel gauge.
 
+  label:
+    description: Name of the battery power supply exposed to userspace.
+
   monitored-battery:
     description: |
        The fuel gauge uses the following battery properties:

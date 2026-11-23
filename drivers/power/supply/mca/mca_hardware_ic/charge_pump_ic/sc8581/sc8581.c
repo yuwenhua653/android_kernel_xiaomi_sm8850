@@ -20,6 +20,7 @@
 #include <mca/platform/platform_cp_class.h>
 #include "inc/sc8581_reg.h"
 #include "inc/sc8581.h"
+#include <linux/bitfield.h>
 #include <linux/mutex.h>
 #include <mca/common/mca_log.h>
 #include <mca/common/mca_event.h>
@@ -2467,6 +2468,10 @@ static int sc8581_parse_pmid2out_uvp(struct sc8581_device *bq,
 
 static int sc8581_parse_dt(struct sc8581_device *bq)
 {
+	const u32 ovp_max = SC8581_BAT_OVP_BASE +
+		FIELD_MAX(SC8581_BAT_OVP_MASK) * SC8581_BAT_OVP_LSB;
+	const u32 alarm_max = SC8581_BAT_OVP_ALM_BASE +
+		FIELD_MAX(SC8581_BAT_OVP_ALM_MASK) * SC8581_BAT_OVP_ALM_LSB;
 	struct device_node *np = bq->dev->of_node;
 	int ret = 0;
 
@@ -2499,6 +2504,9 @@ static int sc8581_parse_dt(struct sc8581_device *bq)
 			  BAT_OVP_TH);
 	mca_parse_dts_u32(np, "bat-ovp-alarm-threshold",
 			  &bq->cfg.bat_ovp_alarm_th, BAT_OVP_ALARM_TH);
+	if (bq->cfg.bat_ovp_th > ovp_max || bq->cfg.bat_ovp_alarm_th > alarm_max)
+		return dev_err_probe(bq->dev, -ERANGE,
+				     "battery OVP threshold exceeds register range\n");
 	mca_parse_dts_u32_array(np, "bus-ovp-threshold", bq->cfg.bus_ovp_th,
 				CP_MODE_DIV_MAX);
 	mca_log_info("%s bus_ovp [%d,%d,%d]\n", bq->log_tag,

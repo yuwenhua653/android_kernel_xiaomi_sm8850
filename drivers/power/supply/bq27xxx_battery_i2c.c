@@ -10,6 +10,7 @@
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/property.h>
 #include <linux/unaligned.h>
 
 #include <linux/power/bq27xxx_battery.h>
@@ -61,6 +62,9 @@ static int bq27xxx_battery_i2c_read(struct bq27xxx_device_info *di, u8 reg,
 
 	if (ret < 0)
 		return ret;
+
+	if (ret != ARRAY_SIZE(msg))
+		return -EIO;
 
 	if (!single)
 		ret = get_unaligned_le16(data);
@@ -158,7 +162,7 @@ static int bq27xxx_battery_i2c_probe(struct i2c_client *client)
 	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	struct bq27xxx_device_info *di;
 	int ret;
-	char *name;
+	const char *name;
 	long num;
 
 	/* Get new ID for the new battery device */
@@ -171,9 +175,12 @@ static int bq27xxx_battery_i2c_probe(struct i2c_client *client)
 	if (ret)
 		return ret;
 
-	name = devm_kasprintf(&client->dev, GFP_KERNEL, "%s-%ld", id->name, num);
-	if (!name)
-		return -ENOMEM;
+	if (device_property_read_string(&client->dev, "label", &name)) {
+		name = devm_kasprintf(&client->dev, GFP_KERNEL, "%s-%ld",
+				      id->name, num);
+		if (!name)
+			return -ENOMEM;
+	}
 
 	di = devm_kzalloc(&client->dev, sizeof(*di), GFP_KERNEL);
 	if (!di)

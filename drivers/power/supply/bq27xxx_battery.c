@@ -78,6 +78,7 @@
 #define BQ27000_FLAG_CHGS	BIT(7) /* Charge state flag */
 
 /* BQ27Z561 has different layout for Flags register */
+#define BQ27Z561_REG_CURRENT	0x0c
 #define BQ27Z561_FLAG_FDC	BIT(4) /* Battery fully discharged */
 #define BQ27Z561_FLAG_FC	BIT(5) /* Battery fully charged */
 #define BQ27Z561_FLAG_DIS_CH	BIT(6) /* Battery is discharging */
@@ -812,6 +813,7 @@ static enum power_supply_property bq27z561_props[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
+	POWER_SUPPLY_PROP_CURRENT_AVG,
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
 	POWER_SUPPLY_PROP_TEMP,
@@ -820,6 +822,7 @@ static enum power_supply_property bq27z561_props[] = {
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_CHARGE_FULL,
 	POWER_SUPPLY_PROP_CHARGE_NOW,
+	POWER_SUPPLY_PROP_CHARGE_COUNTER,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_CYCLE_COUNT,
 	POWER_SUPPLY_PROP_POWER_AVG,
@@ -1571,6 +1574,8 @@ static int bq27xxx_battery_read_soc(struct bq27xxx_device_info *di)
 
 	if (soc < 0)
 		dev_dbg(di->dev, "error reading State-of-Charge\n");
+	else if (di->chip == BQ27Z561 && soc > 100)
+		return -ENODATA;
 
 	return soc;
 }
@@ -1844,7 +1849,7 @@ static bool bq27xxx_battery_is_full(struct bq27xxx_device_info *di, int flags)
 }
 
 /*
- * Return the battery average current in µA and the status
+ * Return the reported current in µA and the charging status.
  * Note that current can be negative signed as well
  * Or 0 if something fails.
  */
@@ -1858,7 +1863,10 @@ static int bq27xxx_battery_current_and_status(
 	int curr;
 	int flags;
 
-	curr = bq27xxx_read(di, BQ27XXX_REG_AI, false);
+	if (di->chip == BQ27Z561)
+		curr = di->bus.read(di, BQ27Z561_REG_CURRENT, false);
+	else
+		curr = bq27xxx_read(di, BQ27XXX_REG_AI, false);
 	if (curr < 0) {
 		dev_err(di->dev, "error reading current\n");
 		return curr;
@@ -2075,6 +2083,12 @@ static int bq27xxx_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = di->cache.flags < 0 ? 0 : 1;
 		break;
+	case POWER_SUPPLY_PROP_CURRENT_AVG:
+		ret = bq27xxx_read(di, BQ27XXX_REG_AI, false);
+		if (ret < 0)
+			return ret;
+		val->intval = (s16)ret * 1000;
+		return 0;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		ret = bq27xxx_battery_current_and_status(di, val, NULL, NULL);
 		break;
@@ -2102,6 +2116,8 @@ static int bq27xxx_battery_get_property(struct power_supply *psy,
 		else
 			val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
 		break;
+	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
+		return bq27xxx_battery_read_rc(di, val);
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		if (di->regs[BQ27XXX_REG_NAC] != INVALID_REG_ADDR)
 			ret = bq27xxx_battery_read_nac(di, val);
