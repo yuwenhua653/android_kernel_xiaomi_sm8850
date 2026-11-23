@@ -190,6 +190,15 @@ fi
 # version string from CONFIG_LOCALVERSION
 config_localversion=$(sed -n 's/^CONFIG_LOCALVERSION=\(.*\)$/\1/p' include/config/auto.conf)
 
+# Myron release label: retain the actual SCM revision, append the owner tag.
+# Only the displayed dirty marker is omitted; the Git worktree is unchanged.
+# --no-local above and non-Myron configurations retain upstream behavior.
+if grep -q '^CONFIG_TARGET_PRODUCT_MYRON=y$' include/config/auto.conf; then
+	scm_version="$(scm_version --no-dirty)"
+	echo "${KERNELVERSION}${file_localversion}${config_localversion}${LOCALVERSION}${scm_version}-yuzuli"
+	exit 0
+fi
+
 # scm version string if not at the kernel version tag or at the file_localversion
 if grep -q "^CONFIG_LOCALVERSION_AUTO=y$" include/config/auto.conf; then
 	# full scm version string

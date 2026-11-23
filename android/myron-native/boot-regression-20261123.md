@@ -48,9 +48,24 @@ retention, Hibern8/off transitions, power/PM/regulator errors and pre-init
 calls. The uncorrected source fails the power_count assertion both in the
 active-link case and when the active case is omitted to reach Hibern8.
 
-This is a confirmed software regression and a concrete candidate for the
-first-logo boot failure. Host tests do not establish that it is the only
-boot issue or that 6.12.118 now boots on hardware. Full Android-toolchain
-rebuild of the affected module and corresponding images, followed by a
-consistent image-set test, is still required. Do not mix new kernel images
-with old system_dlkm/vendor_dlkm modules or disable verification as a fix.
+## Cloud build and device follow-up (2026-11-23)
+
+The r3 baseline plus this UFS correction completed an ARM64 `Image modules`
+build using the supplied image's exact configuration and Android Clang
+r563880c, Rust 1.93.1, bindgen 0.72.0 and pahole 1.25. All 18,259 kernel export
+CRCs matched the supplied 6.12.118 image. The corrected UFS module's 222
+import CRCs, KCFI external type IDs and dependency set also matched.
+
+The controlled test package retained the supplied 6.12.118 core Image and
+other modules. Its UFS module BTF was generated against the shipped core's
+BTF; all three copies in vendor_boot, recovery and vendor_dlkm were replaced.
+Ramdisk metadata, EROFS labels, DTB, DTBO and load lists were preserved, and
+affected AVB descriptors were regenerated without changing the existing
+verification flags. The user subsequently reported that the device boots.
+
+This supports the UFS regression as a cause of the first-logo failure. It is
+not a claim that all remaining hardware behavior is validated. A new full
+native ROM build using a different release label must rebuild the core and
+all modules together; the controlled test does not qualify mixing those
+outputs with the old module images. The later -yuzuli naming policy changes
+release metadata only, not GKI architecture, CFI or AVB policy.
