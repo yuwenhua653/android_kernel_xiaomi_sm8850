@@ -1,5 +1,10 @@
 # Myron wireless follow-up, 2026-11-25
 
+Subsequent battery/connector/CNSS corrections and the newly identified Xiaomi
+thermal-interface gap are recorded in [the consolidated follow-up](runtime-gap-followup-20261125.md).
+That checkpoint supersedes the earlier next-test recommendation below; the
+current batch is not yet a complete thermal/charging qualification.
+
 The user reports that the booting 6.12.118 build with the UFS ownership fix still
 shows wireless charging while battery charge decreases. The previous SC96281
 index-to-bitmask fix remains necessary, but was not a complete charging fix.

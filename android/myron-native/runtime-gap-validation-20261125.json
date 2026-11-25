@@ -1,0 +1,126 @@
+{
+  "date": "2026-11-25",
+  "scope": "Source checkpoint; no request to compile/flash, no full Image/modpost/ROM or device qualification",
+  "parents": {
+    "kernel": "238cabb9740f19d3f2495af26f2ec0f6dd4e69b6",
+    "modules": "1500b5df54325748574deb953a87f198cf23d7b5",
+    "device-myron": "02dbfb85937dfe2cf5b6e21db6b41ab319064dca",
+    "device-common": "b1db55732f95e8e52467bf5c371242bd0f3e641e",
+    "devicetrees": "fb892731a9b9df5ecd076409536d172e564b6850",
+    "vendor-common": "61b4b9d316a24b00284695cd84a86c36f5dfeb14",
+    "vendor-myron": "8fd5073588ddd4f4e789b45d22d9f9fed2a5b2da"
+  },
+  "compiler": "Debian Clang 19.1.7",
+  "config_sha256": "f5a85b793fe48caee984ffecca3396d0c09e97dd298bb1000f9a1c7e0f19445f",
+  "cfi": true,
+  "modversions": true,
+  "rust_btf": false,
+  "source_sha256": {
+    "kernel/drivers/power/supply/mca/mca_business/business_battery/mca_battery_psy.c": "82193e8b257d97ad75dc1f1a19f050ad4018bfb3fe95b948a8598d32f8a93d27",
+    "kernel/drivers/power/supply/mca/mca_hardware_monitor/mca_connector_antiburn.c": "c6d79dfe6ee8e5253e04074dcf2d9820768b6b1ad8fa5f3a414e757f9005ad77",
+    "modules/qcom/opensource/wlan/platform/cnss2/pci.c": "3f58d20f14b79d6558dc56bd50b365e8f6af972517ef21be1b1922f5e06c0518",
+    "device-myron/kernel/source_dt.py": "f49192de7df748e5169f75ada880609f7346f2bf5360eeacfd01de9b10f22fa9",
+    "device-myron/kernel/dt-profile.json": "c0b03bda8c1d7e4c938be83be526d0b5e3c01cc0fef18419154642f29a3fb2fb",
+    "device-myron/kernel/test_thermal_bindings.py": "4e7ab3920340002e376ae7421949db13476efa0c61bea65cc2ad6cd05ee42e95"
+  },
+  "arm64_object_sha256": {
+    "obj/drivers/power/supply/mca/mca_business/business_battery/mca_battery_psy.o": "f0e27cc7172a79d5443edadd36a7ae9a840de763c4285dcd3506284d655fa145",
+    "obj/drivers/power/supply/mca/mca_hardware_monitor/mca_connector_antiburn.o": "9af21bfa31dde9c88f846b55278e4dba34cbd7798fea279bead6edf6bc199855",
+    "ext-check/qcom/opensource/wlan/platform/cnss2/pci.o": "94ad861872936fb6ad314bdf38f7e7c357898f9f70c433f1815aecdc21cd6587"
+  },
+  "host_cases": {
+    "battery": 64,
+    "antiburn": 10,
+    "cnss": 14
+  },
+  "negative_controls": "All three pre-change production sources fail their corresponding harness",
+  "device_dt_suite": {
+    "passed": 21,
+    "skipped": 2,
+    "skips": [
+      "Full historical R115 output/build status unavailable",
+      "Full dtc/fdtoverlaymerge/fdtput/mkdtboimg tool set not configured"
+    ]
+  },
+  "archived_dt_binding_checks": {
+    "0": "405c525f60971e3159b0ace76d76b6a88e0ca4cd39605ee30b81f08c72087057",
+    "1": "33d41666cdda363a5a31c0eaa963f9aed0a382a95a87f1905dd693067f28363a",
+    "2": "93a722864c4667e5a34b95df68a4c5788324bdcab0f4374b41069ce3388ceabf",
+    "3": "8de491b8c4e30c1672cb34123541ca76e0ea1db807ae111587abd1b15e6464a5",
+    "4": "0b3545760e057ef6ad85463b5c181ee6d222c32433b0f30ebbf448ef77502216",
+    "5": "dc067f441ec7be46351dd94904710668fdca829c129ac0fed810519a2f813acc",
+    "6": "38a854a3a57e9dd5696422ef0bc5742b450f65e3379ba0c6c788d019ef401445",
+    "7": "f7c212419cdc0915cfbbc743c0440d5e880ad10b8daf0815997df3a34e3d99f3"
+  },
+  "thermal_interface_comparison": {
+    "reference": "https://raw.githubusercontent.com/LineageOS/android_kernel_xiaomi_sm8550/86c2c5c4787bf13b560e587175d10f3968922db3/drivers/thermal/mi_thermal_interface.c",
+    "reference_attributes": [
+      "ambient_sensor",
+      "ambient_sensor_temp",
+      "balance_mode",
+      "board_sensor",
+      "board_sensor_charge_temp",
+      "board_sensor_other_temp",
+      "board_sensor_second_temp",
+      "board_sensor_temp",
+      "board_sensor_temp_comp",
+      "boost",
+      "charger_temp",
+      "cpu_limits",
+      "cpu_nolimit_temp",
+      "flash_state",
+      "market_download_limit",
+      "modem_level",
+      "modem_limit",
+      "modem_rate",
+      "poor_modem_limit",
+      "sconfig",
+      "screen_state",
+      "temp_state",
+      "usb_online",
+      "wifi_limit"
+    ],
+    "daemon_referenced_paths": [
+      "/sys/class/thermal/thermal_message/ambient_sensor",
+      "/sys/class/thermal/thermal_message/ambient_sensor_temp",
+      "/sys/class/thermal/thermal_message/atc_enable",
+      "/sys/class/thermal/thermal_message/board_sensor_charge_temp",
+      "/sys/class/thermal/thermal_message/board_sensor_other_temp",
+      "/sys/class/thermal/thermal_message/board_sensor_second_temp",
+      "/sys/class/thermal/thermal_message/board_sensor_temp",
+      "/sys/class/thermal/thermal_message/board_sensor_temp_comp",
+      "/sys/class/thermal/thermal_message/boost",
+      "/sys/class/thermal/thermal_message/charger_only_index",
+      "/sys/class/thermal/thermal_message/charger_temp",
+      "/sys/class/thermal/thermal_message/cpu_limits",
+      "/sys/class/thermal/thermal_message/cpu_nolimit_temp",
+      "/sys/class/thermal/thermal_message/display_therm_temp",
+      "/sys/class/thermal/thermal_message/dynamic_tj",
+      "/sys/class/thermal/thermal_message/ipa_cdev_limits",
+      "/sys/class/thermal/thermal_message/ipa_dump_info",
+      "/sys/class/thermal/thermal_message/ipa_virtual_sensor",
+      "/sys/class/thermal/thermal_message/sconfig",
+      "/sys/class/thermal/thermal_message/screen_state",
+      "/sys/class/thermal/thermal_message/special_cpu_limit",
+      "/sys/class/thermal/thermal_message/temp_aware",
+      "/sys/class/thermal/thermal_message/usb_online"
+    ],
+    "not_in_reference": [
+      "atc_enable",
+      "charger_only_index",
+      "display_therm_temp",
+      "dynamic_tj",
+      "ipa_cdev_limits",
+      "ipa_dump_info",
+      "ipa_virtual_sensor",
+      "special_cpu_limit",
+      "temp_aware"
+    ]
+  },
+  "mi_thermald_binary_sha256": "95cad1487b0c9de8a81522392252e8ced4844af4b1cc4e27e357778d47b2df41",
+  "full_image_built": false,
+  "full_module_modpost": false,
+  "device_verified": false,
+  "libperfmgr_changed": false,
+  "thermal_interface_complete": false
+}

@@ -413,7 +413,7 @@ connector_antiburn_mos_ctrl_gpio_init(struct connector_antiburn *conn)
 	conn->mos_ctrl_gpio =
 		of_get_named_gpio(conn->dev->of_node, "mos-ctrl-gpio", 0);
 	if (conn->mos_ctrl_gpio < 0)
-		mca_log_err("failed to parse mos ctrl gpio\n");
+		return conn->mos_ctrl_gpio;
 
 	ret = gpio_request(conn->mos_ctrl_gpio, "mos-ctrl-gpio");
 	if (ret) {
@@ -426,6 +426,7 @@ connector_antiburn_mos_ctrl_gpio_init(struct connector_antiburn *conn)
 	ret = gpiod_direction_output_raw(gpio_to_desc(conn->mos_ctrl_gpio), 0);
 	if (ret) {
 		mca_log_err("unable to set direction for pmic gpio\n");
+		gpio_free(conn->mos_ctrl_gpio);
 		return ret;
 	}
 
@@ -438,7 +439,7 @@ static int connector_antiburn_gpio_init(struct connector_antiburn *conn)
 
 	if (!conn->support_hw_antiburn) {
 		mca_log_info("No gpio config\n");
-		return -1;
+		return 0;
 	}
 
 	return connector_antiburn_mos_ctrl_gpio_init(conn);
@@ -697,7 +698,7 @@ static int connector_antiburn_probe(struct platform_device *pdev)
 	mca_log_info("probe_cnt = %d\n", ++probe_cnt);
 
 	if (hwid == NULL)
-		return -ENOMEM;
+		return -EPROBE_DEFER;
 
 	if (hwid->platform_version == 1 && hwid->major_version == 0 &&
 	    hwid->minor_version == 1) {
@@ -724,26 +725,31 @@ static int connector_antiburn_probe(struct platform_device *pdev)
 		mca_log_err("start to use external boost in O2\n");
 	}
 
-	ret = connector_antiburn_gpio_init(conn);
-	if (ret) {
-		mca_log_err("connector_antiburn_gpio_init failed, err is %d\n",
-			    ret);
-		goto err;
-	}
-
+	/* Resolve both sensors before acquiring or toggling the protection GPIO. */
+	if (!conn->thermal_zone_name ||
+	    (conn->use_double_ntc && !conn->thermal_zone_name2))
+		return -EINVAL;
 	conn->tzd_conn = thermal_zone_get_zone_by_name(conn->thermal_zone_name);
 	if (IS_ERR(conn->tzd_conn)) {
-		mca_log_err("thermal zone get conn_therm failed\n");
-		goto err;
+		ret = PTR_ERR(conn->tzd_conn);
+		return dev_err_probe(conn->dev,
+			ret == -ENODEV ? -EPROBE_DEFER : ret,
+			"thermal zone %s unavailable\n", conn->thermal_zone_name);
 	}
 	if (conn->use_double_ntc) {
 		conn->tzd_conn2 =
 			thermal_zone_get_zone_by_name(conn->thermal_zone_name2);
 		if (IS_ERR(conn->tzd_conn2)) {
-			mca_log_err("thermal zone get conn_therm2 failed\n");
-			goto err;
+			ret = PTR_ERR(conn->tzd_conn2);
+			return dev_err_probe(conn->dev,
+				ret == -ENODEV ? -EPROBE_DEFER : ret,
+				"thermal zone %s unavailable\n", conn->thermal_zone_name2);
 		}
 	}
+
+	ret = connector_antiburn_gpio_init(conn);
+	if (ret)
+		return dev_err_probe(conn->dev, ret, "antiburn GPIO setup failed\n");
 
 	conn->thermal_board_nb.notifier_call =
 		connector_antiburn_thermal_notifier_event;
@@ -767,11 +773,6 @@ static int connector_antiburn_probe(struct platform_device *pdev)
 	conn->disable_antiburn = 0;
 	mca_log_err("probe OK\n");
 	return 0;
-err:
-	if (gpio_is_valid(conn->mos_ctrl_gpio))
-		gpio_free(conn->mos_ctrl_gpio);
-	devm_kfree(&pdev->dev, conn);
-	return -EPROBE_DEFER;
 }
 
 static const struct of_device_id match_table[] = {
@@ -785,7 +786,7 @@ static void connector_antiburn_remove(struct platform_device *pdev)
 
 	cancel_delayed_work(&conn->monitor_work);
 
-	if (conn->mos_ctrl_gpio >= 0) {
+	if (conn->support_hw_antiburn && gpio_is_valid(conn->mos_ctrl_gpio)) {
 		gpio_free(conn->mos_ctrl_gpio);
 		mca_log_info("remove mos ctrl gpio success\n");
 	}

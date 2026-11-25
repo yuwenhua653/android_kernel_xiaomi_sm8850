@@ -59,6 +59,35 @@ static bool battery_psy_is_usb_available(struct batt_psy_info *info)
 	return true;
 }
 
+static int battery_psy_get_input_online(struct batt_psy_info *info,
+					union power_supply_propval *val)
+{
+	union power_supply_propval online = { 0 };
+	int usb_ret = -ENODEV, wls_ret = -ENODEV;
+
+	if (battery_psy_is_usb_available(info)) {
+		usb_ret = power_supply_get_property(info->usb_psy,
+				POWER_SUPPLY_PROP_ONLINE, &online);
+		if (!usb_ret && online.intval)
+			goto connected;
+	}
+	if (battery_psy_is_wls_available(info)) {
+		wls_ret = power_supply_get_property(info->wls_psy,
+				POWER_SUPPLY_PROP_ONLINE, &online);
+		if (!wls_ret && online.intval)
+			goto connected;
+	}
+	/* An unavailable input must not be reported as known to be offline. */
+	if (usb_ret || wls_ret)
+		return usb_ret ? usb_ret : wls_ret;
+	val->intval = 0;
+	return 0;
+
+connected:
+	val->intval = 1;
+	return 0;
+}
+
 static int get_prop_batt_health(struct batt_psy_info *info,
 				union power_supply_propval *val)
 {
@@ -208,10 +237,6 @@ static int batt_psy_get_prop(struct power_supply *psy,
 	if (strategy_class_fg_ops_is_init_ok() <= 0)
 		return -ENODATA;
 
-	if (!battery_psy_is_usb_available(info) ||
-	    !battery_psy_is_wls_available(info))
-		return -ENODEV;
-
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		/* mishow app needs a discharging status while input is suspended. */
@@ -219,21 +244,14 @@ static int batt_psy_get_prop(struct power_supply *psy,
 			info->input_suppend_voter =
 				mca_find_votable("input_suspend");
 		if (info->input_suppend_voter &&
-		    mca_get_client_vote(info->input_suppend_voter, "micharge")) {
+		    mca_get_client_vote(info->input_suppend_voter, "micharge") > 0) {
 			pval->intval = POWER_SUPPLY_STATUS_DISCHARGING;
 			break;
 		}
 
-		rc = power_supply_get_property(info->usb_psy,
-					       POWER_SUPPLY_PROP_ONLINE, pval);
+		rc = battery_psy_get_input_online(info, pval);
 		if (rc)
 			break;
-		if (!pval->intval) {
-			rc = power_supply_get_property(info->wls_psy,
-						       POWER_SUPPLY_PROP_ONLINE, pval);
-			if (rc)
-				break;
-		}
 		if (!pval->intval) {
 			pval->intval = POWER_SUPPLY_STATUS_DISCHARGING;
 			break;
@@ -285,14 +303,17 @@ static int batt_psy_get_prop(struct power_supply *psy,
 			pval->intval *= 1000;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-		rc = power_supply_get_property(info->usb_psy, psp, pval);
+		rc = battery_psy_is_usb_available(info) ?
+			power_supply_get_property(info->usb_psy, psp, pval) :
+			-ENODEV;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		rc = strategy_class_fg_ops_get_current(&pval->intval);
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
-		rc = power_supply_get_property(
-			info->usb_psy, POWER_SUPPLY_PROP_CURRENT_MAX, pval);
+		rc = battery_psy_is_usb_available(info) ?
+			power_supply_get_property(info->usb_psy,
+				POWER_SUPPLY_PROP_CURRENT_MAX, pval) : -ENODEV;
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		rc = strategy_class_fg_ops_get_temperature(&pval->intval);
