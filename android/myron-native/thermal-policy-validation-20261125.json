@@ -1,0 +1,96 @@
+{
+  "date": "2026-11-25",
+  "kernel_parent": "232f1e8757440841e61783f4831dc5ad1b46f279",
+  "scope": "MCA thermal level bounds and thermal policy review; no userspace replacement",
+  "source_sha256": {
+    "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_charger_thermal.c": "0b693551d22cd2a255162d975c311866a2b63f0f1c025968f210d7d5ce942838"
+  },
+  "test_sha256": "dc58e961c28da079aaac86d47338a6aa1034c688c68edc3492fa33158da01379",
+  "arm64_object_sha256": "302821870c83aa21e24299238f4e1527c56fe7e6a6346e552be456901ca7a5d1",
+  "config_sha256": "f5a85b793fe48caee984ffecca3396d0c09e97dd298bb1000f9a1c7e0f19445f",
+  "compiler": "Debian Clang 19.1.7",
+  "cfi": true,
+  "modversions": true,
+  "host_test_cases": 1385,
+  "negative_controls": [
+    "Original sysfs store accepts negative state instead of rejecting",
+    "Original cooling max exceeds valid table level",
+    "Original wireless consumer emits events/votes for invalid selected level"
+  ],
+  "existing_regressions": {
+    "battery_provider": 64,
+    "antiburn_probe": 10
+  },
+  "checkpatch": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "references": {
+    "LOS_SM8550_device": "f9a8fe87c9334c6ca2df588aa3f1e7f25f71d8d1",
+    "LOS_QTI_thermal": "e2ff2bbb4a90503f88d2caa103fb6ed483601043"
+  },
+  "archive_check": {
+    "0": {
+      "dtb_sha256": "405c525f60971e3159b0ace76d76b6a88e0ca4cd39605ee30b81f08c72087057",
+      "wired_rows": 15,
+      "wireless_rows": 15,
+      "base_flip": false,
+      "sys_therm_0_present": false
+    },
+    "1": {
+      "dtb_sha256": "33d41666cdda363a5a31c0eaa963f9aed0a382a95a87f1905dd693067f28363a",
+      "wired_rows": 15,
+      "wireless_rows": 15,
+      "base_flip": false,
+      "sys_therm_0_present": false
+    },
+    "2": {
+      "dtb_sha256": "93a722864c4667e5a34b95df68a4c5788324bdcab0f4374b41069ce3388ceabf",
+      "wired_rows": 15,
+      "wireless_rows": 15,
+      "base_flip": false,
+      "sys_therm_0_present": false
+    },
+    "3": {
+      "dtb_sha256": "8de491b8c4e30c1672cb34123541ca76e0ea1db807ae111587abd1b15e6464a5",
+      "wired_rows": 15,
+      "wireless_rows": 15,
+      "base_flip": false,
+      "sys_therm_0_present": false
+    },
+    "4": {
+      "dtb_sha256": "0b3545760e057ef6ad85463b5c181ee6d222c32433b0f30ebbf448ef77502216",
+      "wired_rows": 15,
+      "wireless_rows": 15,
+      "base_flip": false,
+      "sys_therm_0_present": false
+    },
+    "5": {
+      "dtb_sha256": "dc067f441ec7be46351dd94904710668fdca829c129ac0fed810519a2f813acc",
+      "wired_rows": 15,
+      "wireless_rows": 15,
+      "base_flip": false,
+      "sys_therm_0_present": false
+    },
+    "6": {
+      "dtb_sha256": "38a854a3a57e9dd5696422ef0bc5742b450f65e3379ba0c6c788d019ef401445",
+      "wired_rows": 15,
+      "wireless_rows": 15,
+      "base_flip": false,
+      "sys_therm_0_present": false
+    },
+    "7": {
+      "dtb_sha256": "f7c212419cdc0915cfbbc743c0440d5e880ad10b8daf0815997df3a34e3d99f3",
+      "wired_rows": 15,
+      "wireless_rows": 15,
+      "base_flip": false,
+      "sys_therm_0_present": false
+    }
+  },
+  "full_image_built": false,
+  "full_modpost": false,
+  "hardware_qualified": false,
+  "thresholds_changed": false,
+  "thermal_policy_replaced": false,
+  "libperfmgr_integrated": false
+}

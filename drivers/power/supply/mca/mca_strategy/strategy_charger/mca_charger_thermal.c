@@ -72,14 +72,14 @@ static void mca_wireless_charger_thermal_handle_limit(
 	if (!ctrl->voter_ok)
 		return;
 
-	if (thermal_level > ctrl->max_level) {
-		mca_log_err("thermal level invalid\n");
-		return;
-	}
-
 	thermal_level = info->smartchg_data.wls_super_sts ?
 				ctrl->quickchg_limit_level :
 				ctrl->limit_level;
+	if (thermal_level < 0 || thermal_level > ctrl->max_level ||
+	    thermal_level > MAX_THERMAL_LEVEL) {
+		mca_log_err("thermal level invalid\n");
+		return;
+	}
 
 	phone_flag = thermal_level > info->wireless_phone_level ? 1 : 0;
 	mca_strategy_func_process(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
@@ -204,7 +204,8 @@ static void mca_charger_thermal_flip_handle_limit(
 		mca_log_err("voter is not ready\n");
 	} else if (!info->online) {
 		mca_log_err("charger is not online\n");
-	} else if (ctrl->max_level < thermal_level) {
+	} else if (thermal_level < 0 || thermal_level > ctrl->max_level ||
+		   thermal_level >= MAX_THERMAL_LEVEL) {
 		mca_log_err("thermal level invalid\n");
 	} else if (!ctrl->wls_thermal_remove) {
 		if (thermal_removed) {
@@ -247,7 +248,8 @@ static void mca_wireless_charger_thermal_flip_handle_limit(
 		mca_log_err("voter is not ready\n");
 	} else if (!info->wls_online) {
 		mca_log_err("charger is not online\n");
-	} else if (ctrl->max_level < thermal_level) {
+	} else if (thermal_level < 0 || thermal_level > ctrl->max_level ||
+		   thermal_level >= MAX_THERMAL_LEVEL) {
 		mca_log_err("thermal level invalid\n");
 	} else if (!ctrl->wls_flip_thermal_remove) {
 		if (thermal_removed) {
@@ -304,7 +306,8 @@ static void mca_charger_thermal_handle_limit(struct mca_thermal_ctrl_info *ctrl,
 		return;
 	}
 
-	if (thermal_level > ctrl->max_level) {
+	if (thermal_level < 0 || thermal_level > ctrl->max_level ||
+	    thermal_level > MAX_THERMAL_LEVEL) {
 		mca_log_err("thermal level invalid\n");
 		return;
 	}
@@ -493,6 +496,7 @@ static ssize_t mca_charger_thermal_sysfs_store(struct device *dev,
 	struct mca_sysfs_attr_info *attr_info;
 	struct mca_thermal_info *info = dev_get_drvdata(dev);
 	const char *sic_sellect;
+	int level, ret;
 
 	attr_info = mca_sysfs_lookup_attr(attr->attr.name,
 					  mca_charger_thermal_sysfs_field_tbl,
@@ -547,9 +551,14 @@ static ssize_t mca_charger_thermal_sysfs_store(struct device *dev,
 						 info->wired_voter);
 		break;
 	case MCA_THERMAL_WIRED_CTRL_LIMIT:
-		if (sscanf(buf, "%d\n", &info->wired_ctrl_info.limit_level) !=
-		    1)
-			return -1;
+		ret = kstrtoint(buf, 10, &level);
+		if (ret)
+			return ret;
+		if (level < 0 || level > info->wired_ctrl_info.max_level ||
+		    level > MAX_THERMAL_LEVEL ||
+		    (info->support_base_flip && level == MAX_THERMAL_LEVEL))
+			return -EINVAL;
+		info->wired_ctrl_info.limit_level = level;
 		mca_log_info("set wired limit level %d\n",
 			     info->wired_ctrl_info.limit_level);
 		mca_charger_thermal_handle_limit(&info->wired_ctrl_info,
@@ -578,9 +587,14 @@ static ssize_t mca_charger_thermal_sysfs_store(struct device *dev,
 			info->wireless_voter);
 		break;
 	case MCA_THERMAL_WIRELESS_CTRL_LIMIT:
-		if (sscanf(buf, "%d\n",
-			   &info->wireless_ctrl_info.limit_level) != 1)
-			return -1;
+		ret = kstrtoint(buf, 10, &level);
+		if (ret)
+			return ret;
+		if (level < 0 || level > info->wireless_ctrl_info.max_level ||
+		    level > MAX_THERMAL_LEVEL ||
+		    (info->support_base_flip && level == MAX_THERMAL_LEVEL))
+			return -EINVAL;
+		info->wireless_ctrl_info.limit_level = level;
 		mca_log_info("set wireless limit level %d\n",
 			     info->wireless_ctrl_info.limit_level);
 		mca_wireless_charger_thermal_handle_limit(
@@ -588,9 +602,14 @@ static ssize_t mca_charger_thermal_sysfs_store(struct device *dev,
 			info->wireless_voter);
 		break;
 	case MCA_THERMAL_WIRELESS_QUICK_CHG_CTRL_LIMIT:
-		if (sscanf(buf, "%d\n",
-			   &info->wireless_ctrl_info.quickchg_limit_level) != 1)
-			return -1;
+		ret = kstrtoint(buf, 10, &level);
+		if (ret)
+			return ret;
+		if (level < 0 || level > info->wireless_ctrl_info.max_level ||
+		    level > MAX_THERMAL_LEVEL ||
+		    (info->support_base_flip && level == MAX_THERMAL_LEVEL))
+			return -EINVAL;
+		info->wireless_ctrl_info.quickchg_limit_level = level;
 		mca_log_info("set wireless limit level %d\n",
 			     info->wireless_ctrl_info.quickchg_limit_level);
 		mca_wireless_charger_thermal_handle_limit(
@@ -972,7 +991,9 @@ static int mca_charger_thermal_get_max_level(struct thermal_cooling_device *tcd,
 	if (!info)
 		return -1;
 
-	*state = info->wired_ctrl_info.max_level + 1;
+	*state = min(info->wired_ctrl_info.max_level,
+		     info->support_base_flip ? MAX_THERMAL_LEVEL - 1 :
+					       MAX_THERMAL_LEVEL);
 
 	return 0;
 }
@@ -997,6 +1018,11 @@ static int mca_charger_thermal_set_cur_level(struct thermal_cooling_device *tcd,
 
 	if (!info)
 		return -1;
+
+	if (state > info->wired_ctrl_info.max_level ||
+	    state > MAX_THERMAL_LEVEL ||
+	    (info->support_base_flip && state == MAX_THERMAL_LEVEL))
+		return -EINVAL;
 
 	info->wired_ctrl_info.limit_level = (int)state;
 

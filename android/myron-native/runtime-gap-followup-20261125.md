@@ -1,5 +1,9 @@
 # Myron runtime-gap follow-up — 2026-11-25
 
+Subsequent charging-level boundary fixes and the decision on how much Xiaomi
+thermal compatibility is actually required are recorded in
+[the thermal policy review](thermal-policy-review-20261125.md).
+
 This is a source checkpoint, not a request to compile or flash. The user has
 confirmed that the booting UFS-fixed 6.12.118 still displays wireless charging
 while battery charge falls. No subsequent device result is available.
