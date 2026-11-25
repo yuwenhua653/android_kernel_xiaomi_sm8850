@@ -3572,7 +3572,7 @@ static void strategy_wireless_monitor_work(struct work_struct *work)
 	int vterm = 0;
 	int input_suspend = 0, chg_en = 0;
 	int jeita_hot_result = 1;
-	int chgr_stat;
+	int chgr_stat, ret, vbat;
 
 	if (!info->thermal_phone_flag)
 		(void)mca_vote(info->input_limit_voter, "thermal_phone", false,
@@ -3596,24 +3596,33 @@ static void strategy_wireless_monitor_work(struct work_struct *work)
 			strategy_wireless_switch_to_half_bridge(info);
 	}
 	last_quick_enable = if_qc_enable;
-	(void)mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
+	ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
 					   STRATEGY_STATUS_TYPE_QC_CHARGE_STS,
 					   &quick_charge_status);
+	if (ret || quick_charge_status < MCA_QUICK_CHG_STS_NO_CHARGING ||
+	    quick_charge_status > MCA_QUICK_CHG_STS_CHARGE_FAILED)
+		goto out;
 	if (quick_charge_status == MCA_QUICK_CHG_STS_CHARGING)
 		goto out;
 
 	//WA: slove pmic adnormal status
 	input_suspend = mca_get_effective_result(info->wls_input_suspend_voter);
 	chg_en = mca_get_effective_result(info->chg_enable_voter);
-	if (!input_suspend && info->proc_data.chgr_stage != WLS_FULL_MODE) {
-		(void)platform_class_buckchg_ops_get_chg_status(
+	if (!input_suspend && chg_en > 0 &&
+	    info->proc_data.chgr_stage != WLS_FULL_MODE) {
+		ret = platform_class_buckchg_ops_get_chg_status(
 			MAIN_BUCK_CHARGER, &chgr_stat);
-		if (chg_en && chgr_stat == CHARGER_STATUS_CHARGING_DISABLED) {
-			platform_class_buckchg_ops_set_chg(MAIN_BUCK_CHARGER,
-							   false);
-			platform_class_buckchg_ops_set_chg(MAIN_BUCK_CHARGER,
-							   true);
-			mca_log_err("recover wireless buck charging\n");
+		if (!ret && chgr_stat == CHARGER_STATUS_CHARGING_DISABLED) {
+			ret = platform_class_buckchg_ops_set_chg(MAIN_BUCK_CHARGER,
+							       false);
+			if (!ret) {
+				ret = platform_class_buckchg_ops_set_chg(MAIN_BUCK_CHARGER,
+								       true);
+				if (!ret)
+					mca_log_info("recovered wireless buck charging\n");
+			}
+			if (ret)
+				mca_log_err("wireless buck recovery failed: %d\n", ret);
 		}
 	}
 
@@ -3623,6 +3632,10 @@ static void strategy_wireless_monitor_work(struct work_struct *work)
 		strategy_wireless_sw_cv_stop(info);
 
 	vterm = mca_get_effective_result(info->vterm_voter);
+	ret = strategy_class_fg_ops_get_voltage(&vbat);
+	if (ret || vbat <= 0 || vterm <= 0 || chg_en < 0)
+		goto out;
+	info->proc_data.vbat_cell_mv = vbat;
 	if (!info->sw_cv_running &&
 	    info->proc_data.chgr_stage != WLS_FULL_MODE &&
 	    vterm >= MCA_WLS_CHG_VTERM_LOW_TH &&
@@ -3668,11 +3681,20 @@ static void strategy_wireless_buckchg_sw_cv_workfunc(struct work_struct *work)
 	int iterm = mca_get_effective_result(info->iterm_voter);
 	int fcc = mca_get_effective_result(info->charge_limit_voter);
 	int volt_delta = sw_cv_volt_delta_map[0][1];
+	int current_ua, ret;
+	s64 requested_fv;
 
-	strategy_class_fg_ops_get_voltage(&info->proc_data.vbat_cell_mv);
-	strategy_class_fg_ops_get_current(&info->proc_data.ibat_ma);
-	vbat = info->proc_data.vbat_cell_mv;
-	ibat = -info->proc_data.ibat_ma / 1000;
+	if (vterm <= 0 || iterm < 0 || fcc < 0)
+		goto retry;
+	ret = strategy_class_fg_ops_get_voltage(&vbat);
+	if (ret || vbat <= 0)
+		goto retry;
+	ret = strategy_class_fg_ops_get_current(&current_ua);
+	if (ret || current_ua == INT_MIN)
+		goto retry;
+	info->proc_data.vbat_cell_mv = vbat;
+	info->proc_data.ibat_ma = current_ua;
+	ibat = -current_ua / 1000;
 	mca_log_info("vbat: %d, ibat: %d, vterm: %d, iterm: %d, fcc: %d\n",
 		     vbat, ibat, vterm, iterm, fcc);
 
@@ -3687,7 +3709,7 @@ static void strategy_wireless_buckchg_sw_cv_workfunc(struct work_struct *work)
 
 	if (vbat >= vterm - volt_delta) {
 		interval = CHARGE_SW_CV_WORK_FAST_INTERVAL;
-		if (ibat - FCC_STEP > iterm) {
+		if (fcc > FCC_STEP && ibat - FCC_STEP > iterm) {
 			if (fcc - ibat >= 2 * FCC_STEP)
 				mca_vote(info->charge_limit_voter, "sw_cv",
 					 true, ibat / FCC_STEP * FCC_STEP);
@@ -3701,11 +3723,13 @@ static void strategy_wireless_buckchg_sw_cv_workfunc(struct work_struct *work)
 
 	if (vbat >= vterm) {
 		mca_log_err("WARNING: batt ov, reduce fv\n");
-		platform_class_buckchg_ops_set_term_volt(
-			MAIN_BUCK_CHARGER,
-			vterm + info->pmic_fv_compensation - FV_STEP);
+		requested_fv = (s64)vterm + info->pmic_fv_compensation - FV_STEP;
+		if (requested_fv > 0 && requested_fv <= INT_MAX)
+			platform_class_buckchg_ops_set_term_volt(
+				MAIN_BUCK_CHARGER, (int)requested_fv);
 	}
 
+retry:
 	mca_queue_delayed_work(&info->sw_cv_work, msecs_to_jiffies(interval));
 }
 
@@ -3715,7 +3739,7 @@ static void strategy_wireless_buckchg_base_flip_sw_cv_workfunc(
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, base_flip_sw_cv_work.work);
 	static int sw_cv_volt_delta_map[][2] = { { 1000, 7 }, { 0, 5 } };
-	int interval;
+	int interval = CHARGE_SW_CV_WORK_NORMAL_INTERVAL;
 	int vbat, ibat, ibat_ua;
 	int vterm = mca_get_client_vote(info->vterm_voter, "jeita");
 	int iterm = mca_get_effective_result(info->iterm_voter);
@@ -3723,8 +3747,14 @@ static void strategy_wireless_buckchg_base_flip_sw_cv_workfunc(
 	int first_termination = 0;
 	int fastcharge = strategy_class_fg_get_fastcharge();
 	int compensa_fv, ov_margin, fv_step, actual_vterm, volt_delta, i;
+	int current_ua, ret;
+	s64 requested_fv;
 
-	strategy_class_fg_get_first_termination(&first_termination);
+	if (vterm <= 0 || iterm < 0 || fcc < 0 || fastcharge < 0)
+		goto retry;
+	ret = strategy_class_fg_get_first_termination(&first_termination);
+	if (ret)
+		goto retry;
 
 	if (!fastcharge) {
 		compensa_fv = info->pmic_fv_compensation;
@@ -3737,17 +3767,24 @@ static void strategy_wireless_buckchg_base_flip_sw_cv_workfunc(
 	actual_vterm = vterm;
 	if (first_termination)
 		actual_vterm = mca_get_effective_result(info->vterm_voter);
+	if (actual_vterm <= 0)
+		goto retry;
 
-	strategy_class_fg_ops_get_voltage(&info->proc_data.vbat_cell_mv);
-	strategy_class_fg_ops_get_current(&info->proc_data.ibat_ma);
-	vbat = info->proc_data.vbat_cell_mv;
-	ibat_ua = -info->proc_data.ibat_ma;
+	ret = strategy_class_fg_ops_get_voltage(&vbat);
+	if (ret || vbat <= 0)
+		goto retry;
+	ret = strategy_class_fg_ops_get_current(&current_ua);
+	if (ret || current_ua == INT_MIN)
+		goto retry;
+	info->proc_data.vbat_cell_mv = vbat;
+	info->proc_data.ibat_ma = current_ua;
+	ibat_ua = -current_ua;
 	ibat = ibat_ua / 1000;
 	fv_step = fastcharge ? 10 : 5;
 
 	mca_log_info(
 		"vbat: %d, ibat: %d, vterm: %d, iterm: %d, fcc: %d, actual_vterm %d, pmic_fv_compensa %d, compensa_fv %d\n",
-		vbat, ibat, vterm, iterm, fcc, actual_vterm + compensa_fv,
+		vbat, ibat, vterm, iterm, fcc, actual_vterm,
 		info->pmic_fv_compensation, compensa_fv);
 
 	if (ibat_ua < 1000488) {
@@ -3764,7 +3801,7 @@ cv:
 	if (vbat < vterm - volt_delta) {
 		interval = CHARGE_SW_CV_WORK_NORMAL_INTERVAL;
 	} else {
-		if (iterm < ibat - FCC_STEP) {
+		if (fcc > FCC_STEP && iterm < ibat - FCC_STEP) {
 			if (fcc - ibat < 2 * FCC_STEP)
 				fcc = fcc - FCC_STEP;
 			else
@@ -3781,15 +3818,18 @@ cv:
 
 		mca_log_err("WARNING: batt ov, reduce fv, count: %d\n",
 			    info->base_flip_ov_cnt);
-		info->base_flip_ov_cnt++;
+		if (info->base_flip_ov_cnt < 5)
+			info->base_flip_ov_cnt++;
 		cnt = info->base_flip_ov_cnt;
 		if (cnt >= 5)
 			cnt = 5;
-		platform_class_buckchg_ops_set_term_volt(
-			MAIN_BUCK_CHARGER,
-			actual_vterm + compensa_fv - cnt * fv_step);
+		requested_fv = (s64)actual_vterm + compensa_fv - cnt * fv_step;
+		if (requested_fv > 0 && requested_fv <= INT_MAX)
+			platform_class_buckchg_ops_set_term_volt(
+				MAIN_BUCK_CHARGER, (int)requested_fv);
 	}
 
+retry:
 	mca_queue_delayed_work(&info->base_flip_sw_cv_work,
 			       msecs_to_jiffies(interval));
 }

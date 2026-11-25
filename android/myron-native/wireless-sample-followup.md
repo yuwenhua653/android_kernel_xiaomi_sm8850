@@ -1,5 +1,8 @@
 # Wireless sample validity and thermal decisions
 
+Subsequent [CV/PMIC recovery corrections](wireless-cv-followup.md) extend
+failed-sample handling to the periodic monitor and software CV workers.
+
 ## Corrected defects
 
 The wireless monitor initialized receiver output current to zero and ignored

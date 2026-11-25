@@ -1,0 +1,16 @@
+{
+  "parent": "3abc1cdf389740e260d628deb874719f66aca2fa",
+  "sha256": {
+    "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.c": "152638c4080c7e7b89f1d20acb5111c8562541688ef564fcd71fa820c87edb1d",
+    "android/myron-native/tests/test_wireless_cv_samples.py": "a3480e97a0edc7b5d265e249903fcde8c1c2b57013c98912e6d14e0caa56b9ce"
+  },
+  "new_cases": 50,
+  "related_regression_cases": 1413,
+  "negative_controls": [
+    "monitor",
+    "CV workers"
+  ],
+  "arm64_object": "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.o",
+  "full_build": false,
+  "hardware_result": false
+}

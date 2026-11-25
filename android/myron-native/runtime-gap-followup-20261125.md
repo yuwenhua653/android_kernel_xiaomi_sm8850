@@ -1,6 +1,10 @@
 # Myron runtime-gap follow-up — 2026-11-25
 
-Latest source update: [wireless sample/error handling](wireless-sample-followup.md)
+Latest CV/PMIC update: [constant-voltage follow-up](wireless-cv-followup.md).
+This also identifies MCA owner 32778 and corrects the earlier ADC/debug
+client hypothesis; probe/timing still need device evidence.
+
+Prior source update: [wireless sample/error handling](wireless-sample-followup.md)
 adds validated-current voting, balanced battery references and thermal/FFC
 failed-sample protection. Hardware net charging remains unverified.
 
