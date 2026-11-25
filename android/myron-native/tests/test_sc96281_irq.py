@@ -32,13 +32,14 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--kernel-root", required=True, type=Path)
     ap.add_argument("--driver", type=Path, help="Optional replacement driver for regression testing")
+    ap.add_argument("--strategy", type=Path, help="Optional replacement strategy for regression testing")
     a = ap.parse_args()
     mca = a.kernel_root / "drivers/power/supply/mca"
     drv = mca / "mca_hardware_ic/wireless_ic/sc96281"
     strategy = mca / "mca_strategy/strategy_wireless"
     source = (a.driver or drv / "sc96281_core.c").read_text()
     header = (drv / "inc/sc96281_reg.h").read_text()
-    consumer = (strategy / "mca_basic_wireless.c").read_text()
+    consumer = (a.strategy or strategy / "mca_basic_wireless.c").read_text()
     sh = (strategy / "inc/mca_basic_wireless.h").read_text()
     rx_names = re.findall(r"RX_INT_\w+", enum(header, "rx_irq_flag_t"))
     assert rx_names == re.findall(r"RX_INT_\w+", sh), "Driver/strategy RX enum mismatch"
@@ -74,11 +75,12 @@ struct list_head { struct list_head *next, *prev; };
 static void list_add(struct list_head *n, struct list_head *h) {
     n->next=h->next; n->prev=h; h->next->prev=n; h->next=n;
 }
+static inline void list_add_tail(struct list_head *n, struct list_head *h) { list_add(n,h->prev); }
 static void list_del(struct list_head *n) { n->prev->next=n->next; n->next->prev=n->prev; }
 #define list_empty(h) ((h)->next==(h))
 #define list_first_entry(h,t,m) container_of((h)->next,t,m)
 struct strategy_wireless_irq_node { struct list_head node; int int_mask; };
-struct strategy_wireless_dev { struct list_head header; int list_lock, wait_que, irq_node_cnt, wl_irq_running;
+struct strategy_wireless_dev { struct list_head header, irq_header; int irq_list_lock, irq_wait_que, list_lock, wait_que, irq_node_cnt, wl_irq_running, online, session_lock;
     struct { int int_flag; } proc_data; };
 static int decoded[128], count, mode, failure, cleared;
 static uint32_t raw;
@@ -109,21 +111,23 @@ static void mca_strategy_func_process(int type, int event, int value) {
 static int cases;
 static void check(uint32_t bits, int tx, int fail, bool ready) {
     struct sc96281 chip={.ready=ready};
-    int expected[128]={0}, actual[128]={0}, n=0;
+    int expected[128]={0}, actual[128]={0}, sequence[128]={0}, n=0;
     int_map_t *map=tx?tx_irq_map:rx_irq_map;
     unsigned len=tx?ARRAY_SIZE(tx_irq_map):ARRAY_SIZE(rx_irq_map);
     mode=tx; raw=bits; failure=fail; count=cleared=0;
-    info=(struct strategy_wireless_dev){0}; info.header.next=info.header.prev=&info.header;
+    info=(struct strategy_wireless_dev){.online=1}; info.header.next=info.header.prev=&info.header;
+    info.irq_header.next=info.irq_header.prev=&info.irq_header;
     sc96281_interrupt_work(&chip.interrupt_work.work);
     strategy_wireless_process_irq(&info);
     assert(!chip.wireless_chg_int_lock && !chip.proc_data.int_flag);
-    assert(!info.irq_node_cnt && !info.list_lock && list_empty(&info.header));
-    if (!fail && ready) for(unsigned i=0;i<len;i++) if(bits & map[i].irq_regval) {expected[map[i].irq_flag]++; n++;}
+    assert(!info.irq_node_cnt && !info.list_lock && list_empty(&info.irq_header));
+    if (!fail && ready) for(unsigned i=0;i<len;i++) if(bits & map[i].irq_regval) {expected[map[i].irq_flag]++; sequence[n++]=map[i].irq_flag;}
     for(int i=0;i<count;i++) {assert(decoded[i]>=0 && decoded[i]<128); actual[decoded[i]]++;}
     if(n!=count) {fprintf(stderr,"event count mismatch tx=%d bits=%x expected=%d actual=%d\n",tx,bits,n,count); exit(1);}
     for(int i=0;i<128;i++) if(expected[i]!=actual[i]) {
         fprintf(stderr,"wrong decoded event tx=%d bits=%x index=%d expected=%d actual=%d\n",tx,bits,i,expected[i],actual[i]); exit(1);
     }
+    for(int i=0;i<n;i++) assert(decoded[i]==sequence[i]);
     cases++;
 }
 int main(void) {
@@ -141,7 +145,7 @@ int main(void) {
         check(UINT32_MAX,tx,0,false);
         for(int fail=1;fail<=3;fail++) check(UINT32_MAX,tx,fail,true);
     }
-    printf("PASS: %d IRQ cases; actual RX queue/decoder; TX indices; read/clear failures; ready guard\n",cases);
+    printf("PASS: %d IRQ cases; actual RX FIFO/decoder; TX indices; read/clear failures; ready guard\n",cases);
 }
 '''
     code = preamble + "\n".join(enum(header, n) for n in ("wp_irq_t", "rx_irq_flag_t", "tx_irq_flag_t"))

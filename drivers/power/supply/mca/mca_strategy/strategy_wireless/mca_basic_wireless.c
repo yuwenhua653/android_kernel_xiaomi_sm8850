@@ -2463,14 +2463,32 @@ static void
 strategy_wireless_process_online_change(int value,
 					struct strategy_wireless_dev *info)
 {
+	struct strategy_wireless_irq_node *irq_node;
+
+	mutex_lock(&info->session_lock);
 	if (value == info->online)
-		return;
+		goto out;
 
 	info->online = value;
 	if (value)
 		strategy_wireless_power_good_on(info);
-	else
+	else {
 		strategy_wireless_power_good_off(info);
+		/* Discard already queued RX events at the end of this session. */
+		spin_lock(&info->irq_list_lock);
+		while (!list_empty(&info->irq_header)) {
+			irq_node = list_first_entry(&info->irq_header,
+				struct strategy_wireless_irq_node, node);
+			list_del(&irq_node->node);
+			info->irq_node_cnt--;
+			kfree(irq_node);
+		}
+		spin_unlock(&info->irq_list_lock);
+	}
+out:
+	mutex_unlock(&info->session_lock);
+	/* The RX IRQ may arrive before the business-layer CONNECT event. */
+	wake_up(&info->irq_wait_que);
 }
 
 static void strategy_wireless_chg_handler(struct strategy_wireless_dev *info)
@@ -2965,36 +2983,45 @@ strategy_wireless_split_irq_index(struct strategy_wireless_dev *info,
 		mca_log_info("queue irq node, int_mask = 0x%x\n",
 			     irq_node->int_mask);
 
-		spin_lock(&info->list_lock);
-		list_add(&irq_node->node, &info->header);
+		spin_lock(&info->irq_list_lock);
+		list_add_tail(&irq_node->node, &info->irq_header);
 		info->irq_node_cnt++;
-		spin_unlock(&info->list_lock);
+		spin_unlock(&info->irq_list_lock);
 	}
 
-	wake_up(&info->wait_que);
+	wake_up(&info->irq_wait_que);
 }
 
 static int strategy_wireless_process_irq(struct strategy_wireless_dev *info)
 {
 	struct strategy_wireless_irq_node *irq_node;
 
-	spin_lock(&info->list_lock);
-	while (!list_empty(&info->header)) {
-		irq_node = list_first_entry(&info->header,
+	mutex_lock(&info->session_lock);
+	/*
+	 * CONNECT initializes ICL to zero. Do not let it overwrite an LDO_ON
+	 * ramp that ran first on the independent RX worker.
+	 */
+	if (!info->online)
+		goto out;
+
+	spin_lock(&info->irq_list_lock);
+	while (!list_empty(&info->irq_header)) {
+		irq_node = list_first_entry(&info->irq_header,
 					    struct strategy_wireless_irq_node,
 					    node);
 		list_del(&irq_node->node);
 		info->irq_node_cnt--;
-		spin_unlock(&info->list_lock);
+		spin_unlock(&info->irq_list_lock);
 
 		info->proc_data.int_flag = __ffs(irq_node->int_mask);
 		strategy_wireless_chg_handler(info);
 		kfree(irq_node);
 
-		spin_lock(&info->list_lock);
+		spin_lock(&info->irq_list_lock);
 	}
-	spin_unlock(&info->list_lock);
-
+	spin_unlock(&info->irq_list_lock);
+out:
+	mutex_unlock(&info->session_lock);
 	return !info->wl_irq_running;
 }
 
@@ -3004,7 +3031,7 @@ static void strategy_wireless_process_irq_work(struct work_struct *work)
 		work, struct strategy_wireless_dev, process_irq_work.work);
 
 	while (info->wl_irq_running)
-		wait_event(info->wait_que,
+		wait_event(info->irq_wait_que,
 			   strategy_wireless_process_irq(info));
 }
 
@@ -5000,6 +5027,10 @@ static int basic_wireless_class_probe(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&info->header);
 	spin_lock_init(&info->list_lock);
+	mutex_init(&info->session_lock);
+	INIT_LIST_HEAD(&info->irq_header);
+	spin_lock_init(&info->irq_list_lock);
+	init_waitqueue_head(&info->irq_wait_que);
 	init_waitqueue_head(&info->wait_que);
 	strategy_wireless_init_work(info);
 
@@ -5052,7 +5083,7 @@ static void strategy_wireless_stop_irq_worker(struct strategy_wireless_dev *info
 		return;
 
 	info->wl_irq_running = false;
-	wake_up(&info->wait_que);
+	wake_up(&info->irq_wait_que);
 	cancel_delayed_work_sync(&info->process_irq_work);
 }
 

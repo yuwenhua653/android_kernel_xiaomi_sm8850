@@ -21,6 +21,7 @@
 #define __MCA_BASIC_WIRELESS_H__
 
 #include <linux/wait.h>
+#include <linux/mutex.h>
 #include <mca/strategy/strategy_wireless_class.h>
 
 #define MCA_WLS_CHG_CURRENT_DEFAULT_VALUE 100
@@ -393,6 +394,12 @@ struct strategy_wireless_dev {
 	struct list_head header;
 	wait_queue_head_t wait_que;
 	spinlock_t list_lock;
+	/* RX nodes have a different layout from the TX nodes in header. */
+	struct list_head irq_header;
+	wait_queue_head_t irq_wait_que;
+	spinlock_t irq_list_lock;
+	/* Serialize session initialization/reset against RX event handling. */
+	struct mutex session_lock;
 
 	//voter
 	struct mca_votable *input_limit_voter; //ICL
