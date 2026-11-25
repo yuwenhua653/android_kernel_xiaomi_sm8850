@@ -20,6 +20,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/math64.h>
 #include <linux/string.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
@@ -1391,27 +1392,37 @@ static int strategy_wireless_get_chgr_stage(struct strategy_wireless_dev *info,
 	return 0;
 }
 
-static void
+static int strategy_wireless_get_batt_property(enum power_supply_property prop,
+					      int *value)
+{
+	struct power_supply *battery;
+	union power_supply_propval pval;
+	int ret;
+
+	battery = power_supply_get_by_name("battery");
+	if (!battery)
+		return -ENODEV;
+	ret = power_supply_get_property(battery, prop, &pval);
+	power_supply_put(battery);
+	if (ret)
+		return ret;
+	*value = pval.intval;
+	return 0;
+}
+
+static int
 strategy_wireless_get_batt_chgr_status(struct strategy_wireless_dev *info,
 				       int *chg_status)
 {
-	int rc = 0;
-	union power_supply_propval pval = {
-		0,
-	};
+	int status, ret;
 
-	info->batt_psy = power_supply_get_by_name("battery");
-	if (!info->batt_psy) {
-		mca_log_err("batt_psy is not find, return\n");
-		return;
-	}
-
-	rc = power_supply_get_property(info->batt_psy, POWER_SUPPLY_PROP_STATUS,
-				       &pval);
-	if (rc < 0)
-		mca_log_err("Couldn't read battery status, rc=%d\n", rc);
-
-	*chg_status = pval.intval;
+	ret = strategy_wireless_get_batt_property(POWER_SUPPLY_PROP_STATUS, &status);
+	if (ret)
+		return ret;
+	if (status < POWER_SUPPLY_STATUS_UNKNOWN || status > POWER_SUPPLY_STATUS_FULL)
+		return -ERANGE;
+	*chg_status = status;
+	return 0;
 }
 
 static int
@@ -1767,8 +1778,13 @@ static void
 strategy_wireless_epp_train_tx_work(struct strategy_wireless_dev *info)
 {
 	bool vout_change = false;
-	int vout = 0, battery_temp = 0;
-	(void)strategy_class_fg_ops_get_temperature(&battery_temp);
+	int vout = 0, battery_temp, ret;
+
+	ret = strategy_class_fg_ops_get_temperature(&battery_temp);
+	if (ret) {
+		mca_log_err("battery temperature unavailable: %d\n", ret);
+		return;
+	}
 	mca_log_info("enter epp train tx work, BatteryTemperature=%d\n",
 		     battery_temp);
 	battery_temp /= 10;
@@ -1963,8 +1979,13 @@ static void
 strategy_wireless_epp_musical_box_work(struct strategy_wireless_dev *info)
 {
 	bool vout_change = false;
-	int vout = 0, battery_temp = 0;
-	(void)strategy_class_fg_ops_get_temperature(&battery_temp);
+	int vout = 0, battery_temp, ret;
+
+	ret = strategy_class_fg_ops_get_temperature(&battery_temp);
+	if (ret) {
+		mca_log_err("battery temperature unavailable: %d\n", ret);
+		return;
+	}
 	mca_log_info("enter epp musical box work, BatteryTemperature=%d\n",
 		     battery_temp);
 	battery_temp /= 10;
@@ -2106,29 +2127,35 @@ strategy_wireless_get_charging_info(struct strategy_wireless_dev *info)
 	bool chg_en = false;
 	int enable_quickchg = 0;
 	int brg_status = 0;
+	int iout_ret, quickchg_ret, status_ret, soc;
 
 	(void)platform_class_wireless_get_vout(WIRELESS_ROLE_MASTER, &vout);
 	(void)platform_class_wireless_get_vrect(WIRELESS_ROLE_MASTER, &vrect);
-	(void)platform_class_wireless_get_iout(WIRELESS_ROLE_MASTER, &iout);
+	iout_ret = platform_class_wireless_get_iout(WIRELESS_ROLE_MASTER, &iout);
 	(void)platform_class_buckchg_ops_get_wls_curr(MAIN_BUCK_CHARGER, &iwls);
 	(void)platform_class_buckchg_ops_get_chg_status(MAIN_BUCK_CHARGER,
 							&pmic_status);
 	(void)platform_class_wireless_get_rx_brg_status(WIRELESS_ROLE_MASTER,
 							&brg_status);
-	info->proc_data.batt_soc = strategy_class_fg_ops_get_soc();
-	strategy_wireless_add_trans_task_to_queue(info, TRANS_DATA_FLAG_SOC, 0);
-	strategy_wireless_get_batt_chgr_status(info,
-					       &info->proc_data.chgr_status);
-	strategy_wireless_get_chgr_stage(info, &info->proc_data.chgr_stage);
+	soc = strategy_class_fg_ops_get_soc();
+	if (soc >= 0 && soc <= 100) {
+		info->proc_data.batt_soc = soc;
+		strategy_wireless_add_trans_task_to_queue(info, TRANS_DATA_FLAG_SOC, 0);
+	}
+	status_ret = strategy_wireless_get_batt_chgr_status(info,
+						&info->proc_data.chgr_status);
+	if (!status_ret && soc >= 0 && soc <= 100)
+		strategy_wireless_get_chgr_stage(info, &info->proc_data.chgr_stage);
 	(void)strategy_class_fg_ops_get_voltage(&info->proc_data.vbat_cell_mv);
 	icl = mca_get_effective_result(info->input_limit_voter);
 	buck_fcc = mca_get_effective_result(info->charge_limit_voter);
 	chg_en = mca_get_effective_result(info->chg_enable_voter);
 
-	(void)mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
+	quickchg_ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
 					   STRATEGY_STATUS_TYPE_QC_START_FLAG,
 					   &enable_quickchg);
-	if (info->proc_data.epp && info->proc_data.fc_flag &&
+	if (!quickchg_ret && (enable_quickchg == 0 || enable_quickchg == 1) &&
+	    info->proc_data.epp && info->proc_data.fc_flag &&
 	    (!info->proc_data.start_vout_check_flag)) {
 		++info->proc_data.start_wls_loop_cnt;
 		if (enable_quickchg)
@@ -2145,10 +2172,17 @@ strategy_wireless_get_charging_info(struct strategy_wireless_dev *info)
 		}
 	}
 
-	if (!enable_quickchg)
-		strategy_wireless_soc_icl_setting(info, true, iout + 250);
-	else
-		strategy_wireless_soc_icl_setting(info, false, 0);
+	/* A failed RX read is not a zero-current sample or a new 250 mA limit. */
+	if (!quickchg_ret) {
+		if (enable_quickchg == 1)
+			strategy_wireless_soc_icl_setting(info, false, 0);
+		else if (!enable_quickchg && !iout_ret &&
+			 iout >= 0 && iout <= INT_MAX - 250)
+			strategy_wireless_soc_icl_setting(info, true, iout + 250);
+	}
+	if (iout_ret || quickchg_ret || status_ret)
+		mca_log_err("wireless samples unavailable: iout=%d qc=%d status=%d\n",
+			    iout_ret, quickchg_ret, status_ret);
 
 	mca_log_err(
 		"wireless loop: vout:%d, vrect:%d, iout:%d, iwls:%d, vbat_cell_mv:%d, soc:%d, tx_adapter:%d\n",
@@ -3103,29 +3137,19 @@ strategy_wireless_process_soc_limit_change(int value,
 static void strategy_wireless_process_battery_health_change(
 	struct strategy_wireless_dev *info)
 {
-	union power_supply_propval pval = {
-		0,
-	};
+	int health, ret;
 	int len = 0;
 	char event[MCA_EVENT_NOTIFY_SIZE] = { 0 };
 	struct mca_event_notify_data event_data;
 
-	info->batt_psy = power_supply_get_by_name("battery");
-	if (!info->batt_psy) {
-		mca_log_err("batt_psy is not find, return\n");
+	ret = strategy_wireless_get_batt_property(POWER_SUPPLY_PROP_HEALTH, &health);
+	if (ret) {
+		mca_log_err("Couldn't read battery health, rc=%d\n", ret);
 		return;
 	}
 
-	power_supply_get_property(info->batt_psy, POWER_SUPPLY_PROP_HEALTH,
-				  &pval);
-	if (pval.intval == POWER_SUPPLY_HEALTH_COLD)
-		info->batt_cold = 1;
-	else if (pval.intval == POWER_SUPPLY_HEALTH_OVERHEAT)
-		info->batt_overhot = 1;
-	else {
-		info->batt_cold = 0;
-		info->batt_overhot = 0;
-	}
+	info->batt_cold = health == POWER_SUPPLY_HEALTH_COLD;
+	info->batt_overhot = health == POWER_SUPPLY_HEALTH_OVERHEAT;
 
 	if (info->online) {
 		strategy_wireless_update_quick_charge_type(info);
@@ -3232,16 +3256,20 @@ static void strategy_wireless_check_rx_alarm(struct strategy_wireless_dev *info,
 					     bool *ocp_flag, bool *otp_flag,
 					     bool *otp_recovery)
 {
-	int rx_iout = 0;
+	int rx_iout, rx_temp, iout_ret, temp_ret;
 
-	(void)platform_class_wireless_get_iout(WIRELESS_ROLE_MASTER, &rx_iout);
-	if (info->proc_data.forward_charger_mode == FORWARD_2_1_CHARGER_MODE)
-		*ocp_flag = (rx_iout >= info->rx_max_iout[CHG_MODE_DIV2]);
-	else
-		*ocp_flag = (rx_iout >= info->rx_max_iout[CHG_MODE_DIV4]);
+	iout_ret = platform_class_wireless_get_iout(WIRELESS_ROLE_MASTER, &rx_iout);
+	if (!iout_ret && rx_iout >= 0) {
+		if (info->proc_data.forward_charger_mode == FORWARD_2_1_CHARGER_MODE)
+			*ocp_flag = (rx_iout >= info->rx_max_iout[CHG_MODE_DIV2]);
+		else
+			*ocp_flag = (rx_iout >= info->rx_max_iout[CHG_MODE_DIV4]);
+	}
 
-	(void)platform_class_wireless_get_temp(WIRELESS_ROLE_MASTER,
-					       &info->rx_temp);
+	temp_ret = platform_class_wireless_get_temp(WIRELESS_ROLE_MASTER, &rx_temp);
+	if (temp_ret)
+		return;
+	info->rx_temp = rx_temp;
 	if (info->project_vendor == WLS_CHIP_VENDOR_SC96281) {
 		*otp_flag = (info->rx_temp >= MCA_WLS_CHG_RX_MAX_TEMP_SC96281);
 		*otp_recovery = (info->rx_temp <=
@@ -3253,6 +3281,8 @@ static void strategy_wireless_check_rx_alarm(struct strategy_wireless_dev *info,
 				 MCA_WLS_CHG_RX_MAX_TEMP -
 					 MCA_WLS_CHG_RX_OTP_DELTA_TEMP);
 	}
+	/* Recovery needs both fresh samples; a failed read cannot clear a vote. */
+	*otp_recovery = *otp_recovery && !iout_ret && rx_iout >= 0;
 }
 
 static void strategy_wireless_start_renego(struct strategy_wireless_dev *info)
@@ -3350,28 +3380,45 @@ strategy_wireless_enable_fast_charge_mode(struct strategy_wireless_dev *info)
 	static int fastchg_cnt;
 
 	if (info->proc_data.adapter_type > ADAPTER_AUTH_FAILED) {
-		(void)mca_strategy_func_get_status(
+		ret = mca_strategy_func_get_status(
 			STRATEGY_FUNC_TYPE_JEITA,
 			STRATEGY_STATUS_TYPE_JEITA_FFC_ITERM, &ffc_iterm);
-		(void)mca_strategy_func_get_status(
+		if (ret)
+			return ret;
+		ret = mca_strategy_func_get_status(
 			STRATEGY_FUNC_TYPE_JEITA,
 			STRATEGY_STATUS_TYPE_JEITA_NORMAL_VTERM, &normal_vterm);
+		if (ret)
+			return ret;
 		effective_icl =
 			mca_get_effective_result(info->input_limit_voter);
 		effective_fcc =
 			mca_get_effective_result(info->charge_limit_voter);
+		if (effective_icl < 0 || effective_fcc < 0 ||
+		    ffc_iterm < 0 || normal_vterm < 0)
+			return -ENODATA;
 
-		(void)platform_class_wireless_get_vout(WIRELESS_ROLE_MASTER,
+		ret = platform_class_wireless_get_vout(WIRELESS_ROLE_MASTER,
 						       &rx_vout_mv);
+		if (ret)
+			return ret;
 		if (rx_vout_mv <= BPP_DEFAULT_VOUT ||
 		    rx_vout_mv >= EPP_PLUS_VOUT)
 			rx_vout_mv = EPP_DEFAULT_VOUT;
 
-		(void)strategy_class_fg_ops_get_temperature(&batt_temp);
+		ret = strategy_class_fg_ops_get_temperature(&batt_temp);
+		if (ret)
+			return ret;
 		batt_temp /= 10;
 
-		(void)strategy_class_fg_ops_get_voltage(&vbat_cell_mv);
+		ret = strategy_class_fg_ops_get_voltage(&vbat_cell_mv);
+		if (ret)
+			return ret;
+		if (vbat_cell_mv <= 0)
+			return -ENODATA;
 		fastcharge_mode = strategy_class_fg_get_fastcharge();
+		if (fastcharge_mode < 0)
+			return fastcharge_mode;
 		strategy_wireless_get_chgr_stage(info,
 						 &info->proc_data.chgr_stage);
 		mca_log_info(
@@ -3401,7 +3448,7 @@ strategy_wireless_enable_fast_charge_mode(struct strategy_wireless_dev *info)
 					     info->smartchg_data.delta_fv -
 					     CHARGE_SW_CV_VBAT_ALARM_DELTA) &&
 		    (effective_fcc < ffc_iterm ||
-		     effective_icl * rx_vout_mv / vbat_cell_mv < ffc_iterm)) {
+		     div_s64((s64)effective_icl * rx_vout_mv, vbat_cell_mv) < ffc_iterm)) {
 			if (fastcharge_mode) {
 				fastchg_cnt++;
 				if (fastchg_cnt >
@@ -3918,6 +3965,7 @@ static void strategy_wireless_rx_alarm_work(struct work_struct *work)
 	bool ocp_flag = false, otp_flag = false, otp_recovery = false;
 	int current_fcc_val = 0;
 	int quick_charge_status = MCA_QUICK_CHG_STS_CHARGE_FAILED;
+	int ret;
 
 	strategy_wireless_check_rx_alarm(info, &ocp_flag, &otp_flag,
 					 &otp_recovery);
@@ -3929,28 +3977,34 @@ static void strategy_wireless_rx_alarm_work(struct work_struct *work)
 		return;
 	}
 
-	mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
+	ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
 				     STRATEGY_STATUS_TYPE_QC_CHARGE_STS,
 				     &quick_charge_status);
-	if (quick_charge_status == MCA_QUICK_CHG_STS_CHARGING)
-		mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
+	if (ret)
+		goto retry;
+	if (quick_charge_status == MCA_QUICK_CHG_STS_CHARGING) {
+		ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
 					     STRATEGY_STATUS_TYPE_QC_IBAT_MAX,
 					     &current_fcc_val);
-	else
+		if (ret)
+			goto retry;
+	} else {
 		current_fcc_val =
 			mca_get_effective_result(info->charge_limit_voter);
+	}
 
 	if (ocp_flag) {
-		if (current_fcc_val - 100 > 0)
+		if (current_fcc_val > 100)
 			strategy_wireless_fcc_setting(info, true,
 						      (current_fcc_val - 100));
 	}
 	if (otp_flag) {
-		if (current_fcc_val - 500 > 0)
+		if (current_fcc_val > 500)
 			strategy_wireless_otp_fcc_setting(
 				info, true, (current_fcc_val - 500));
 	}
 
+retry:
 	schedule_delayed_work(&info->rx_alarm_work, msecs_to_jiffies(4000));
 }
 
@@ -5012,10 +5066,6 @@ static int basic_wireless_class_probe(struct platform_device *pdev)
 	info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
-
-	info->batt_psy = power_supply_get_by_name("battery");
-	if (!info->batt_psy)
-		mca_log_err("batt_psy is not ready, wait for it\n");
 
 	info->dev = &pdev->dev;
 	platform_set_drvdata(pdev, info);

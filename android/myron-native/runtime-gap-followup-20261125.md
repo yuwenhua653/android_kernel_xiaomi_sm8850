@@ -1,5 +1,9 @@
 # Myron runtime-gap follow-up — 2026-11-25
 
+Latest source update: [wireless sample/error handling](wireless-sample-followup.md)
+adds validated-current voting, balanced battery references and thermal/FFC
+failed-sample protection. Hardware net charging remains unverified.
+
 Subsequent charging-level boundary fixes and the decision on how much Xiaomi
 thermal compatibility is actually required are recorded in
 [the thermal policy review](thermal-policy-review-20261125.md).

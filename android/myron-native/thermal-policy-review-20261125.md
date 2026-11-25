@@ -116,3 +116,7 @@ The checkpoint still does not authorize calling the entire adaptation fixed:
 net wireless charge gain, thermal daemon/interface behavior, real cooling
 responses and skin severity remain to be verified. No compile/flash request
 is made to the owner in this update.
+
+Further review: the current daemon has a standard CPU frequency fallback;
+missing `cpu_limits` alone is not a proven blocker. See the
+[wireless/thermal sample follow-up](wireless-sample-followup.md).

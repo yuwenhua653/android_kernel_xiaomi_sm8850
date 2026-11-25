@@ -1,0 +1,22 @@
+{
+  "parent": "015299a099e96933180f411ce14538fbbedf13f7",
+  "sha256": {
+    "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.c": "c113feae2a5fef7b3156aa2126e9c943853fb02b6c553c2e24685f1dff7af336",
+    "android/myron-native/tests/test_wireless_samples.py": "c80b3ec4df65f443ea90a665949faba5ee44db38bd2d20f266caf80976c7c5c1",
+    "android/myron-native/tests/test_wireless_safety_samples.py": "e2af32cc70b6e3e03d602028e1a42dcc7deda98970814c81368d2aef20712995"
+  },
+  "test_counts": {
+    "samples": 539,
+    "safety_samples": 874
+  },
+  "negative_controls": [
+    "monitor",
+    "health",
+    "alarm",
+    "ffc",
+    "profiles"
+  ],
+  "object": "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.o",
+  "full_build": false,
+  "device_test": false
+}
