@@ -330,6 +330,7 @@ struct ufs_qcom_qos_req {
 	struct qos_cpu_group *qcg;
 	unsigned int num_groups;
 	struct workqueue_struct *workq;
+	struct mutex freq_lock;
 };
 
 /* Check for QOS_POWER when added to DT */
@@ -468,6 +469,7 @@ struct ufs_qcom_regs {
  * @min_cpu_scale_freq: the minimal frequency of the cpu
  * @max_cpu_scale_freq: the maximal frequency of the cpu
  * @default_cluster_mask : the deafault cluster mask
+ * @boosted: the high frequency request was applied to this cluster
  * @available_cluster_mask: the available cluster mask
  */
 struct cpu_freq_info {
@@ -477,6 +479,7 @@ struct cpu_freq_info {
 	unsigned int max_cpu_scale_freq;
 	cpumask_t default_cluster_mask;
 	cpumask_t available_cluster_mask;
+	bool boosted;
 };
 
 struct ufs_qcom_dev_params {
