@@ -936,6 +936,20 @@ static void thermal_release(struct device *dev)
 
 static struct class *thermal_class;
 
+#if IS_ENABLED(CONFIG_MI_THERMAL_INTERFACE)
+/* Keep vendor auxiliary devices out of thermal-zone/cooling-device lists. */
+struct device *thermal_auxiliary_device_create(const char *name, void *data,
+				const struct attribute_group **groups)
+{
+	if (!thermal_class)
+		return ERR_PTR(-EPROBE_DEFER);
+
+	return device_create_with_groups(thermal_class, NULL, 0, data, groups,
+					 "%s", name);
+}
+EXPORT_SYMBOL_GPL(thermal_auxiliary_device_create);
+#endif
+
 static inline
 void print_bind_err_msg(struct thermal_zone_device *tz,
 			const struct thermal_trip *trip,

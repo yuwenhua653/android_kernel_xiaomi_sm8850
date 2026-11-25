@@ -31,6 +31,12 @@
 #define THERMAL_TEMP_INVALID	-274000
 
 struct thermal_zone_device;
+struct attribute_group;
+#if IS_ENABLED(CONFIG_MI_THERMAL_INTERFACE)
+struct device *thermal_auxiliary_device_create(const char *name, void *data,
+				const struct attribute_group **groups);
+#endif
+
 struct thermal_cooling_device;
 struct thermal_instance;
 struct thermal_debugfs;

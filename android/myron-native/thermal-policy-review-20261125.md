@@ -41,6 +41,10 @@ checkpoint is also not automatically sufficient for Myron's newer userspace.
 
 ## Remaining concrete integration gaps
 
+Update: the board-temperature contract below has since been established and
+a partial publisher implemented; see [board bridge](thermal-board-bridge.md).
+The original investigation notes remain below for provenance.
+
 1. **Board-temperature notification:** four Myron MCA components register for
    `MCA_EVENT_THERMAL_BOARD_TEMP_CHANGE` (buck, fuel gauge, smart charging and
    connector protection). The tracked kernel source has receivers but no

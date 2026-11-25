@@ -58,6 +58,15 @@ config MCA_QCOM_PANEL
 	  This restores the event source consumed by the battery gauge and
 	  smart-charge policies without introducing a periodic polling worker.
 
+config MI_THERMAL_INTERFACE
+	tristate "Myron board-temperature notification interface"
+	depends on THERMAL && MYRON_MCA_BASE && OF && SYSFS
+	help
+	  Restore the verified board_sensor and board_sensor_temp sysfs ABI
+	  consumed by Myron's thermal daemon and MCA charging strategies.
+	  Samples remain signed milli-Celsius. This is a partial compatibility
+	  interface, not a replacement thermal policy or a complete Xiaomi ABI.
+
 config MYRON_MCA_INTERFACE
     tristate "Myron MCA charge interface source candidate"
     depends on SYSFS && OF && MYRON_MCA_BASE

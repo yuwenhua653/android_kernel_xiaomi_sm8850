@@ -1,0 +1,30 @@
+{
+  "kernel_parent": "5152e7b1b728dd4f12b965d94a0c8c7199f4de9f",
+  "device_parent": "cb44271f99e1ab83e2ef653bbb764e749adfa2a5",
+  "kernel_sha256": {
+    "drivers/thermal/xiaomi/mi_thermal_interface.c": "6e3deac7829b2b0f9c7ebb70c2fdbac611c5610c71945a209c03b0f55c7de90a",
+    "drivers/thermal/xiaomi/Makefile": "9245e2a92a5d1f250a98cea43fdbb2692fe679573eaf9a51b07a1a1b5a938a37",
+    "drivers/thermal/thermal_core.c": "0aecd48f18602e5d9139001c2ea2da6a9e0733499cfcae0f892164b001e19545",
+    "include/linux/thermal.h": "9a670de39639aec4755ad695324c9b30d63fe3bdd2bf0eaac4128646f05e00da",
+    "drivers/thermal/Makefile": "14a8c48b7ad9e784fec25944e22a75300e203da4e5b968f161bf9498452e1ef9",
+    "drivers/xiaomi/myron/Kconfig": "be27802d07287e21877bc46a55ba72e4be18d8bc905b8021da2a8b46bbe8bdbc",
+    "arch/arm64/configs/vendor/myron_GKI.config": "c39ebd2725f1569bdf4f0673f4c779fa6b239ba34e47d8f3c3036e1c5538c1c5",
+    "android/myron-native/tests/test_board_thermal_bridge.py": "2108659389c216b9e7dd53c04448ef95ea376fb820dd2c8831bd6d417f6be10a"
+  },
+  "device_sha256": {
+    "kernel/modules.mk": "30b275d499b0048c59c79b1aba65811c9e167f428a61ed72c50f69d1269e0ed1",
+    "kernel/check_thermal_modules.py": "2a44a92b5e9b93de32a42a797f82065c78506d133c09c857386f24dbc1b2bcbf"
+  },
+  "host_cases": 29,
+  "concurrent_writes": 2000,
+  "negative_controls_rejected": [
+    "historical_event_0x38",
+    "temperature_divided_before_delivery"
+  ],
+  "arm64_objects": [
+    "drivers/thermal/thermal_core.o",
+    "drivers/thermal/xiaomi/mi_thermal_interface.o"
+  ],
+  "full_build": false,
+  "hardware_verified": false
+}

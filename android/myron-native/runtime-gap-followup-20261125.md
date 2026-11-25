@@ -56,6 +56,11 @@ is claimed. Previous wireless queue/session corrections at kernel commit
 
 ## Thermal interface blocker identified
 
+Follow-up: the two verified board-temperature attributes now have a source
+implementation and MCA publisher. See [board bridge](thermal-board-bridge.md)
+for contract evidence and qualification limits; other private thermal controls
+are still incomplete. The absence described below records the earlier state.
+
 The ROM has an import/start configuration for `mi_thermald`; this is static
 integration evidence, not proof that the daemon ran on the phone. The vendor
 binary references `/sys/class/thermal/thermal_message/*`. No implementation of
