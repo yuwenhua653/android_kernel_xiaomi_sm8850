@@ -85,3 +85,4 @@ ccflags-y += -I$(srctree)
 ccflags-y += -I$(srctree)/drivers/misc
 obj-$(CONFIG_QSEECOM_PROXY) += qseecom_proxy.o
 obj-$(CONFIG_PKVM_IOMMU_TEMPLATE)  += pkvm-iommu-temp/
+obj-$(CONFIG_XIAOMI_DXS702) += gpio-tiantong-dxs702.o

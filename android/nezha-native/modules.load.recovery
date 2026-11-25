@@ -122,8 +122,10 @@ gh_rm_heap_manager.ko
 gh_msgq.ko
 gh_rm_drv.ko
 gh_vcpu_mgr.ko
+pinctrl-spmi-gpio.ko
 et5907mv-regulator.ko
 hl7603-regulator.ko
+gpio-tiantong-dxs702.ko
 sched-walt.ko
 qcom_ipc_logging.ko
 qrtr.ko
@@ -173,7 +175,6 @@ pci-msm-drv.ko
 eom_driver.ko
 phy-qcom-eusb2-repeater.ko
 phy-qcom-qmp-combo.ko
-pinctrl-spmi-gpio.ko
 qcom-pon.ko
 reboot-mode.ko
 mca_sysfs.ko

@@ -1,5 +1,11 @@
 # Xiaomi 17 Ultra kernel bring-up
 
+The [Nezha module inventory](module-gaps.md) tracks remaining factory
+module names and partially implemented interfaces. The native DXS702 driver
+reports modem wake and PMIC status and reads eight regulator voltages.
+Satellite power sequencing, SIM/RF switching and the control character
+device are still open.
+
 Target: nezha, China OS4.0.7.0.XPACNXM. All three Git branches are named
 `nazha`. The source baseline is 6.12.118. The OTA boot kernel is
 `6.12.69-android16-6-g43b5ab7e247d-abogki561813157-4k` (4 KiB).

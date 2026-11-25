@@ -518,6 +518,10 @@ static struct gpio_desc *of_find_gpio_rename(struct device_node *np,
 #if IS_ENABLED(CONFIG_MFD_ARIZONA)
 		{ "wlf,reset",	NULL,		NULL },
 #endif
+#if IS_ENABLED(CONFIG_XIAOMI_DXS702)
+		{ "bp-sleep-ap", "gpio-bp-sleep-ap", "mdm,gpio-tiantong-dxs702" },
+		{ "pmic-irq", "gpio-pmic-irq", "mdm,gpio-tiantong-dxs702" },
+#endif
 #if IS_ENABLED(CONFIG_RTC_DRV_MOXART)
 		{ "rtc-data",	"gpio-rtc-data",	"moxa,moxart-rtc" },
 		{ "rtc-sclk",	"gpio-rtc-sclk",	"moxa,moxart-rtc" },

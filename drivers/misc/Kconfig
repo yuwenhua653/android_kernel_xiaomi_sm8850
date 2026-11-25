@@ -654,4 +654,11 @@ source "drivers/misc/uacce/Kconfig"
 source "drivers/misc/pvpanic/Kconfig"
 source "drivers/misc/mchp_pci1xxxx/Kconfig"
 source "drivers/misc/keba/Kconfig"
+config XIAOMI_DXS702
+	tristate "Xiaomi Tiantong DXS702 modem status"
+	depends on OF_GPIO && REGULATOR
+	help
+	  Report satellite modem and PMIC status edges, support modem wakeup
+	  and expose the eight board supply voltages on Xiaomi 17 Ultra.
+
 endmenu
