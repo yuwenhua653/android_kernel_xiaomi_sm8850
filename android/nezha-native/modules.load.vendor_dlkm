@@ -58,6 +58,7 @@ mca_platform_fg_ic_ops.ko
 mca_platform_buckchg_class.ko
 mca_platform_bc12_class.ko
 mca_platform_cp_class.ko
+sc8581.ko
 mca_platform_loadsw_class.ko
 mca_protocol_class.ko
 mca_adsp_glink.ko
@@ -199,6 +200,9 @@ qrng_dlkm.ko
 hdcp_qseecom_dlkm.ko
 smmu_proxy_dlkm.ko
 smcinvoke_dlkm.ko
+stm_st54se_gpio.ko
+stm_nfc_i2c.ko
+focus_ring_bridge.ko
 tmecom-intf_dlkm.ko
 tz_log_dlkm.ko
 spcom.ko

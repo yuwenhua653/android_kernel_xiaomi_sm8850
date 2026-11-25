@@ -24,7 +24,7 @@ nezha_native_modules := $(nezha_display_modules) xiaomi/nezha-touch \
     qcom/opensource/video-driver \
     qcom/opensource/spu-kernel \
     qcom/opensource/graphics-kernel \
-    nxp/opensource/driver \
+    nxp/opensource/driver st/opensource/driver \
     qcom/opensource/dsp-kernel \
     qcom/opensource/audio-kernel \
     qcom/opensource/wlan/platform \

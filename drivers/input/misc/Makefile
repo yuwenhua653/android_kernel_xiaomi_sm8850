@@ -98,3 +98,4 @@ ccflags-y += -I$(srctree)
 ccflags-y += -I$(srctree)/drivers/input/misc
 obj-$(CONFIG_INPUT_PM8941_PWRKEY) += pm8941-pwrkey.o
 obj-$(CONFIG_INPUT_QCOM_HV_HAPTICS) += qcom-hv-haptics.o
+obj-$(CONFIG_INPUT_XIAOMI_FOCUS_RING) += focus_ring_bridge.o

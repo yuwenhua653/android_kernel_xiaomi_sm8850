@@ -186,6 +186,18 @@ the factory base DTB section and does not qualify a production Android
 image, module signing, firmware or hardware. That build preceded the regulator and MCA integration below. Other WLAN
 variants remain to be ported.
 
+## Nezha NFC, camera ring and charge pump
+
+The ST21NFC transport is based on the CodeLinaro ST Android driver at
+`3fa722644b674b2c0303840e9aa89e705cf91139` in
+`la_platform_vendor_st_opensource_driver`. The ST module group builds after
+SecureMSM and retains the Canoe secure-peripheral and BOB1 configuration.
+The ST54 reset node exposes the factory GPIO ioctl ABI. The camera ring
+reports the nine ADSP notifications through the factory REL_WHEEL interface.
+The SE5 SC8585 master uses the existing MCA SC8581 family driver with
+board-specific wiring and protection thresholds. Device validation and
+remaining charger policy work are tracked in the module inventory.
+
 ## OS4 wiring and earlier MCA build results
 
 The two board overlays describe the same SE10 I2C bus, seven ET5907MV

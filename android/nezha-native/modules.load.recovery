@@ -185,6 +185,7 @@ mca_platform_fg_ic_ops.ko
 mca_platform_buckchg_class.ko
 mca_platform_bc12_class.ko
 mca_platform_cp_class.ko
+sc8581.ko
 mca_platform_loadsw_class.ko
 mca_protocol_class.ko
 mca_adsp_glink.ko

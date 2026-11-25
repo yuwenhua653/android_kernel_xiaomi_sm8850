@@ -956,4 +956,10 @@ config INPUT_STPMIC1_ONKEY
 	  To compile this driver as a module, choose M here: the
 	  module will be called stpmic1_onkey.
 
+config INPUT_XIAOMI_FOCUS_RING
+	tristate "Xiaomi ADSP lens ring"
+	depends on OF && QCOM_SMP2P
+	help
+	  Report the Nezha camera lens ring as a relative input device.
+
 endif

@@ -4,4 +4,4 @@
 # Platform drivers reference private in-tree headers by source-root paths.
 ccflags-y += -I$(srctree)
 ccflags-y += -I$(srctree)/drivers/misc/hwid -I$(srctree)/drivers/power/supply/mca/include -I$(srctree)/drivers/power/supply/mca/mca_hardware_ic/charge_pump_ic/sc8581
-obj-$(CONFIG_MYRON_CHARGE_IC) += sc8581.o
+obj-$(CONFIG_XIAOMI_MCA_SC8581) += sc8581.o

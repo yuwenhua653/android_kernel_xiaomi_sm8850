@@ -1035,6 +1035,14 @@ config XIAOMI_MCA_CLASSES
 	  QC class interfaces. Hardware drivers register their operations
 	  separately.
 
+config XIAOMI_MCA_SC8581
+	tristate "Southchip SC8581 family charge pump"
+	depends on XIAOMI_MCA_CLASSES && I2C && GPIOLIB
+	default MYRON_CHARGE_IC
+	help
+	  Register the board charge pump with the MCA platform class.
+	  Supports the SC8585 master used on Nezha.
+
 config XIAOMI_MCA_ADSP_PD
 	tristate "Xiaomi MCA Qualcomm ADSP Power Delivery provider"
 	depends on XIAOMI_MCA_CLASSES && QTI_PMIC_GLINK

@@ -2489,15 +2489,12 @@ static int sc8581_parse_dt(struct sc8581_device *bq)
 
 	bq->irq_gpio = of_get_named_gpio(np, "cp-int", 0);
 	if (!gpio_is_valid(bq->irq_gpio)) {
-		mca_log_err("%s failed to parse irq_gpio\n", bq->log_tag);
-		return -1;
+		return dev_err_probe(bq->dev, bq->irq_gpio, "missing cp-int GPIO\n");
 	}
 
 	bq->nlpm_gpio = of_get_named_gpio(np, "cp-nlpm-gpio", 0);
 	if (!gpio_is_valid(bq->nlpm_gpio)) {
-		mca_log_err("%s failed to parse  sc858_nlpm_gpio\n",
-			    bq->log_tag);
-		return -1;
+		return dev_err_probe(bq->dev, bq->nlpm_gpio, "missing cp-nlpm GPIO\n");
 	}
 
 	mca_parse_dts_u32(np, "bat-ovp-threshold", &bq->cfg.bat_ovp_th,
@@ -2694,7 +2691,7 @@ static int sc8581_probe(struct i2c_client *client,
 	bq->client = client;
 	bq->dev = dev;
 	i2c_set_clientdata(client, bq);
-	if (mca_cp_is_en_buck_project_hwid())
+	if (IS_ENABLED(CONFIG_MYRON_CHARGE_IC) && mca_cp_is_en_buck_project_hwid())
 		client->addr = SC8581_EN_BUCK_CP_I2C_ADDR;
 	ret = sc8581_parse_dt(bq);
 	if (ret)
@@ -2823,6 +2820,7 @@ MODULE_DEVICE_TABLE(of, sc8581_of_match);
 static struct i2c_driver sc8581_driver = {
 	.driver = {
 		.name = "sc8581_charger_pump",
+		.suppress_bind_attrs = IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA),
 		.of_match_table = sc8581_of_match,
 		.pm = &sc8581_pm_ops,
 	},
@@ -2830,7 +2828,16 @@ static struct i2c_driver sc8581_driver = {
 	.remove = sc8581_remove,
 	.shutdown = sc8581_shutdown,
 };
+#if IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA)
+/* The MCA class, log and debug interfaces retain the registered callbacks. */
+static int __init sc8581_init(void)
+{
+	return i2c_add_driver(&sc8581_driver);
+}
+module_init(sc8581_init);
+#else
 module_i2c_driver(sc8581_driver);
+#endif
 
 MODULE_AUTHOR("lvxiaofeng <lvxiaofeng@xiaomi.com>");
 MODULE_DESCRIPTION("southchip SC8581 driver");

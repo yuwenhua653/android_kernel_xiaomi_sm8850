@@ -4,7 +4,7 @@
 
 ## 原厂模块取舍
 
-四份原厂加载清单共有 655 个不同模块名。ARM64 4 KiB、Clang 19 的 6.12.118 构建产出 372 个树内和 85 个外置模块，其中 415 个与原厂加载项同名。下列 240 项是名称差异。一个功能可能有通用替代实现，也可能要由多个模块共同提供。
+四份原厂加载清单共有 655 个不同模块名。ARM64 4 KiB、Clang 19 的 6.12.118 构建产出 374 个树内和 87 个外置模块，其中 419 个与原厂加载项同名。下列 236 项是名称差异。一个功能可能有通用替代实现，也可能要由多个模块共同提供。
 
 | 范围 | 名称数 | 处理方式 |
 |---|---:|---|
@@ -12,8 +12,20 @@
 | 原厂增强 | 28 | 暂缓独立移植，如 Millet 冻结、游戏调度和内存调优。有实际用户态或二进制依赖时再评估。 |
 | 诊断测试 | 54 | 按故障开启测试、追踪或日志，不作为日用功能验收项。保留基础日志与异常采集能力。 |
 | 按硬件选择 | 35 | 按本机 DT、总线 ID、probe 与 HAL 确认实际器件和配套驱动。 |
-| 日用功能 | 27 | 验证对应日用功能或保护链路。标准实现经验证可替代原厂同名模块。 |
+| 日用功能 | 23 | 验证对应日用功能或保护链路。标准实现经验证可替代原厂同名模块。 |
 | 核对调用方 | 92 | 现有证据不足以排除。优先检查原厂硬依赖、vendor HAL/init 和实际 probe，再决定取舍。 |
+
+## 已接入、待实机验收
+
+| 功能 | 已核对 | 17 Ultra 实机验收 |
+|---|---|---|
+| ST21NFC 与 ST54 安全元件 | NFC 模块版本 2.2.0.19，依赖 SecureMSM 与 Qualcomm pinctrl。ST54 保留原厂节点名及三个复位 ioctl。 | 验证 HAL 启停、息屏唤醒、读卡和安全元件访问。 |
+| SC8585 主电荷泵 | SE5 地址 0x6e、GPIO114/209 和保护阈值对应 4.0.7。主电荷泵按芯片 ID 匹配并向 MCA 注册。 | 核对 probe、接入和拔出、温度与保护状态，再测快充协商。 |
+| 镜头环 | ADSP SMP2P 九路事件使用原厂设备名、输入设备 ID 和 REL_WHEEL 事件；两格和三格旋转逐格同步。 | 验证实际中断、Android 输入事件及相机对焦/变焦。 |
+
+VL53L5/L8 测距的 SE14 CS0、三路电源、3 MHz 总线与两个固件名已接入；SE14 CS1 的卫星器件保持不启用。小米 popsicle-w-oss 参考驱动已单独试编，仍需核对固件长度、失败时电源回滚和 HAL 访问后再加入加载清单。
+
+SC96281 正向无线充电仍待适配。原厂常规异物检测表有 32 行，2:1 表有两行；常规表有 6 行、2:1 表有 2 行的薄壳与厚壳标定不同。目前共用驱动只能表示一行 2:1 数据，且要求薄厚壳标定相同。需要接入 17 Ultra 的配件状态和对应标定，再验证在线状态及 MCA 保护链路。
 
 ## 剩余验收顺序
 
@@ -31,8 +43,8 @@
 | 加载清单 | 去重名称 | 已编出同名模块 | 差异 |
 |---|---:|---:|---:|
 | 启动 | 172 | 128 | 44 |
-| 恢复 | 465 | 260 | 205 |
-| Vendor | 404 | 209 | 195 |
+| 恢复 | 465 | 261 | 204 |
+| Vendor | 404 | 213 | 191 |
 | System | 82 | 81 | 1 |
 
 原厂镜像还有 21 个只随包交付的模块名，均有同名构建产物。zram、zsmalloc 在原生布局的 vendor 侧。主机验证使用内置 C Binder。
@@ -117,7 +129,6 @@
 | `dump_binder.ko` | 恢复、Vendor | 诊断测试 |  | Xiaomi binder async buffer monitor |
 | `dump_display.ko` | 恢复、Vendor | 诊断测试 |  |  |
 | `f_fs_ipc_log.ko` | 恢复、Vendor | 诊断测试 |  |  |
-| `focus_ring_bridge.ko` | Vendor | 日用功能 |  | 核对镜头环事件与相机输入映射 |
 | `ftun.ko` | Vendor | 核对调用方 |  | File Tunnel Support |
 | `gh_ctrl.ko` | 恢复、Vendor | 核对调用方 | dmesg_dumper | Qualcomm Technologies, Inc. Gunyah Hypervisor Control Driver |
 | `gh_panic_notifier.ko` | 恢复、Vendor | 核对调用方 | dmesg_dumper |  Qualcomm Technologies, Inc. Gunyah Panic Notifier Driver |
@@ -250,7 +261,6 @@
 | `rust_binder.ko` | System | 日用功能 |  | 主机使用内置 C Binder，生产 Rust 配置待编译 |
 | `sc7601.ko` | 恢复、Vendor | 按硬件选择 |  | SC sc7601 Driver |
 | `sc8531.ko` | 恢复、Vendor | 按硬件选择 |  | SC sc8531 Charge Pump Driver |
-| `sc8581.ko` | 恢复、Vendor | 日用功能 |  | 原厂 ELF 匹配 sc8585_master，两组原厂板型均启用该主电荷泵 |
 | `sc96281_charger.ko` | 恢复、Vendor | 日用功能 |  | 两组原厂板型启用 sc,sc96281-wireless-charger，需验正向无线充电 |
 | `sia91xx_dlkm.ko` | Vendor | 按硬件选择 |  | SI-IN SIA81xx ASoC driver |
 | `sia91xx_tuning_dlkm.ko` | Vendor | 按硬件选择 |  |  |
@@ -262,9 +272,7 @@
 | `spi_cnss_proto.ko` | Vendor | 核对调用方 |  | spi cnss driver |
 | `spmi-pmic-arb-debug.ko` | 恢复、Vendor | 诊断测试 |  |  |
 | `spmi-pmic-err-debug.ko` | 恢复、Vendor | 诊断测试 |  | QCOM SPMI error debug driver |
-| `stm_nfc_i2c.ko` | Vendor | 日用功能 |  | 两组均启用 st,st21nfc；现有 NXP 驱动不能证明覆盖该硬件 |
 | `stm_p_ost.ko` | 恢复、Vendor | 诊断测试 |  | MIPI Open System Trace STM framing protocol driver |
-| `stm_st54se_gpio.ko` | Vendor | 日用功能 |  | 两组均启用 st,st54spi_gpio，核对安全元件使用场景 |
 | `stmvl53l5.ko` | 恢复、Vendor | 日用功能 |  | 两组均有启用的 st,stmvl53l5 测距节点，需结合相机 HAL 验证 |
 | `swr_dmic_dlkm.ko` | Vendor | 按硬件选择 |  | SWR DMIC driver |
 | `sys_pm_vx.ko` | 恢复、Vendor | 诊断测试 |  | Qualcomm Technologies, Inc. (QTI) System PM Violators driver |
