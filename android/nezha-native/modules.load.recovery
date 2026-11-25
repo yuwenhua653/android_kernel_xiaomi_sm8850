@@ -123,9 +123,6 @@ gh_msgq.ko
 gh_rm_drv.ko
 gh_vcpu_mgr.ko
 pinctrl-spmi-gpio.ko
-et5907mv-regulator.ko
-hl7603-regulator.ko
-gpio-tiantong-dxs702.ko
 sched-walt.ko
 qcom_ipc_logging.ko
 qrtr.ko

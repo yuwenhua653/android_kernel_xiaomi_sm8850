@@ -1,10 +1,11 @@
 # Xiaomi 17 Ultra kernel bring-up
 
-The [Nezha module inventory](module-gaps.md) tracks remaining factory
-module names and partially implemented interfaces. The native DXS702 driver
-reports modem wake and PMIC status and reads eight regulator voltages.
-Satellite power sequencing, SIM/RF switching and the control character
-device are still open.
+The [Nezha module inventory](module-gaps.md) classifies the differences
+from the factory load lists by their relevance to daily Android use.
+The AOSP profile disables the DXS702 satellite modem and the ET5907MV
+and HL7603 satellite supplies. The PMIC pin controllers apply the six
+factory SIM routing states independently during probe. Cold boot with
+both SIM slots, terrestrial radio and GNSS still need device validation.
 
 Target: nezha, China OS4.0.7.0.XPACNXM. All three Git branches are named
 `nazha`. The source baseline is 6.12.118. The OTA boot kernel is
@@ -185,9 +186,9 @@ the factory base DTB section and does not qualify a production Android
 image, module signing, firmware or hardware. That build preceded the regulator and MCA integration below. Other WLAN
 variants remain to be ported.
 
-## OS4 satellite supplies and MCA framework
+## OS4 wiring and earlier MCA build results
 
-The two board overlays use the same SE10 I2C bus, seven ET5907MV
+The two board overlays describe the same SE10 I2C bus, seven ET5907MV
 outputs at address 0x35 and one HL7603 PA supply at 0x55. The latter
 matches `tiantong,dcdc`. The separate MCA HL7603 boost chip has a
 different binding. GPIO160 controls the shared PMIC enable and GPIO172
@@ -204,8 +205,7 @@ switch node stays disabled. These parameters describe the board. Actual
 charging depends on the matching IC drivers, policy and firmware.
 Register and voltage checks are offline. On the two low-voltage LDOs
 the 800000 and 1300000 uV initial requests select 804000 and 1302000 uV
-on the hardware grid. The future DXS702 consumer must allow these actual
-voltages when using the Linux regulator API.
+on the hardware grid. These values describe the optional regulator drivers.
 
 For Canoe use the overlay order above. For SG/Whale use
 `nezha-sg-whale-board-overlay.dtbo` on its corresponding base. Both
@@ -216,10 +216,9 @@ board changes onto all 12 factory and 12 source bases. Across each merge
 matched the corresponding factory overlay, including the referenced pins.
 This does not qualify bootloader selection on CanoeP thermal variants.
 
-Normal first-stage coverage is now 130/172 factory module names.
+At that earlier revision, normal first-stage coverage was 130/172 factory module names.
 Recovery covers 260/465 plus the two native touch modules. Vendor DLKM
-covers 197/404. The `gpio-tiantong-dxs702` satellite GPIO consumer and OEM charging
-policy still need source integration. The common MCA
+covers 197/404. See the module inventory for current counts and charging work. The common MCA
 symbols also differ between the native and factory stacks. Use matched
 source-built consumers. In particular the fuel-gauge, charge-pump, buck
 charger and PD operations still have factory-only interfaces.
@@ -232,8 +231,7 @@ build's exports. The panel screen/HBM getters match the factory CRCs
 and report primary-panel notifier state. The signed DT helper uses
 the source kernel's device-node ABI. That build lacked 17 factory-exported names across the 16 MCA modules.
 The subsequent Nezha PD update supplied USB vendor ID and Product VDO.
-The native regulator interface still needs testing with the DXS702
-consumer on hardware. No production Rust/AVB or device boot was tested.
+The earlier build did not test production Rust/AVB or device boot.
 
 ## Main battery on Nezha
 
