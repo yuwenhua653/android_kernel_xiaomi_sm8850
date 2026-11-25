@@ -1323,8 +1323,11 @@ enum pd_attr_list {
 
 static ssize_t pd_class_sysfs_show(struct device *dev,
 	struct device_attribute *attr, char *buff);
+
+#if !IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA)
 static ssize_t pd_class_sysfs_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count);
+#endif
 
 static struct mca_sysfs_attr_info pd_class_sysfs_field_tbl[] = {
 	mca_sysfs_attr_ro(pd_class_sysfs, 0440, PD_PROP_CC_ORIENTATION, cc_orientation),
@@ -1332,8 +1335,13 @@ static struct mca_sysfs_attr_info pd_class_sysfs_field_tbl[] = {
 	mca_sysfs_attr_ro(pd_class_sysfs, 0440, PD_PROP_HAS_DP, has_dp),
 	mca_sysfs_attr_ro(pd_class_sysfs, 0440, PD_PROP_CID_STATUS, cid_status),
 	mca_sysfs_attr_ro(pd_class_sysfs, 0440, PD_PROP_OTG_UI_SUPPORT, otg_ui_support),
+#if IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA)
+	mca_sysfs_attr_ro(pd_class_sysfs, 0440, PD_PROP_CC_TOGGLE, cc_toggle),
+	mca_sysfs_attr_ro(pd_class_sysfs, 0440, PD_PROP_PPS_PTF, pps_ptf),
+#else
 	mca_sysfs_attr_rw(pd_class_sysfs, 0640, PD_PROP_CC_TOGGLE, cc_toggle),
 	mca_sysfs_attr_rw(pd_class_sysfs, 0640, PD_PROP_PPS_PTF, pps_ptf),
+#endif
 	mca_sysfs_attr_ro(pd_class_sysfs, 0440, PD_PROP_CC_SHORT_VBUS, cc_short_vbus),
 	mca_sysfs_attr_ro(pd_class_sysfs, 0440, PD_PROP_TYPEC_MODE, typec_mode),
 };
@@ -1344,66 +1352,61 @@ static ssize_t pd_class_sysfs_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	struct mca_sysfs_attr_info *attr_info;
-	int val = 0;
-	int type = XM_CHARGER_TYPE_UNKNOW;
-	ssize_t count = 0;
+	unsigned int port = READ_ONCE(g_cur_port);
+	unsigned int power;
+	bool flag = false;
+	int type, val = 0;
+	int ret = 0;
 
 	attr_info = mca_sysfs_lookup_attr(attr->attr.name,
 		pd_class_sysfs_field_tbl, PD_SYSFS_ATTRS_SIZE);
 	if (!attr_info)
-		return -1;
+		return -EINVAL;
 
 	switch (attr_info->sysfs_attr_name) {
 	case PD_PROP_CC_ORIENTATION:
-		protocol_class_pd_get_typec_cc_orientation(READ_ONCE(g_cur_port), &val);
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
-		mca_log_info("cur typec port = %d, cc_orientation = %d\n", READ_ONCE(g_cur_port), val);
+		ret = protocol_class_pd_get_typec_cc_orientation(port, &val);
 		break;
 	case PD_PROP_APDO_MAX:
-		protocol_class_pps_adapter_get_max_power(NULL, (unsigned int *)(&val));
-		val = protocol_pd_record_max(val);
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
-		mca_log_err("read apdo_max: %d\n", val);
+		ret = protocol_class_pps_adapter_get_max_power(NULL, &power);
+		if (!ret)
+			val = protocol_pd_record_max(power);
 		break;
 	case PD_PROP_HAS_DP:
-		protocol_class_pd_get_has_dp(READ_ONCE(g_cur_port), (bool *)(&val));
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
-		mca_log_err("read has_dp: %d\n", val);
+		ret = protocol_class_pd_get_has_dp(port, &flag);
+		val = flag;
 		break;
 	case PD_PROP_CID_STATUS:
-		protocol_class_pd_get_cid_status(READ_ONCE(g_cur_port), (bool *)(&val));
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
+		ret = protocol_class_pd_get_cid_status(port, &flag);
+		val = flag;
 		break;
 	case PD_PROP_OTG_UI_SUPPORT:
 		val = 1;
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
 		break;
 	case PD_PROP_CC_TOGGLE:
-		protocol_class_pd_get_cc_toggle(READ_ONCE(g_cur_port), (bool *)(&val));
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
+		ret = protocol_class_pd_get_cc_toggle(port, &flag);
+		val = flag;
 		break;
 	case PD_PROP_CC_SHORT_VBUS:
-		protocol_class_pd_get_cc_short_vbus(READ_ONCE(g_cur_port), &val);
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
+		ret = protocol_class_pd_get_cc_short_vbus(port, &val);
 		break;
 	case PD_PROP_PPS_PTF:
-		protocol_class_pd_get_pd_type(READ_ONCE(g_cur_port), &type);
-		if (type == XM_CHARGER_TYPE_PPS || type == XM_CHARGER_TYPE_PD_VERIFY) {
-			protocol_class_pd_get_pps_ptf(READ_ONCE(g_cur_port), &val);
-		}
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
-		mca_log_err("read buf: %d\n", val);
+		ret = protocol_class_pd_get_pd_type(port, &type);
+		if (!ret && (type == XM_CHARGER_TYPE_PPS || type == XM_CHARGER_TYPE_PD_VERIFY))
+			ret = protocol_class_pd_get_pps_ptf(port, &val);
 		break;
 	case PD_PROP_TYPEC_MODE:
-		protocol_class_pd_get_typec_mode(READ_ONCE(g_cur_port), &val);
-		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
+		ret = protocol_class_pd_get_typec_mode(port, &val);
 		break;
 	default:
-		break;
+		return -EINVAL;
 	}
-	return count;
+	if (ret)
+		return ret;
+	return sysfs_emit(buf, "%d\n", val);
 }
 
+#if !IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA)
 static ssize_t pd_class_sysfs_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -1428,6 +1431,8 @@ static ssize_t pd_class_sysfs_store(struct device *dev,
 	}
 	return count;
 }
+
+#endif
 
 static int pd_sysfs_create_files(void)
 {

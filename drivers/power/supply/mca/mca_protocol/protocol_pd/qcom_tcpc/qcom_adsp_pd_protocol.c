@@ -76,9 +76,19 @@ enum nezha_pd_read_prop {
 	NEZHA_PD_ADAPTER_SVID = 0x21012,
 	NEZHA_PD_PDOS = 0x21014,
 	NEZHA_PD_PPS_MAX_CUR = 0x21016,
+	NEZHA_PD_PPS_APDO_MAX = 0x21017,
 	NEZHA_PD_TYPEC_MODE = 0x21018,
 	NEZHA_PD_CC_ORIENT = 0x21019,
 	NEZHA_PD_PPS_STATUS = 0x2101c,
+	NEZHA_PD_HAS_DP = 0x21021,
+	NEZHA_PD_CID_STATUS = 0x21022,
+	NEZHA_PD_OTG_PLUGIN = 0x21023,
+	NEZHA_PD_CC_TOGGLE = 0x21024,
+	NEZHA_PD_SNK_SRC_MODE = 0x21025,
+	NEZHA_PD_CC_STATUS = 0x21026,
+	NEZHA_PD_CC_SHORT_VBUS = 0x21027,
+	NEZHA_PD_PPS_PTF = 0x21028,
+	NEZHA_PD_SUSPEND_SUPPORT = 0x21029,
 };
 
 struct adsp_pd_protocol {
@@ -145,6 +155,17 @@ static int adsp_pd_read_profile_prop(int myron_id, int nezha_id, void *buf, size
 				 nezha_id : myron_id, buf, len);
 }
 
+static int adsp_pd_read_profile_bool(int myron_id, int nezha_id, bool *value)
+{
+	u8 raw;
+	int ret;
+
+	ret = adsp_pd_read_profile_prop(myron_id, nezha_id, &raw, sizeof(raw));
+	if (!ret)
+		*value = !!raw;
+	return ret;
+}
+
 static int adsp_pd_write_prop(int prop, void *buf, size_t size)
 {
 	int rc = mca_adsp_glink_write_prop(prop, buf, size);
@@ -204,8 +225,8 @@ static int adsp_pd_protocol_select_pps_pdo(unsigned int volt, unsigned int curr,
 
 static int adsp_pd_protocol_get_pps_ptf(int *pps_ptf, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_PPS_PTF, pps_ptf,
-					sizeof(*pps_ptf));
+	return adsp_pd_read_profile_prop(PD_PROP_PPS_PTF, NEZHA_PD_PPS_PTF,
+					 pps_ptf, sizeof(*pps_ptf));
 }
 
 static int adsp_pd_protocol_set_fixed_pd_volt(unsigned int volt, void *data)
@@ -251,8 +272,8 @@ static int adsp_pd_protocol_get_pps_status(unsigned int *volt, unsigned int *cur
 
 static int adsp_pd_protocol_get_pps_apdo_max(unsigned int *apdo_max, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_PPS_APDO_MAX, apdo_max,
-					sizeof(*apdo_max));
+	return adsp_pd_read_profile_prop(PD_PROP_PPS_APDO_MAX, NEZHA_PD_PPS_APDO_MAX,
+					 apdo_max, sizeof(*apdo_max));
 }
 
 static int adsp_pd_protocol_get_pdos(struct pd_pdo *pdos, int count, void *data)
@@ -423,16 +444,18 @@ static int adsp_pd_protocol_get_adapter_svid(unsigned int *adapter_svid,
 
 static int adsp_pd_protocol_get_has_dp(bool *has_dp, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_HAS_DP, has_dp,
-					sizeof(*has_dp));
+	return adsp_pd_read_profile_bool(PD_PROP_HAS_DP, NEZHA_PD_HAS_DP,
+					 has_dp);
 }
 
 static int adsp_pd_protocol_get_data_role(unsigned char *pr, void *data)
 {
-	u32 val = 1;
+	u32 val;
 	int ret;
 
 	ret = adsp_pd_read_prop(PD_PROP_DATA_ROLE, &val, sizeof(val));
+	if (ret)
+		return ret;
 	*pr = (unsigned char)val;
 	mca_log_info("get data_role: %d\n", val & 0xff);
 	return ret;
@@ -589,14 +612,14 @@ static int adsp_pd_protocol_get_vdm_cmd(int *cmd,
 
 static int adsp_pd_protocol_get_cid_status(bool *status, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_CID_STATUS, status,
-					sizeof(*status));
+	return adsp_pd_read_profile_bool(PD_PROP_CID_STATUS, NEZHA_PD_CID_STATUS,
+					 status);
 }
 
 static int adsp_pd_protocol_get_otg_plugin_status(bool *status, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_OTG_PLUGIN, status,
-					sizeof(*status));
+	return adsp_pd_read_profile_bool(PD_PROP_OTG_PLUGIN, NEZHA_PD_OTG_PLUGIN,
+					 status);
 }
 
 static int adsp_protocol_set_cc_toggle(bool en, void *data)
@@ -609,33 +632,33 @@ static int adsp_protocol_set_cc_toggle(bool en, void *data)
 
 static int adsp_protocol_get_cc_toggle(bool *en, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_CC_TOGGLE, en, sizeof(*en));
+	return adsp_pd_read_profile_bool(PD_PROP_CC_TOGGLE, NEZHA_PD_CC_TOGGLE,
+					 en);
 }
 
 static int adsp_pd_protocol_get_snk_src_mode(int *snk_src_mode, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_SNK_SRC_MODE, snk_src_mode,
-					sizeof(*snk_src_mode));
+	return adsp_pd_read_profile_prop(PD_PROP_SNK_SRC_MODE, NEZHA_PD_SNK_SRC_MODE,
+					 snk_src_mode, sizeof(*snk_src_mode));
 }
 
 static int adsp_protocol_get_cc_status(bool *status, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_CC_STATUS, status,
-					sizeof(*status));
+	return adsp_pd_read_profile_bool(PD_PROP_CC_STATUS, NEZHA_PD_CC_STATUS,
+					 status);
 }
 
 static int adsp_protocol_get_cc_short_vbus(int *cc_short_vbus, void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_CC_SHORT_VBUS, cc_short_vbus,
-					sizeof(*cc_short_vbus));
+	return adsp_pd_read_profile_prop(PD_PROP_CC_SHORT_VBUS, NEZHA_PD_CC_SHORT_VBUS,
+					 cc_short_vbus, sizeof(*cc_short_vbus));
 }
 
 static int adsp_pd_protocol_get_suspend_support_status(bool *pdsuspendsupported,
 						       void *data)
 {
-	return adsp_pd_read_prop(PD_PROP_SUSPEND_SUPPORT,
-					pdsuspendsupported,
-					sizeof(*pdsuspendsupported));
+	return adsp_pd_read_profile_bool(PD_PROP_SUSPEND_SUPPORT, NEZHA_PD_SUSPEND_SUPPORT,
+					 pdsuspendsupported);
 }
 
 static int adsp_pd_protocol_get_zimi_cypress_flag(int *zimi_cypress_flag,
@@ -711,6 +734,19 @@ static struct protocol_class_pd_ops nezha_pd_ops = {
 	.protocol_pd_get_pdos = adsp_pd_protocol_get_pdos,
 	.protocol_pd_get_pps_max_cur = adsp_pd_protocol_get_pps_max_cur,
 	.protocol_pd_get_pps_status = adsp_pd_protocol_get_pps_status,
+	.protocol_pd_get_pps_apdo_max = adsp_pd_protocol_get_pps_apdo_max,
+	.protocol_pd_get_has_dp = adsp_pd_protocol_get_has_dp,
+	.protocol_pd_get_cid_status = adsp_pd_protocol_get_cid_status,
+	.protocol_pd_get_otg_plugin_status = adsp_pd_protocol_get_otg_plugin_status,
+	.protocol_pd_get_cc_toggle = adsp_protocol_get_cc_toggle,
+	.protocol_pd_get_snk_src_mode = adsp_pd_protocol_get_snk_src_mode,
+	.protocol_pd_get_cc_status = adsp_protocol_get_cc_status,
+	.protocol_pd_get_cc_short_vbus = adsp_protocol_get_cc_short_vbus,
+	.protocol_pd_get_pps_ptf = adsp_pd_protocol_get_pps_ptf,
+	.protocol_pd_get_suspend_support_status = adsp_pd_protocol_get_suspend_support_status,
+	.protocol_pd_get_data_role = adsp_pd_protocol_get_data_role,
+	.protocol_pd_get_current_state = adsp_pd_protocol_get_current_state,
+	.protocol_pd_get_pd_type = adsp_pd_protocol_get_pd_type,
 };
 
 static int adsp_pd_protocol_event_cb(struct notifier_block *nb,
