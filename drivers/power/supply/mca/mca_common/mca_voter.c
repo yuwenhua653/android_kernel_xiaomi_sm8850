@@ -480,7 +480,7 @@ EXPORT_SYMBOL(mca_get_effective_client);
  *		ignored if enabled is false.
  *
  * The callback is called only when there is a change in the election results or
- * if it is the first time someone is voting.
+ * if it is the first time someone is voting or the last callback failed.
  *
  * Returns:
  *	The return from the callback when present and needs to be called
@@ -545,7 +545,8 @@ int mca_vote(struct mca_votable *votable, const char *client_str, bool enabled,
 			     &effective_id);
 		break;
 	default:
-		return -EINVAL;
+		rc = -EINVAL;
+		goto out;
 	}
 
 	/*
@@ -597,7 +598,8 @@ int mca_vote(struct mca_votable *votable, const char *client_str, bool enabled,
 	}
 #endif
 
-	votable->voted_on = true;
+	/* Retry an unchanged election after a failed hardware callback. */
+	votable->voted_on = rc >= 0;
 out:
 	mca_unlock_votable(votable);
 	return rc;
@@ -680,6 +682,8 @@ int mca_rerun_election(struct mca_votable *votable)
 			votable, votable->data, effective_result,
 			mca_get_client_str(votable,
 					   votable->effective_client_id));
+	if (rc < 0)
+		votable->voted_on = false;
 	mca_unlock_votable(votable);
 	return rc;
 }

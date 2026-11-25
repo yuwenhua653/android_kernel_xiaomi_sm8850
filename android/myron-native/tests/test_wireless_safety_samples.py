@@ -26,6 +26,7 @@ code = r'''
 #include <stdint.h>
 #include <stdio.h>
 typedef int64_t s64;
+#define max(a,b) ((a)>(b)?(a):(b))
 #define div_s64(a,b) ((s64)(a)/(b))
 #define mca_log_err(...) do { if(0) printf(__VA_ARGS__); } while(0)
 #define mca_log_info(...) do { if(0) printf(__VA_ARGS__); } while(0)
@@ -82,8 +83,8 @@ static int mca_get_effective_result(int voter) {
  assert(voter==2);return fail_at==8?-EIO:fcc_sample;
 }
 static void msleep(int ms) { assert(ms==200); }
-static void strategy_wireless_set_rx_vout(struct strategy_wireless_dev *s,int v) { vout_calls++; }
-static void strategy_wireless_icl_setting(struct strategy_wireless_dev *s,bool en,int v) { assert(en);icl_calls++; }
+static int strategy_wireless_set_rx_vout(struct strategy_wireless_dev *s,int v) { vout_calls++;return 0; }
+static int strategy_wireless_icl_setting(struct strategy_wireless_dev *s,bool en,int v) { assert(en);icl_calls++;return 0; }
 static void strategy_wireless_otp_fcc_setting(struct strategy_wireless_dev *s,bool en,int value) {
  otp_calls++;otp_en=en;otp_value=value;
 }
@@ -97,6 +98,7 @@ alarm = a.alarm_source.read_text() if a.alarm_source else s
 for name in ['strategy_wireless_check_rx_alarm','strategy_wireless_rx_alarm_work']:
     code += function(alarm,name)+'\n'
 code += function(a.ffc_source.read_text() if a.ffc_source else s,'strategy_wireless_enable_fast_charge_mode')+'\n'
+code += function(s,'strategy_wireless_apply_profile_vout')+'\n'
 for name in ['strategy_wireless_epp_train_tx_work','strategy_wireless_epp_musical_box_work']:
     code += function(a.profile_source.read_text() if a.profile_source else s,name)+'\n'
 code += r'''

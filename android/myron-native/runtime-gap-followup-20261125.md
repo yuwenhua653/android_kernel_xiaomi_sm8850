@@ -1,6 +1,11 @@
 # Myron runtime-gap follow-up — 2026-11-25
 
-Latest CV/PMIC update: [constant-voltage follow-up](wireless-cv-followup.md).
+Latest source update: [command application and retry](wireless-apply-followup.md)
+repairs failed-vote retries and voltage/current cache commits. The newest host
+qualification passes Image plus 354 in-tree modules; the earlier no-full-build
+statements below describe their respective checkpoints, not this latest build.
+
+Prior CV/PMIC update: [constant-voltage follow-up](wireless-cv-followup.md).
 This also identifies MCA owner 32778 and corrects the earlier ADC/debug
 client hypothesis; probe/timing still need device evidence.
 
@@ -103,13 +108,13 @@ for `mi_thermal_interface`.
 | Battery provider dependencies / negative client vote | Corrected here; hardware error counts and charging status need later confirmation. Unsupported properties still return errors. |
 | QTI CPU/GPU/userspace cooling, dynamic trip, PMIC alarm | Source and load-list fixes retained. Final module loading, cooling policy IDs and SCMI responses need verification. |
 | Connector thermal routes / antiburn | Eight archived DT variants pass mapping checks; probe/GPIO correction compiled. New runtime binding and protection behavior unverified. |
-| Xiaomi thermal_message / mi_thermald contract | Real source/integration gap identified above; not complete and not papered over with SM8550 stubs. |
+| Xiaomi thermal_message / mi_thermald contract | Board-temperature bridge implemented and integrated; remaining private controls require actual-use/protocol evidence. Vendor CPU sysfs fallback is verified in the binary; this is not a fully qualified replacement policy. |
 | thermal_config | Reviewed source is debug support; not classified as mandatory missing policy. |
 | IPA readiness / callbacks / queue ownership | Previously corrected in modules 1500b5df54325748574deb953a87f198cf23d7b5; no new firmware/performance measurement. |
 | CNSS suspend | Rollback defect corrected here. Cause of captured -11 remains unknown; vetoes preserved. |
 | OCP / SPSS supplier dependencies | OCP built-in, SPSS selected and prior integration retained. Binding/sync_state need current-device evidence. |
 | Qualcomm LPM versus generic PSCI | Generic PSCI retained; vendor governor not enabled without matched DT/firmware evidence. Pending-node removal is not proof of equivalent low-power operation. |
-| GLINK 32778 / qti_glink_adc / pmic_ecid / MCA platform | Missing module names do not establish the failed property's provider. No competing generic battery client enabled; ownership/provider failures need current logs. |
+| GLINK 32778 / qti_glink_adc / pmic_ecid / MCA platform | 32778 is the MCA ADSP client in this source. Source/load selection is present; probe/link timing and failed-property IDs still need current logs. No competing generic battery client enabled. |
 | PMIC/RPMh resources / SCMI timeout | Need effective DT/command-db/firmware evidence; no fabricated resource or suppressed timeout. |
 | charger_partition -95 | Prior unsupported-format repeat suppression retained; writes remain disabled without verified layout. |
 | Audio LPI / core vote prints | Print counts alone are not a functional defect; no arbitrary audio change. |

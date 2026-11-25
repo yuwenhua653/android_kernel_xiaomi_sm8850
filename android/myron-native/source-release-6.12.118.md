@@ -2,15 +2,16 @@
 
 The Linux 6.12.118 base update and retained platform fixes were published in
 `3db85f696ae6cd550912c63a6c2251dd774b50a7`. Subsequent runtime hardening is
-recorded in [the current gap report](runtime-gap-status-20261122.md).
+recorded in [the current gap report](runtime-gap-followup-20261125.md).
 The current `manifest.xml` pairs the kernel branch with:
 
 | Checkout | Branch | Commit |
 | --- | --- | --- |
-| `kernel/xiaomi/sm8850-modules` | `lineage-24.0` | `1500b5df54325748574deb953a87f198cf23d7b5` |
+| `kernel/xiaomi/sm8850-modules` | `lineage-24.0` | `c8a5bfa8d4d2f2377c411ac9a41f2dc9aa5edff8` |
 | `kernel/xiaomi/sm8850-devicetrees` | `lineage-24.0` | `fb892731a9b9df5ecd076409536d172e564b6850` |
 
-The module update retains native Canoe video/MMRM integration, HFI brightness
+The paired module revision also includes CNSS host-resume rollback after a
+failed PCI-state save. The module update retains native Canoe video/MMRM integration, HFI brightness
 transfers, deferred and incremental backlight fixes, RMNET external IPA APIs,
 qce50/qcedev and SPU build entries, and SPSS resource/CMAC handling. The DT
 update retains the wireless battery tables and generic-PSCI-v2 optional-consumer

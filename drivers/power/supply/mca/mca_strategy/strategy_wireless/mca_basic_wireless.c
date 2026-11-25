@@ -495,29 +495,26 @@ static int strategy_wireless_msleep(int ms, struct strategy_wireless_dev *info)
 	return 0;
 }
 
-static void strategy_wireless_icl_setting(struct strategy_wireless_dev *info,
+static int strategy_wireless_icl_setting(struct strategy_wireless_dev *info,
 					  bool en, int mA)
 {
 	mca_log_info("en: %d, ma: %u\n", en, mA);
 
 	if (en)
-		mca_vote(info->input_limit_voter, "xm_wls", true, mA);
+		return mca_vote(info->input_limit_voter, "xm_wls", true, mA);
 	else
-		mca_vote(info->input_limit_voter, "xm_wls", false, 0);
+		return mca_vote(info->input_limit_voter, "xm_wls", false, 0);
 }
 
-static void strategy_wireless_fcc_setting(struct strategy_wireless_dev *info,
-					  bool en, int mA)
+static int strategy_wireless_fcc_setting(struct strategy_wireless_dev *info,
+					 bool en, int mA)
 {
-	mca_log_info("en: %d, ma: %u\n", en, mA);
+	int ret, qc_ret;
 
-	if (en) {
-		mca_vote(info->charge_limit_voter, "xm_wls", true, mA);
-		mca_vote(info->sw_qc_ichg_voter, "xm_wls", true, mA);
-	} else {
-		mca_vote(info->charge_limit_voter, "xm_wls", false, 0);
-		mca_vote(info->sw_qc_ichg_voter, "xm_wls", false, 0);
-	}
+	mca_log_info("en: %d, ma: %u\n", en, mA);
+	ret = mca_vote(info->charge_limit_voter, "xm_wls", en, en ? mA : 0);
+	qc_ret = mca_vote(info->sw_qc_ichg_voter, "xm_wls", en, en ? mA : 0);
+	return ret < 0 ? ret : qc_ret;
 }
 
 static void
@@ -1705,11 +1702,48 @@ strategy_wireless_transparent_fail(struct strategy_wireless_dev *info)
 	return ret;
 }
 
+/* Commit the requested profile only after every required command succeeds. */
+static int strategy_wireless_apply_profile_vout(struct strategy_wireless_dev *info,
+					       bool ramp_down)
+{
+	int target = info->proc_data.target_vout;
+	int vout, ret;
+
+	if (target == info->proc_data.pre_vout)
+		return 0;
+	if (target <= 0 || (ramp_down && target != EPP_DEFAULT_VOUT &&
+			   target != EPP_PLUS_VOUT))
+		return -EINVAL;
+
+	if (ramp_down && target == EPP_DEFAULT_VOUT) {
+		ret = platform_class_wireless_get_vout(WIRELESS_ROLE_MASTER, &vout);
+		if (ret)
+			return ret;
+		if (vout <= 0)
+			return -ENODATA;
+		while (vout > target) {
+			vout = max(vout - 1000, target);
+			ret = strategy_wireless_set_rx_vout(info, vout);
+			if (ret)
+				return ret;
+			msleep(200);
+		}
+	}
+
+	ret = strategy_wireless_set_rx_vout(info, target);
+	if (ret)
+		return ret;
+	info->proc_data.pre_vout = target;
+	if (ramp_down)
+		info->proc_data.qc_enable = target == EPP_PLUS_VOUT;
+	return 1;
+}
+
 static void
 strategy_wireless_epp_plate_tx_work(struct strategy_wireless_dev *info)
 {
 	bool vout_change = false;
-	int vout = 0;
+	int ret;
 
 	mca_log_info("enter epp plate tx work\n");
 
@@ -1738,47 +1772,29 @@ strategy_wireless_epp_plate_tx_work(struct strategy_wireless_dev *info)
 			strategy_wireless_icl_setting(info, true, 550);
 	}
 
-	if (info->proc_data.target_vout != info->proc_data.pre_vout) {
-		mca_log_info("epp plate, set new vout: %u, pre vout: %u\n",
-			     info->proc_data.target_vout,
-			     info->proc_data.pre_vout);
-
-		if (info->proc_data.target_vout == EPP_PLUS_VOUT) {
-			strategy_wireless_set_rx_vout(
-				info, info->proc_data.target_vout);
-			info->proc_data.qc_enable = true;
-		} else if (info->proc_data.target_vout == EPP_DEFAULT_VOUT) {
-			(void)platform_class_wireless_get_vout(
-				WIRELESS_ROLE_MASTER, &vout);
-			while (vout > EPP_DEFAULT_VOUT) {
-				vout = vout - 1000;
-				strategy_wireless_set_rx_vout(info, vout);
-				msleep(200);
-			}
-			strategy_wireless_set_rx_vout(
-				info, info->proc_data.target_vout);
-			info->proc_data.qc_enable = false;
-		}
-		info->proc_data.pre_vout = info->proc_data.target_vout;
-		vout_change = true;
-	}
+	ret = strategy_wireless_apply_profile_vout(info, true);
+	if (ret < 0)
+		return;
+	vout_change = ret > 0;
 
 	if ((info->proc_data.target_iwls != info->proc_data.pre_iwls) ||
 	    vout_change) {
 		mca_log_info("epp plate, set new iwls: %u, pre iwls: %u\n",
 			     info->proc_data.target_iwls,
 			     info->proc_data.pre_iwls);
-		strategy_wireless_icl_setting(info, true,
-					      info->proc_data.target_iwls);
-		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 	}
+	/* The voter suppresses successful duplicates and retries failed commands. */
+	ret = strategy_wireless_icl_setting(info, true,
+					  info->proc_data.target_iwls);
+	if (!ret)
+		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 }
 
 static void
 strategy_wireless_epp_train_tx_work(struct strategy_wireless_dev *info)
 {
 	bool vout_change = false;
-	int vout = 0, battery_temp, ret;
+	int battery_temp, ret;
 
 	ret = strategy_class_fg_ops_get_temperature(&battery_temp);
 	if (ret) {
@@ -1812,44 +1828,29 @@ strategy_wireless_epp_train_tx_work(struct strategy_wireless_dev *info)
 			strategy_wireless_icl_setting(info, true, 550);
 	}
 
-	if (info->proc_data.target_vout != info->proc_data.pre_vout) {
-		mca_log_info("epp train, set new vout: %u, pre vout: %u\n",
-			     info->proc_data.target_vout,
-			     info->proc_data.pre_vout);
-
-		if (info->proc_data.target_vout == EPP_PLUS_VOUT) {
-			strategy_wireless_set_rx_vout(
-				info, info->proc_data.target_vout);
-			info->proc_data.qc_enable = true;
-		} else if (info->proc_data.target_vout == EPP_DEFAULT_VOUT) {
-			(void)platform_class_wireless_get_vout(
-				WIRELESS_ROLE_MASTER, &vout);
-			while (vout > EPP_DEFAULT_VOUT) {
-				vout = vout - 1000;
-				strategy_wireless_set_rx_vout(info, vout);
-				msleep(200);
-			}
-			strategy_wireless_set_rx_vout(info, vout);
-			info->proc_data.qc_enable = false;
-		}
-		info->proc_data.pre_vout = info->proc_data.target_vout;
-		vout_change = true;
-	}
+	ret = strategy_wireless_apply_profile_vout(info, true);
+	if (ret < 0)
+		return;
+	vout_change = ret > 0;
 
 	if ((info->proc_data.target_iwls != info->proc_data.pre_iwls) ||
 	    vout_change) {
 		mca_log_info("epp train, set new iwls: %u, pre iwls: %u\n",
 			     info->proc_data.target_iwls,
 			     info->proc_data.pre_iwls);
-		strategy_wireless_icl_setting(info, true,
-					      info->proc_data.target_iwls);
-		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 	}
+	/* The voter suppresses successful duplicates and retries failed commands. */
+	ret = strategy_wireless_icl_setting(info, true,
+					  info->proc_data.target_iwls);
+	if (!ret)
+		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 }
 
 static void
 strategy_wireless_qc2_adapter_work(struct strategy_wireless_dev *info)
 {
+	int ret;
+
 	mca_log_info("enter qc2 adapter work\n");
 
 	if (info->proc_data.batt_soc >= 95)
@@ -1859,27 +1860,26 @@ strategy_wireless_qc2_adapter_work(struct strategy_wireless_dev *info)
 	if (info->proc_data.chgr_stage == WLS_FULL_MODE)
 		info->proc_data.target_iwls = 200;
 
-	if (info->proc_data.target_vout != info->proc_data.pre_vout) {
-		mca_log_info("qc2 adapter, set new vout: %u, pre vout: %u\n",
-			     info->proc_data.target_vout,
-			     info->proc_data.pre_vout);
-		strategy_wireless_set_rx_vout(info,
-					      info->proc_data.target_vout);
-		info->proc_data.pre_vout = info->proc_data.target_vout;
-	}
+	ret = strategy_wireless_apply_profile_vout(info, false);
+	if (ret < 0)
+		return;
 
 	if (info->proc_data.target_iwls != info->proc_data.pre_iwls) {
 		mca_log_info("qc2 adapter, set new iwls: %u, pre iwls: %u\n",
 			     info->proc_data.target_iwls,
 			     info->proc_data.pre_iwls);
-		strategy_wireless_icl_setting(info, true,
-					      info->proc_data.target_iwls);
-		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 	}
+	/* The voter suppresses successful duplicates and retries failed commands. */
+	ret = strategy_wireless_icl_setting(info, true,
+					  info->proc_data.target_iwls);
+	if (!ret)
+		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 }
 
 static void strategy_wireless_bpp_plus_work(struct strategy_wireless_dev *info)
 {
+	int ret;
+
 	mca_log_info("enter bpp plus work\n");
 
 	if (info->proc_data.batt_soc >= 95) {
@@ -1889,28 +1889,27 @@ static void strategy_wireless_bpp_plus_work(struct strategy_wireless_dev *info)
 	if (info->proc_data.chgr_stage == WLS_FULL_MODE)
 		info->proc_data.target_iwls = 250;
 
-	if (info->proc_data.target_vout != info->proc_data.pre_vout) {
-		mca_log_info("bpp plus, set new vout: %u, pre vout: %u\n",
-			     info->proc_data.target_vout,
-			     info->proc_data.pre_vout);
-		strategy_wireless_set_rx_vout(info,
-					      info->proc_data.target_vout);
-		info->proc_data.pre_vout = info->proc_data.target_vout;
-	}
+	ret = strategy_wireless_apply_profile_vout(info, false);
+	if (ret < 0)
+		return;
 
 	if (info->proc_data.target_iwls != info->proc_data.pre_iwls) {
 		mca_log_info("bpp plus, set new iwls: %u, pre iwls: %u\n",
 			     info->proc_data.target_iwls,
 			     info->proc_data.pre_iwls);
-		strategy_wireless_icl_setting(info, true,
-					      info->proc_data.target_iwls);
-		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 	}
+	/* The voter suppresses successful duplicates and retries failed commands. */
+	ret = strategy_wireless_icl_setting(info, true,
+					  info->proc_data.target_iwls);
+	if (!ret)
+		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 }
 
 static void
 strategy_wireless_epp_standard_work(struct strategy_wireless_dev *info)
 {
+	int ret;
+
 	mca_log_info("enter standard epp work\n");
 
 	if (info->proc_data.chgr_stage == WLS_FULL_MODE)
@@ -1923,14 +1922,18 @@ strategy_wireless_epp_standard_work(struct strategy_wireless_dev *info)
 		mca_log_info("standard epp, set new iwls: %u, pre iwls: %u\n",
 			     info->proc_data.target_iwls,
 			     info->proc_data.pre_iwls);
-		strategy_wireless_icl_setting(info, true,
-					      info->proc_data.target_iwls);
-		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 	}
+	/* The voter suppresses successful duplicates and retries failed commands. */
+	ret = strategy_wireless_icl_setting(info, true,
+					  info->proc_data.target_iwls);
+	if (!ret)
+		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 }
 
 static void strategy_wireless_epp_plus_work(struct strategy_wireless_dev *info)
 {
+	int ret;
+
 	mca_log_info("enter epp plus work\n");
 	if (info->proc_data.chgr_stage == WLS_FULL_MODE) {
 		info->proc_data.target_vout = 6000;
@@ -1949,29 +1952,28 @@ static void strategy_wireless_epp_plus_work(struct strategy_wireless_dev *info)
 				info->proc_data.target_iwls, 100, 50);
 	}
 
-	if (info->proc_data.target_vout != info->proc_data.pre_vout) {
-		mca_log_info("epp plus, set new vout: %u, pre vout: %u\n",
-			     info->proc_data.target_vout,
-			     info->proc_data.pre_vout);
-		strategy_wireless_set_rx_vout(info,
-					      info->proc_data.target_vout);
+	ret = strategy_wireless_apply_profile_vout(info, false);
+	if (ret < 0)
+		return;
+	if (ret > 0)
 		msleep(200);
-		info->proc_data.pre_vout = info->proc_data.target_vout;
-	}
 
 	if (info->proc_data.target_iwls != info->proc_data.pre_iwls) {
 		mca_log_info("epp plus, set new iwls: %u, pre iwls: %u\n",
 			     info->proc_data.target_iwls,
 			     info->proc_data.pre_iwls);
-		strategy_wireless_icl_setting(info, true,
-					      info->proc_data.target_iwls);
-		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 	}
+	/* The voter suppresses successful duplicates and retries failed commands. */
+	ret = strategy_wireless_icl_setting(info, true,
+					  info->proc_data.target_iwls);
+	if (!ret)
+		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 
 	if (info->proc_data.batt_soc >= 70 &&
 	    info->proc_data.high_soc_fcc_set == false) {
-		info->proc_data.high_soc_fcc_set = true;
-		strategy_wireless_fcc_setting(info, true, 6000);
+		ret = strategy_wireless_fcc_setting(info, true, 6000);
+		if (!ret)
+			info->proc_data.high_soc_fcc_set = true;
 	}
 }
 
@@ -1979,7 +1981,7 @@ static void
 strategy_wireless_epp_musical_box_work(struct strategy_wireless_dev *info)
 {
 	bool vout_change = false;
-	int vout = 0, battery_temp, ret;
+	int battery_temp, ret;
 
 	ret = strategy_class_fg_ops_get_temperature(&battery_temp);
 	if (ret) {
@@ -2029,40 +2031,22 @@ strategy_wireless_epp_musical_box_work(struct strategy_wireless_dev *info)
 			strategy_wireless_icl_setting(info, true, 550);
 	}
 
-	if (info->proc_data.target_vout != info->proc_data.pre_vout) {
-		mca_log_info(
-			"epp musical box, set new vout: %u, pre vout: %u\n",
-			info->proc_data.target_vout, info->proc_data.pre_vout);
-
-		if (info->proc_data.target_vout == EPP_PLUS_VOUT) {
-			strategy_wireless_set_rx_vout(
-				info, info->proc_data.target_vout);
-			info->proc_data.qc_enable = true;
-		} else if (info->proc_data.target_vout == EPP_DEFAULT_VOUT) {
-			(void)platform_class_wireless_get_vout(
-				WIRELESS_ROLE_MASTER, &vout);
-			while (vout > EPP_DEFAULT_VOUT) {
-				vout = vout - 1000;
-				strategy_wireless_set_rx_vout(info, vout);
-				msleep(200);
-			}
-			strategy_wireless_set_rx_vout(
-				info, info->proc_data.target_vout);
-			info->proc_data.qc_enable = false;
-		}
-		info->proc_data.pre_vout = info->proc_data.target_vout;
-		vout_change = true;
-	}
+	ret = strategy_wireless_apply_profile_vout(info, true);
+	if (ret < 0)
+		return;
+	vout_change = ret > 0;
 
 	if ((info->proc_data.target_iwls != info->proc_data.pre_iwls) ||
 	    vout_change) {
 		mca_log_info(
 			"epp musical box, set new iwls: %u, pre iwls: %u\n",
 			info->proc_data.target_iwls, info->proc_data.pre_iwls);
-		strategy_wireless_icl_setting(info, true,
-					      info->proc_data.target_iwls);
-		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 	}
+	/* The voter suppresses successful duplicates and retries failed commands. */
+	ret = strategy_wireless_icl_setting(info, true,
+					  info->proc_data.target_iwls);
+	if (!ret)
+		info->proc_data.pre_iwls = info->proc_data.target_iwls;
 }
 
 static int
