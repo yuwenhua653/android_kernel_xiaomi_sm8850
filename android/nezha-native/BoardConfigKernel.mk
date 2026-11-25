@@ -14,6 +14,11 @@ nezha_native_modules := $(nezha_display_modules) xiaomi/nezha-touch \
     qcom/opensource/datarmnet \
     qcom/opensource/datarmnet-ext/shs \
     qcom/opensource/datarmnet-ext/perf \
+    qcom/opensource/datarmnet-ext/offload \
+    qcom/opensource/datarmnet-ext/perf_tether \
+    qcom/opensource/datarmnet-ext/wlan \
+    qcom/opensource/datarmnet-ext/aps \
+    qcom/opensource/datarmnet-ext/sch \
     qcom/opensource/data-kernel/drivers/smem-mailbox \
     qcom/opensource/mmrm-driver \
     qcom/opensource/video-driver \
