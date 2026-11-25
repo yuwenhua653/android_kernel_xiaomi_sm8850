@@ -1,0 +1,4582 @@
+{
+  "pass": true,
+  "scope": "ELF/CRC/provider/depends/vermagic only",
+  "kernel_release": "6.12.118-g9a7946c166d3-yuzuli",
+  "vermagic": "6.12.118-g9a7946c166d3-yuzuli SMP preempt mod_unload modversions aarch64",
+  "module_count": 427,
+  "export_count": 21627,
+  "version_records_checked": 25516,
+  "symvers_inputs": [
+    {
+      "root": "kernel",
+      "symvers_sha256": "05f27d6f7a529a1be143b99577578d0ee898221cf8835f59fdc28ec1ce56fa8c"
+    },
+    {
+      "root": "1:msm_ext_display",
+      "symvers_sha256": "e2afc84432e6ed0d7a2b582c772829f24f14ed1a607cd28ee5e6f5ce53d7762b"
+    },
+    {
+      "root": "2:hfi_core",
+      "symvers_sha256": "85db0cd642c6ed2d9ab51552264c87053c433b676819febd3a54b8f844279560"
+    },
+    {
+      "root": "3:hw_fence",
+      "symvers_sha256": "1c3b01da11d0183bffdb7aefc50b88d970308919dca5812118f82019ae5f0f23"
+    },
+    {
+      "root": "4:sync_fence",
+      "symvers_sha256": "5bd763746f7123c455f9ffaa3046c4c535b3e2e5e8fe3c1250ad4bb15c47ea08"
+    },
+    {
+      "root": "5:audio-kernel",
+      "symvers_sha256": "3707d666057146322c466e73fb979d7401ad49048029b44d2cda701e3ac19034"
+    },
+    {
+      "root": "6:dsp-kernel",
+      "symvers_sha256": "fd95462bf296230a5b48ff54e3967b5987814db58727a485766777cf40dc5220"
+    },
+    {
+      "root": "7:mmrm-driver",
+      "symvers_sha256": "6a783e9882fb89c62e75183ad594b321883765af88a4bdd55b3a06b8dd9c3aee"
+    },
+    {
+      "root": "8:synx-kernel",
+      "symvers_sha256": "67b9556073a87bda41c7a947cebff45aea391c4bca31da38c256d70333f434ad"
+    },
+    {
+      "root": "9:securemsm-kernel",
+      "symvers_sha256": "3771818b80a8b8f1246f334fd16aff3f0a707508df38b44a75d9b3acc8c49ea7"
+    },
+    {
+      "root": "10:spu-kernel",
+      "symvers_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "root": "11:mem",
+      "symvers_sha256": "bfff062c755549237da1bd1837d69651194d5017be8946ca192831151ce22d4f"
+    },
+    {
+      "root": "12:dataipa",
+      "symvers_sha256": "2563eefed60bdc7c378d3c8d6854146e9e727cae2ce59c17f428843ef3b509c5"
+    },
+    {
+      "root": "13:datarmnet",
+      "symvers_sha256": "96447a9f55dc27e7c37a292954a2f142ed8a7924e256f858ddaeb364161847e7"
+    },
+    {
+      "root": "14:shs",
+      "symvers_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "root": "15:perf",
+      "symvers_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "root": "16:smem-mailbox",
+      "symvers_sha256": "fd2d31873e3ae4a931afa2bbed847ab8d10bc1c9d0216f19e45dcd93ef0e5ada"
+    },
+    {
+      "root": "17:driver",
+      "symvers_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "root": "18:camera-kernel",
+      "symvers_sha256": "0ab01e8daa601d024d816b221c6d4846b9fdaff47a925295025035cf6300d1ae"
+    },
+    {
+      "root": "19:graphics-kernel",
+      "symvers_sha256": "cda42cafcc624f7306dfa5e286e08e0d127ca9424874edc5c44fc7ba34cab981"
+    },
+    {
+      "root": "20:display-drivers",
+      "symvers_sha256": "9b95ca0c570bbd060bea4dda9e0d2c1abbeaa92d66f403ebf2df15ce9681265e"
+    },
+    {
+      "root": "21:eva-kernel",
+      "symvers_sha256": "4640f09eb3f99e551a3d7b91d644dc0b3bf4710d91902a14d23cd77035cdd0fc"
+    },
+    {
+      "root": "22:video-driver",
+      "symvers_sha256": "03af92b7c1ddbbf784e8abc3be202a1c34a6e992ce8a66c9f108d884c8f36dac"
+    },
+    {
+      "root": "23:platform",
+      "symvers_sha256": "e392f74d6155b1b1564760d927cd1fb290a59f36b3861220152a22b9469e36e4"
+    },
+    {
+      "root": "24:bt-kernel",
+      "symvers_sha256": "d732e910fc3dbaf78cc95fb65d081faa27799e7e7e82541c3ffe5e6f48f016f4"
+    },
+    {
+      "root": "25:qcacld-3.0",
+      "symvers_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "modules": [
+    {
+      "module": "gh_arm_drv",
+      "bytes": 162088,
+      "sha256": "04f43bdeea64c197b16a9e28ac123b112ddb2a13f3bd470a3036ec2b2f943ffd",
+      "checked_versions": 10,
+      "dependencies": []
+    },
+    {
+      "module": "aes_neon_blk",
+      "bytes": 258288,
+      "sha256": "68ed4e18c6e4a605f4dd73b6b2b8828d53f6524e12ccac1c515aae38069e04d3",
+      "checked_versions": 21,
+      "dependencies": []
+    },
+    {
+      "module": "gzvm",
+      "bytes": 1465720,
+      "sha256": "ba387375954a25944b8d1251471d58c4319822a2aad8a5a13265b8df591e0933",
+      "checked_versions": 120,
+      "dependencies": []
+    },
+    {
+      "module": "sched_walt",
+      "bytes": 5865648,
+      "sha256": "b2a0c5901fe96e63929eed8d2b50cafc5100bfd27ee26e6d3bc68c381ecf3e28",
+      "checked_versions": 304,
+      "dependencies": [
+        "socinfo"
+      ]
+    },
+    {
+      "module": "time_test",
+      "bytes": 185656,
+      "sha256": "6d8dca9bcc413a48916d5cc828434bd502ba61bf628f939c84ae331c9dfd9465",
+      "checked_versions": 6,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "qcom_ipc_logging",
+      "bytes": 375224,
+      "sha256": "e3bd5683206d8afe9fc7f9641eb24af334e1abf16812a0d476f5c9d6f62c7379",
+      "checked_versions": 51,
+      "dependencies": [
+        "minidump"
+      ]
+    },
+    {
+      "module": "kheaders",
+      "bytes": 4699696,
+      "sha256": "4138c5720114ae4d29a8407652c0d459e43a143083740578004b4a4ce7e66db8",
+      "checked_versions": 5,
+      "dependencies": []
+    },
+    {
+      "module": "msm_sysstats",
+      "bytes": 353960,
+      "sha256": "d3e6a8d81b48e68efb0148cb0da9ae73e73f9b0add0fcdee6e56e06d6f009db2",
+      "checked_versions": 48,
+      "dependencies": [
+        "qcom_dma_heaps"
+      ]
+    },
+    {
+      "module": "zsmalloc",
+      "bytes": 358552,
+      "sha256": "f66c240bf71ae3afa6056d2ecbbe57e75995a153da3a4b1c3f48ea24919054a4",
+      "checked_versions": 53,
+      "dependencies": []
+    },
+    {
+      "module": "ext4_inode_test",
+      "bytes": 219120,
+      "sha256": "3a5cc3f8bc5e215949af56404aa7fcc9f8b06be8f724ab471c70450c6982bbdd",
+      "checked_versions": 5,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "fat_test",
+      "bytes": 266256,
+      "sha256": "9d40a9c122af9cf30667f5565b336072ff481b5a0a59de2273f6ecd589cd85d8",
+      "checked_versions": 7,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "pstore_zone",
+      "bytes": 284472,
+      "sha256": "21b6c828858f04a70a1f06a6772c8398eafdf8e12b5bd6b600cf5b45397d2e97",
+      "checked_versions": 25,
+      "dependencies": []
+    },
+    {
+      "module": "pstore_blk",
+      "bytes": 239224,
+      "sha256": "97397528c2a582b2d78122060bbb158a5454dd20e7b4567bef1b2113cb4333a8",
+      "checked_versions": 23,
+      "dependencies": [
+        "pstore_zone"
+      ]
+    },
+    {
+      "module": "netfs",
+      "bytes": 2406448,
+      "sha256": "a7b2f0e278b850dc18b2aeaf3aead482c095aabffee5887255ae6b6c36c84218",
+      "checked_versions": 141,
+      "dependencies": []
+    },
+    {
+      "module": "efivarfs",
+      "bytes": 575784,
+      "sha256": "b0f5e1c82db9466c3373c3cf978ed2aab00e0f001785c46848080a3754a43850",
+      "checked_versions": 81,
+      "dependencies": []
+    },
+    {
+      "module": "kunit",
+      "bytes": 1330648,
+      "sha256": "d98cd3e5abb80010881ec7609268c21cc23edd8480b3ae8cbe53bfddb20c6b02",
+      "checked_versions": 90,
+      "dependencies": []
+    },
+    {
+      "module": "kunit_test",
+      "bytes": 323688,
+      "sha256": "d2f00eaf03d7b20ba31ddab915d5b05f518b764f481655554271239d528409e7",
+      "checked_versions": 41,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "platform_test",
+      "bytes": 226528,
+      "sha256": "afd41bae9d9ed2158de3d104db6ecec2588dc337e6fbc6fc49e599790097d0e9",
+      "checked_versions": 22,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "kunit_example_test",
+      "bytes": 215360,
+      "sha256": "5073afc5ba729d3fc8b2682c68e571376227049a23942e0f3748b3aa2764b517",
+      "checked_versions": 18,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "libarc4",
+      "bytes": 105312,
+      "sha256": "883e5434b311062ee94a7fe783a6e7dee39408e771085a89eb538f8390cc5024",
+      "checked_versions": 1,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_pdc",
+      "bytes": 277664,
+      "sha256": "65c7e7ea8a55ec59f54aede128949d293a4aea006a23d9f326021af84c2a6556",
+      "checked_versions": 52,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "mhi",
+      "bytes": 1282128,
+      "sha256": "8212e8211ed0755dc187ebfe885c398eb7e28b9e7a91bdd07dc640c1f67976c1",
+      "checked_versions": 133,
+      "dependencies": [
+        "pci_msm_drv",
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "phy_qcom_ufs",
+      "bytes": 311472,
+      "sha256": "90769bae2f14e5513ef3e1fa94239ec192cff7cde49a4747108ae9a1d3e3b968",
+      "checked_versions": 41,
+      "dependencies": []
+    },
+    {
+      "module": "phy_qcom_ufs_qmp_v4_canoe",
+      "bytes": 262848,
+      "sha256": "eb91081afdb3479d20e144a3bba509da3b2b5a0e405dd35f6b3a5737d6f280d4",
+      "checked_versions": 27,
+      "dependencies": [
+        "phy_qcom_ufs"
+      ]
+    },
+    {
+      "module": "phy_qcom_ufs_qrbtc_sdm845",
+      "bytes": 251808,
+      "sha256": "9bea1d02449416926b9d4e477648b88c56d3cc5f08c8d3f479fdea86b5961333",
+      "checked_versions": 20,
+      "dependencies": [
+        "phy_qcom_ufs"
+      ]
+    },
+    {
+      "module": "pinctrl_alor",
+      "bytes": 385680,
+      "sha256": "ba5e42f24ec505158d2715a352ff3dbf43219b938436f554a0fb2e9af1f81793",
+      "checked_versions": 6,
+      "dependencies": [
+        "pinctrl_msm"
+      ]
+    },
+    {
+      "module": "pinctrl_canoe",
+      "bytes": 399328,
+      "sha256": "2d7c61ba12340ffdd4300f2431022fc606b1ea9cb7e8b94375e02f75be5b61bd",
+      "checked_versions": 7,
+      "dependencies": [
+        "pinctrl_msm"
+      ]
+    },
+    {
+      "module": "pinctrl_chora",
+      "bytes": 335072,
+      "sha256": "838db88f28aca174fb525ec8df689d9becae357ca175213e9c400e41138aa8f4",
+      "checked_versions": 6,
+      "dependencies": [
+        "pinctrl_msm"
+      ]
+    },
+    {
+      "module": "pinctrl_msm",
+      "bytes": 373184,
+      "sha256": "d49d8f4d87e6dcbf33de4cd8f9ab2ce8e14cc4c3980c3e23b8a97d3c77e7788c",
+      "checked_versions": 96,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "pinctrl_spmi_gpio",
+      "bytes": 334008,
+      "sha256": "ccc481f05390d98b6419a259a6b941e1bd0ac15fb76d480f370291ddca33b179",
+      "checked_versions": 42,
+      "dependencies": []
+    },
+    {
+      "module": "leds_qcom_flash",
+      "bytes": 335400,
+      "sha256": "229bbaa9e706b77feee41314d74cc85d4ae623ccf86d8b9f50db0c9993e00a03",
+      "checked_versions": 31,
+      "dependencies": [
+        "qti_battery_charger"
+      ]
+    },
+    {
+      "module": "pci_msm_drv",
+      "bytes": 1227776,
+      "sha256": "93a5fc53e9078c51cb73c21282bc69922b8d3829746f883577361d8656b7e559",
+      "checked_versions": 225,
+      "dependencies": [
+        "clk_qcom",
+        "crm_v2",
+        "pcie_pdc",
+        "pinctrl_msm",
+        "qcom_ipc_logging",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "qcom_spmi_wled",
+      "bytes": 344528,
+      "sha256": "c7a97c29c70a9fc9bd7b00fef3d52975730314beddc843a033bc4889916434e4",
+      "checked_versions": 43,
+      "dependencies": [
+        "qti_battery_charger"
+      ]
+    },
+    {
+      "module": "clk_test",
+      "bytes": 506040,
+      "sha256": "d4f2575b9e1b6f1908314facecf41e9a4cf7419c94729687fbece72bac039b7d",
+      "checked_versions": 48,
+      "dependencies": [
+        "clk_kunit_helpers",
+        "kunit",
+        "of_kunit_helpers"
+      ]
+    },
+    {
+      "module": "clk_gate_test",
+      "bytes": 273912,
+      "sha256": "18a33707c2b2606fb50940686e9d69b5a828a8a2a5db7fec918df082e8939112",
+      "checked_versions": 27,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "clk_kunit_helpers",
+      "bytes": 193424,
+      "sha256": "acdc98dacbce0ecb53dee12571a9f46acbf44a38b7831261f54ead49cf5555e0",
+      "checked_versions": 13,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "cambistmclkcc_canoe",
+      "bytes": 268696,
+      "sha256": "74d94d146694929f744d329fb7b5c7f2e2bfc909088126fc8e94063b84f1ef35",
+      "checked_versions": 25,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "camcc_alor",
+      "bytes": 359840,
+      "sha256": "12602c4ecb73b5b07650d80c6134c5511406941e5e906de7d1c78d4baab835ec",
+      "checked_versions": 29,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "camcc_canoe",
+      "bytes": 364800,
+      "sha256": "d1a67c4fbf6fac8ad8921947bd77621f864c734994ce52cf5c72a0b118c6a93f",
+      "checked_versions": 32,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "clk_dummy",
+      "bytes": 208352,
+      "sha256": "249a93f26bebd936e07f50458c48caef85d5d2d968a14208d18a9b5a7f5ecc66",
+      "checked_versions": 16,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "clk_qcom",
+      "bytes": 2994176,
+      "sha256": "a7c253f90d3dcca015166fd7627fa3a33f89912ed0252c561f93801126b02969",
+      "checked_versions": 173,
+      "dependencies": [
+        "crm_v2",
+        "gdsc_regulator",
+        "icc_clk",
+        "minidump"
+      ]
+    },
+    {
+      "module": "clk_rpmh",
+      "bytes": 318120,
+      "sha256": "bfbb3524bb4ac003f5c3efd28306e4970162bc00af99214ff7b727bd461b6f2a",
+      "checked_versions": 21,
+      "dependencies": [
+        "clk_qcom",
+        "cmd_db",
+        "qcom_rpmh"
+      ]
+    },
+    {
+      "module": "debugcc_canoe",
+      "bytes": 265280,
+      "sha256": "cdc895bd92f0c57aa2b0659db7588772d6b0f99d8bfed79eb24e18ac85cd648a",
+      "checked_versions": 12,
+      "dependencies": [
+        "clk_dummy",
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "dispcc_canoe",
+      "bytes": 342248,
+      "sha256": "232e51cc6a25d4aae50d9bb8fd3d815cfc708e65ac5f9687e914f3f6413f5785",
+      "checked_versions": 38,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "evacc_canoe",
+      "bytes": 273264,
+      "sha256": "081110342458357c482baee6e06572d154a179e8d028c5d9814e998daf126cda",
+      "checked_versions": 27,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "gcc_alor",
+      "bytes": 389744,
+      "sha256": "09573196f232c11aad126aadebeea7edf3605168c0a5fdd1e6c363eeb8c43545",
+      "checked_versions": 20,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "gcc_canoe",
+      "bytes": 392656,
+      "sha256": "d2ff890e20920860fc049d6b93ee22ba02ed8b3232a30fe5996d410f40da172c",
+      "checked_versions": 19,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "gdsc_regulator",
+      "bytes": 359128,
+      "sha256": "ffb55f3c1210a7a2a8b1e3b35a535dc791aa296d92c62917a788968e226118f8",
+      "checked_versions": 71,
+      "dependencies": [
+        "debug_regulator",
+        "proxy_consumer"
+      ]
+    },
+    {
+      "module": "gpucc_canoe",
+      "bytes": 285512,
+      "sha256": "25481003b7d05c58164057eec5067fe9ffe13e41fb3288fe1fa2ee2dd7e304f6",
+      "checked_versions": 25,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "tcsrcc_canoe",
+      "bytes": 242440,
+      "sha256": "490bc6ea8152c2e91a882aacd3d1605406df31e55995c86a5d0d38fbbb8f523a",
+      "checked_versions": 9,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "videocc_canoe",
+      "bytes": 295912,
+      "sha256": "a5c7dd842eb1930a936f811fa5388e2065599f92a9ab0cb954d99d766e2e8fe1",
+      "checked_versions": 26,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "clk_scmi",
+      "bytes": 216832,
+      "sha256": "5a267adbd218c26a3f113f0ed2ba1ff2237fdb2dbc909db0a7fcedc8006b46da",
+      "checked_versions": 12,
+      "dependencies": []
+    },
+    {
+      "module": "msm_gpi",
+      "bytes": 506216,
+      "sha256": "35a5ef41d0f21490c3f9b1e40e091e727bd14407a00fe36aabc72c96c7d33e6d",
+      "checked_versions": 86,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "smem"
+      ]
+    },
+    {
+      "module": "dcvs_fp",
+      "bytes": 205240,
+      "sha256": "82f5535623822dcfa23a0904251ab50b19cc3a4d74ca12fbe9aa2d34e09a2f2a",
+      "checked_versions": 14,
+      "dependencies": [
+        "cmd_db",
+        "qcom_rpmh"
+      ]
+    },
+    {
+      "module": "qcom_dcvs",
+      "bytes": 700432,
+      "sha256": "7e50161f69b087e228b45f69b64501f7032923ff6325b2d831f7554269bc48aa",
+      "checked_versions": 69,
+      "dependencies": [
+        "dcvs_fp"
+      ]
+    },
+    {
+      "module": "qcom_pmu_lib",
+      "bytes": 365240,
+      "sha256": "0349f0337e5253c294676a3cc4242a9f83161f556b62c791a83fd22db3bf46c7",
+      "checked_versions": 57,
+      "dependencies": [
+        "cpu_phys_log_map",
+        "qcom_llcc_pmu",
+        "qcom_scmi_client"
+      ]
+    },
+    {
+      "module": "qcom_scmi_client",
+      "bytes": 201872,
+      "sha256": "5c5368739867a4611b09c7c2c9ceb0bf5256954063b3e20d1e173a1c25aea28d",
+      "checked_versions": 11,
+      "dependencies": []
+    },
+    {
+      "module": "mem_buf",
+      "bytes": 452088,
+      "sha256": "77cb2ecd407aac5b951d6681f6aad4ddce39b658346a098d2fc4f25502d708ce",
+      "checked_versions": 124,
+      "dependencies": [
+        "mem_buf_dev",
+        "mem_buf_msgq"
+      ]
+    },
+    {
+      "module": "mem_buf_dev",
+      "bytes": 834976,
+      "sha256": "bbc5e9d57b4b960bd939e652df9aae3c8ed06c6f60da6cb437f9d285c1edf969",
+      "checked_versions": 104,
+      "dependencies": [
+        "gh_mem_notifier",
+        "gh_rm_drv",
+        "gh_rm_heap_manager",
+        "secure_buffer"
+      ]
+    },
+    {
+      "module": "mem_buf_msgq",
+      "bytes": 231304,
+      "sha256": "26c54351a473835e11699ad60ca4287efef10cc25e3fb0d0d9e4b56dac1fed02",
+      "checked_versions": 42,
+      "dependencies": [
+        "gh_msgq",
+        "mem_buf_dev"
+      ]
+    },
+    {
+      "module": "altmode_glink",
+      "bytes": 241520,
+      "sha256": "9efcf9704b1002bbd3540f9cb45319236bfdf23e87df56ec786273e38c9e2555",
+      "checked_versions": 43,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "qti_pmic_glink"
+      ]
+    },
+    {
+      "module": "cmd_db",
+      "bytes": 211328,
+      "sha256": "76cab823e079da3766144be1c7ebc7d32bd13fa937761a6d3ec272734a29f0a3",
+      "checked_versions": 18,
+      "dependencies": []
+    },
+    {
+      "module": "cpu_phys_log_map",
+      "bytes": 198304,
+      "sha256": "f4f9b68bfbce034bb8712327ab40846a966f81e9c726bbbae072367ed4f4a486",
+      "checked_versions": 10,
+      "dependencies": []
+    },
+    {
+      "module": "cpucp_fast",
+      "bytes": 224576,
+      "sha256": "ff0e09d9f4fcfb09546ab1ec2817b6d65e60881f8be75b0458fe42a20480a94c",
+      "checked_versions": 25,
+      "dependencies": [
+        "cpu_phys_log_map",
+        "qcom_scmi_client",
+        "sched_walt"
+      ]
+    },
+    {
+      "module": "crm_v2",
+      "bytes": 401272,
+      "sha256": "3229c1b7bf6fac45608d5be96bc32cda34f67e3d1c13cebfb2c94981781b6619",
+      "checked_versions": 65,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "debug_symbol",
+      "bytes": 209896,
+      "sha256": "0fa0b6a58529d28aa8734d30e76c6456e4f32cdeeaa032c676cf6d31ca94fb6f",
+      "checked_versions": 10,
+      "dependencies": []
+    },
+    {
+      "module": "eud",
+      "bytes": 306056,
+      "sha256": "6882aa99a2c6f6933c94dccdeccccee70428d827fb7673c05ce56b4954297e18",
+      "checked_versions": 60,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "fsa4480_i2c",
+      "bytes": 283840,
+      "sha256": "5d406e07bba4019263c64caeb5a68a418df3348b0f6cb1459dc19fc78cbc3bbd",
+      "checked_versions": 37,
+      "dependencies": [
+        "qti_regmap_debugfs"
+      ]
+    },
+    {
+      "module": "gic_intr_routing",
+      "bytes": 287672,
+      "sha256": "7354770d43e8078b81d70944b6fa477c31072e9d49a5dcf4d66f167535c96177",
+      "checked_versions": 65,
+      "dependencies": [
+        "cpu_phys_log_map",
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "llcc_qcom",
+      "bytes": 333232,
+      "sha256": "f85c52952e4e6022e00a523c47e4d182d58a6ac58c55ed978b6767561f13e1f9",
+      "checked_versions": 51,
+      "dependencies": [
+        "socinfo"
+      ]
+    },
+    {
+      "module": "mdt_loader",
+      "bytes": 209736,
+      "sha256": "308c9a220b65d3c64e5fb7b0cbcf7b7eeced0a317a37bfb1c5ad85e11b1ad30e",
+      "checked_versions": 19,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "mem_prot",
+      "bytes": 234240,
+      "sha256": "600c281614cb24c756c874ab07a424f0222b6dc9366bb85acd0f34b80039d9c7",
+      "checked_versions": 38,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "memory_dump_v2",
+      "bytes": 275960,
+      "sha256": "abd575b4291daca79b7de75b5d274d28be212e7bc7ca8b09dbeeba8b79809796",
+      "checked_versions": 52,
+      "dependencies": [
+        "minidump",
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "minidump",
+      "bytes": 906128,
+      "sha256": "d5354a7e0de29e2cbfd1ccb9e069bd09f7f85554ef6ab9b5c7774b4dee034619",
+      "checked_versions": 125,
+      "dependencies": [
+        "debug_symbol",
+        "qcom_dma_heaps",
+        "smem"
+      ]
+    },
+    {
+      "module": "msm_performance",
+      "bytes": 342248,
+      "sha256": "90bda930d63c5689ec306f4f409cd60f96482b378fdeedba773c2179250191bf",
+      "checked_versions": 53,
+      "dependencies": [
+        "qcom_pmu_lib",
+        "sched_walt"
+      ]
+    },
+    {
+      "module": "panel_event_notifier",
+      "bytes": 189336,
+      "sha256": "113f482be2558b53fa8ff25698b92ef221ac225e4aedf62025dcb7e7a6cef8ea",
+      "checked_versions": 8,
+      "dependencies": []
+    },
+    {
+      "module": "pcie_pdc",
+      "bytes": 204464,
+      "sha256": "4f215949adbf8d68bd1de7c2550ecb952b9c910bccfad3bd7c2261de3a3f9e41",
+      "checked_versions": 9,
+      "dependencies": []
+    },
+    {
+      "module": "pdr_interface",
+      "bytes": 234912,
+      "sha256": "5cdad4dfe2caede841df0ead1f82c048ecbd22df4a2acace75600fbb8718bd74",
+      "checked_versions": 46,
+      "dependencies": [
+        "qcom_pdr_msg",
+        "qmi_helpers",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "pmic_pon_log",
+      "bytes": 230720,
+      "sha256": "6dd2b9b7c862ab68ee8c1d8d68465223a5826e5a14ad36c6c076a7066ab9d314",
+      "checked_versions": 16,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "qcom_aoss",
+      "bytes": 359056,
+      "sha256": "23bb478319a4393e099f07681e0b7d51f6825aeb4f09cd822b07a4209d56cf07",
+      "checked_versions": 76,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "qcom_cpu_vendor_hooks",
+      "bytes": 210712,
+      "sha256": "e55baf119921cd2e9b8aec3f34720c014bcdf2de9374c6c95a08f8eb13ab4275",
+      "checked_versions": 22,
+      "dependencies": [
+        "debug_symbol"
+      ]
+    },
+    {
+      "module": "qcom_cpucp",
+      "bytes": 224608,
+      "sha256": "c6b299b5d31f9626502a02a12d3913b43c0cb313d5ebe3a0ff0e389202c9a050",
+      "checked_versions": 22,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_ice",
+      "bytes": 253064,
+      "sha256": "ca2e921ede6b3da25c95c5926c43dacecc8f93ff123199187bc2e68cd716043a",
+      "checked_versions": 47,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "qcom_logbuf_boot_log",
+      "bytes": 191296,
+      "sha256": "5b38c2ccfa23b14c59877c4147b58ec07418709a0575ee33d7af7418141f326f",
+      "checked_versions": 17,
+      "dependencies": [
+        "minidump"
+      ]
+    },
+    {
+      "module": "qcom_logbuf_vendor_hooks",
+      "bytes": 205216,
+      "sha256": "efc490393480adcaefcea21b3968ae0070d4c96867b553de3858cde4cfb36ee7",
+      "checked_versions": 10,
+      "dependencies": [
+        "debug_symbol",
+        "minidump"
+      ]
+    },
+    {
+      "module": "qcom_pdr_msg",
+      "bytes": 111112,
+      "sha256": "24b47a69e226c91997f23d8c94067b51025dfb5a84bea62cd702b72564638d73",
+      "checked_versions": 2,
+      "dependencies": [
+        "qmi_helpers"
+      ]
+    },
+    {
+      "module": "qcom_ramdump",
+      "bytes": 250184,
+      "sha256": "0fc0ceb7733bed3b9095a878b7f3cb37b2829db5eddfc34da0d3ca56664af38b",
+      "checked_versions": 40,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_rpmh",
+      "bytes": 548360,
+      "sha256": "fbceea7214da83060080a18206b718fc8e5b7e02a69ec40359effd663da07135",
+      "checked_versions": 95,
+      "dependencies": [
+        "cmd_db",
+        "crm_v2",
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "qcom_sdei",
+      "bytes": 203312,
+      "sha256": "1eb16011673a651d753f6c26d9e6d354b69234f7bf00302cdf6628e44680e6f6",
+      "checked_versions": 14,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_soc_wdt",
+      "bytes": 204768,
+      "sha256": "f138ca5dc9030e6a3f4f1eb468bedaaba09e928d87c04ac16ad5d412b959371c",
+      "checked_versions": 13,
+      "dependencies": [
+        "qcom_wdt_core"
+      ]
+    },
+    {
+      "module": "qcom_va_minidump",
+      "bytes": 258552,
+      "sha256": "5db3ddc6211689966b5a8f9a49973844bd469933f1ed0ebe40c347235ff633e0",
+      "checked_versions": 49,
+      "dependencies": [
+        "minidump"
+      ]
+    },
+    {
+      "module": "qcom_wdt_core",
+      "bytes": 294832,
+      "sha256": "2607a8bfe1ac5698c3f0bee5f89c70ace78a8220b8bfdb37b5babd89d77ce503",
+      "checked_versions": 74,
+      "dependencies": [
+        "minidump",
+        "qcom_scm",
+        "qcom_sdei"
+      ]
+    },
+    {
+      "module": "qmi_helpers",
+      "bytes": 481432,
+      "sha256": "ac7d75697c4ac3ccd55459737995c32beade046d54e4054c0a634717e243bc17",
+      "checked_versions": 43,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "qti_pmic_glink",
+      "bytes": 272056,
+      "sha256": "de41be7da0943b254a51ca8602c1239440d29c7367e3f9b9ba007a67adb9d9ba",
+      "checked_versions": 69,
+      "dependencies": [
+        "pdr_interface",
+        "qcom_ipc_logging",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "secure_buffer",
+      "bytes": 356000,
+      "sha256": "3be0dcaaf803cd98fbdd336323039ac1fb4f8e9a59a388903762cae921bd0162",
+      "checked_versions": 42,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "smem",
+      "bytes": 245488,
+      "sha256": "2c283410ca584fb3681b7b4971698a1174941994ae76754d1a22e5e4420f3629",
+      "checked_versions": 25,
+      "dependencies": []
+    },
+    {
+      "module": "smp2p",
+      "bytes": 261528,
+      "sha256": "4b51161ef4f14dc31966a5ddc142832d76cc207c76bea5bfacd6eec8301ee637",
+      "checked_versions": 62,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "smem"
+      ]
+    },
+    {
+      "module": "smp2p_sleepstate",
+      "bytes": 243240,
+      "sha256": "edc0f1f97b1ff29336d619985d1da9a8dda4334e61f473e755923ca4db63008c",
+      "checked_versions": 24,
+      "dependencies": [
+        "smem"
+      ]
+    },
+    {
+      "module": "socinfo",
+      "bytes": 361664,
+      "sha256": "75c79841db1e9f79c0333a50d238eff759136c129b97fc00b4d301886329433b",
+      "checked_versions": 31,
+      "dependencies": [
+        "smem"
+      ]
+    },
+    {
+      "module": "wcd_usbss_i2c",
+      "bytes": 587976,
+      "sha256": "4ceb8ec60b14e4e1327aa5fb15ca160ba63cf0ff8485b42509da0353cfed9f3c",
+      "checked_versions": 70,
+      "dependencies": [
+        "qti_regmap_debugfs"
+      ]
+    },
+    {
+      "module": "cpuss_telemetry",
+      "bytes": 210448,
+      "sha256": "93cc7362227a0ad800a82a1206ac68092399f3075041fb82236fe80cc679b7ef",
+      "checked_versions": 28,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_cpuss_sleep_stats_v4",
+      "bytes": 221704,
+      "sha256": "4da5071bc492747cafb989500ea51f1054409e938da7c5145eb68824eb8fb6b6",
+      "checked_versions": 23,
+      "dependencies": [
+        "cpuss_telemetry"
+      ]
+    },
+    {
+      "module": "sps_drv",
+      "bytes": 1262088,
+      "sha256": "a37e11d3d4ed6e64537eeb75881ace3abf7c9da863a69d353fb63cfeb043becf",
+      "checked_versions": 73,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "virtio_pci_modern_dev",
+      "bytes": 242000,
+      "sha256": "4072566d6e82247634071f1f7b6edefddec599515f128fcc2805e249725112a5",
+      "checked_versions": 20,
+      "dependencies": []
+    },
+    {
+      "module": "virtio_pci_legacy_dev",
+      "bytes": 218768,
+      "sha256": "39cd1b31f6868e2fd2f6f531254d0415468dd7d8fe70071d0a5e3c6fed84e21d",
+      "checked_versions": 12,
+      "dependencies": []
+    },
+    {
+      "module": "virtio_pci",
+      "bytes": 519512,
+      "sha256": "08256858c877c3844ba5d7d7d76564dc36d8a838625563966db2ac9db65552c7",
+      "checked_versions": 104,
+      "dependencies": [
+        "virtio_pci_legacy_dev",
+        "virtio_pci_modern_dev"
+      ]
+    },
+    {
+      "module": "virtio_balloon",
+      "bytes": 317576,
+      "sha256": "a3505c38f090e13af5a90e0a393dffc4045aa9b0db0d50156dc159864389ec24",
+      "checked_versions": 83,
+      "dependencies": []
+    },
+    {
+      "module": "debug_regulator",
+      "bytes": 347728,
+      "sha256": "cf3c9b30e97d34c6ff254ad98eff6100899fc64da4c409abb970ba423f316b98",
+      "checked_versions": 57,
+      "dependencies": []
+    },
+    {
+      "module": "proxy_consumer",
+      "bytes": 250144,
+      "sha256": "dbb0b9a5dba9301787388a0b427174ac7d83026a381f26711be0bac605c7ca0d",
+      "checked_versions": 24,
+      "dependencies": []
+    },
+    {
+      "module": "qti_fixed_regulator",
+      "bytes": 260104,
+      "sha256": "c871b83a9e24d1b8e6f9a6ed3269e7b1088110258ad080e3b41a52ecfae90565",
+      "checked_versions": 29,
+      "dependencies": [
+        "debug_regulator",
+        "proxy_consumer"
+      ]
+    },
+    {
+      "module": "rpmh_regulator",
+      "bytes": 315544,
+      "sha256": "2250b8499e805d9670ac353fe97f107af38415a2dfd56e6698ca3b2449997291",
+      "checked_versions": 38,
+      "dependencies": [
+        "cmd_db",
+        "debug_regulator",
+        "proxy_consumer",
+        "qcom_ipc_logging",
+        "qcom_rpmh"
+      ]
+    },
+    {
+      "module": "stub_regulator",
+      "bytes": 247672,
+      "sha256": "93f3295bba43b66c1465cc51dc742136578f1d7e326236459b70fd2c988b45ca",
+      "checked_versions": 12,
+      "dependencies": [
+        "debug_regulator"
+      ]
+    },
+    {
+      "module": "msm_geni_serial",
+      "bytes": 681136,
+      "sha256": "384f3f9c9e4bc21af57d2bf0efb8e306bb56ccee63b13fdb732b08d6f39888df",
+      "checked_versions": 149,
+      "dependencies": [
+        "msm_gpi",
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "cctrng",
+      "bytes": 230264,
+      "sha256": "d9085db7f4430d1e28c31d6dec580c0da1711124186d631f3b5a497af4826d5a",
+      "checked_versions": 37,
+      "dependencies": []
+    },
+    {
+      "module": "virtio_console",
+      "bytes": 352568,
+      "sha256": "72626facb78d8e6135d82b1e296be3c31ebc423f3514ed2ddaf2c9f03854fd5e",
+      "checked_versions": 100,
+      "dependencies": []
+    },
+    {
+      "module": "arm_smmu",
+      "bytes": 1083104,
+      "sha256": "24c69878d6e2ddd4f467c13fb93d5331bb93fef7e5fd625c0e3e77f8f02b122f",
+      "checked_versions": 161,
+      "dependencies": [
+        "iommu_logger",
+        "qcom_iommu_util",
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "iommu_logger",
+      "bytes": 214088,
+      "sha256": "6f1ddd7885e702041f6b379ad26c63ba85629bd17ea6223dc9eb77f9e238697c",
+      "checked_versions": 13,
+      "dependencies": []
+    },
+    {
+      "module": "msm_dma_iommu_mapping",
+      "bytes": 233896,
+      "sha256": "0b6b1ae8e0559f19e44b5fa3f0b44f6a04c6952bf654df5ac3bda17b4769f2f3",
+      "checked_versions": 28,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_iommu_debug",
+      "bytes": 576480,
+      "sha256": "c13c570b0cc1e40f11f7a732f7d47c8733600e75cbad0a50be8d17f860d6df9c",
+      "checked_versions": 89,
+      "dependencies": [
+        "qcom_iommu_util",
+        "qcom_scm",
+        "secure_buffer"
+      ]
+    },
+    {
+      "module": "qcom_iommu_util",
+      "bytes": 1017912,
+      "sha256": "b93a2638f14a0c4cc5620e5efcaaf4a043b5f4e8f920f58c0750b845a5ebf8d6",
+      "checked_versions": 123,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "drm_display_helper",
+      "bytes": 1664912,
+      "sha256": "9641a3d5ad6c7cfddcadd41d85f61862b8f3bd563a0c1e9e09663715e24641e9",
+      "checked_versions": 96,
+      "dependencies": []
+    },
+    {
+      "module": "regmap_kunit",
+      "bytes": 487504,
+      "sha256": "195dde6d320aede5fc9e30f73c7cda691ea80956b32e62f3eed96673cabc23b9",
+      "checked_versions": 40,
+      "dependencies": [
+        "kunit",
+        "regmap_ram",
+        "regmap_raw_ram"
+      ]
+    },
+    {
+      "module": "regmap_ram",
+      "bytes": 204968,
+      "sha256": "39155065f2694fd514254c1f0a4fc4bd7110e08f8f51cb2acdc3520fc2329804",
+      "checked_versions": 6,
+      "dependencies": []
+    },
+    {
+      "module": "regmap_raw_ram",
+      "bytes": 207648,
+      "sha256": "cd7ddef98614a78c3e5e50f8d7eb8a0fac55e5be16f536b5974bced8fdecee07",
+      "checked_versions": 7,
+      "dependencies": []
+    },
+    {
+      "module": "qti_regmap_debugfs",
+      "bytes": 234888,
+      "sha256": "3e7ba42770b81fa132f0d8756705cf023357d93684be3eb7affc106098b7bbc9",
+      "checked_versions": 34,
+      "dependencies": []
+    },
+    {
+      "module": "virtio_blk",
+      "bytes": 312560,
+      "sha256": "fd5073f4d82d642ef61d54a1587b9ab4307e76260fc696d452c8919363f3ec99",
+      "checked_versions": 83,
+      "dependencies": []
+    },
+    {
+      "module": "zram",
+      "bytes": 525320,
+      "sha256": "e91b23c6d14e8d66091ba1295587163135c2541e37649d578b59d28b0530d19b",
+      "checked_versions": 91,
+      "dependencies": [
+        "zsmalloc"
+      ]
+    },
+    {
+      "module": "hwid",
+      "bytes": 187400,
+      "sha256": "53080f1bf3f7de921eea380f26de5dfcc04327a1cfd81ebd09ddc71de5295739",
+      "checked_versions": 3,
+      "dependencies": [
+        "socinfo"
+      ]
+    },
+    {
+      "module": "miev",
+      "bytes": 313632,
+      "sha256": "4da8efb6829e36f7c0d84bcccc145e95e86eabf54e20e7e9b0176e0559d31884",
+      "checked_versions": 36,
+      "dependencies": []
+    },
+    {
+      "module": "open_dice",
+      "bytes": 209944,
+      "sha256": "70794949890e2c19f8065d69a75f97509b004203c011e576d33dd4e604719136",
+      "checked_versions": 19,
+      "dependencies": []
+    },
+    {
+      "module": "vcpu_stall_detector",
+      "bytes": 216032,
+      "sha256": "93cc6346b61cf179d14c0e75871d93fc409f0d5cca13835b58cb1a826cdbb4a2",
+      "checked_versions": 23,
+      "dependencies": []
+    },
+    {
+      "module": "qseecom_proxy",
+      "bytes": 112184,
+      "sha256": "5e404b144accbe7b902bc6294f1fd95b0136611cae99637d643e0fa2c4ae76cd",
+      "checked_versions": 3,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_spmi_pmic",
+      "bytes": 225624,
+      "sha256": "352e6567d219fb4280094bf338532200e2e0ce997fdb871cece41b75308d51e3",
+      "checked_versions": 20,
+      "dependencies": [
+        "qti_regmap_debugfs"
+      ]
+    },
+    {
+      "module": "deferred_free_helper",
+      "bytes": 238920,
+      "sha256": "97830afeb1eff843fabc478068ea056bcca366f1fa4c04deb884776d8676bc7b",
+      "checked_versions": 18,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_dma_heaps",
+      "bytes": 1311512,
+      "sha256": "1ce68c2f2e2349e605ea843b121c6e9ffef5fb4be13510dbbffb0ed6b2d31eab",
+      "checked_versions": 111,
+      "dependencies": [
+        "deferred_free_helper",
+        "mem_buf_dev",
+        "msm_dma_iommu_mapping",
+        "qcom_scm",
+        "secure_buffer"
+      ]
+    },
+    {
+      "module": "sg",
+      "bytes": 395024,
+      "sha256": "c1621d7d0d495adbe392214313237677f375c7c59dad66136e32b3d2e0a6e346",
+      "checked_versions": 97,
+      "dependencies": []
+    },
+    {
+      "module": "spi_msm_geni",
+      "bytes": 526704,
+      "sha256": "a5516045725703d5ffcc7d596d9c895b52502a5a0c1b74c20e9147963f201dab",
+      "checked_versions": 119,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "spmi_pmic_arb",
+      "bytes": 311264,
+      "sha256": "3ba0cb55b251fa3e58cd10ef4c01ed959d10c16f14eebfe00d93564726380423",
+      "checked_versions": 57,
+      "dependencies": []
+    },
+    {
+      "module": "macsec",
+      "bytes": 635824,
+      "sha256": "48366083375749e3847d16f004c377c3193ae68a88f114ab437c69a66ae597ed",
+      "checked_versions": 100,
+      "dependencies": []
+    },
+    {
+      "module": "mii",
+      "bytes": 344376,
+      "sha256": "e83e7d43ec9b30000cbf1ca8b4d28e29d9ec061fd60d6f2eb503b9db6d8515ee",
+      "checked_versions": 7,
+      "dependencies": []
+    },
+    {
+      "module": "can_dev",
+      "bytes": 1748688,
+      "sha256": "cbe51bac2bc1a3e711c60eb7d4e47e9496c6ad88f7a2df2dbd20d08d836ded30",
+      "checked_versions": 63,
+      "dependencies": []
+    },
+    {
+      "module": "vcan",
+      "bytes": 356752,
+      "sha256": "dff2fd7931ed29b2c81935f420f64675e56dd5ed09097f1d3e0b452469baf931",
+      "checked_versions": 16,
+      "dependencies": [
+        "can_dev"
+      ]
+    },
+    {
+      "module": "slcan",
+      "bytes": 614912,
+      "sha256": "d78dc9338051bbfc46c3d5e744c75b689e9b166f97f2a7538cb63172ae50b217",
+      "checked_versions": 53,
+      "dependencies": [
+        "can_dev"
+      ]
+    },
+    {
+      "module": "ppp_generic",
+      "bytes": 522032,
+      "sha256": "0a24cf9763b71e52c0ca7bac6195e5411282060ab0eab374b5725426f2510203",
+      "checked_versions": 113,
+      "dependencies": [
+        "slhc"
+      ]
+    },
+    {
+      "module": "bsd_comp",
+      "bytes": 203232,
+      "sha256": "4eab8a1a72860e52b7169c421ad0729ce4a9c833cfc9a7493a0e9e1c99af5440",
+      "checked_versions": 10,
+      "dependencies": [
+        "ppp_generic"
+      ]
+    },
+    {
+      "module": "ppp_deflate",
+      "bytes": 205496,
+      "sha256": "561343a8b2c35913f3ed163cae4e988350765f9a96d3d21cfb3ad58189e95070",
+      "checked_versions": 21,
+      "dependencies": [
+        "ppp_generic"
+      ]
+    },
+    {
+      "module": "ppp_mppe",
+      "bytes": 215216,
+      "sha256": "9c410ff73f2bd2c4cb50c3253fea5f37b337995828e18d75848df0544016082e",
+      "checked_versions": 19,
+      "dependencies": [
+        "libarc4",
+        "ppp_generic"
+      ]
+    },
+    {
+      "module": "pppox",
+      "bytes": 339952,
+      "sha256": "dae7816563495a92117ede514c298f989a802aadc0027867e6e081311d3b41c1",
+      "checked_versions": 14,
+      "dependencies": [
+        "ppp_generic"
+      ]
+    },
+    {
+      "module": "pptp",
+      "bytes": 407784,
+      "sha256": "baac30b2b69bcd355c9f32ed250d7e483a533ea10adbc5d970e7a0c759af0fad",
+      "checked_versions": 58,
+      "dependencies": [
+        "ppp_generic",
+        "pppox"
+      ]
+    },
+    {
+      "module": "slhc",
+      "bytes": 376912,
+      "sha256": "b3503eb8519b6a459cbc71140424a028f744a349a9a34b4695ee183e2755edb8",
+      "checked_versions": 12,
+      "dependencies": []
+    },
+    {
+      "module": "wwan",
+      "bytes": 411472,
+      "sha256": "ebd798351f64399d5250d988314b04fee33e45a0c4c86ef3567f96bc3e141291",
+      "checked_versions": 76,
+      "dependencies": []
+    },
+    {
+      "module": "rtl8150",
+      "bytes": 399424,
+      "sha256": "9777a3c62c87cb976cdbc3fc53895ffbbb63edd9033f5c94668d710d66dc4485",
+      "checked_versions": 55,
+      "dependencies": []
+    },
+    {
+      "module": "r8152",
+      "bytes": 1118064,
+      "sha256": "fa850f0ba42307e8fcc2a88f3161837796634d4f185f3e6ea8ad08d9c4804a3a",
+      "checked_versions": 133,
+      "dependencies": [
+        "mii"
+      ]
+    },
+    {
+      "module": "asix",
+      "bytes": 940288,
+      "sha256": "95d5a56298fdbea913ea091f87c76dfb9820eebf57b5d92f7c4df6a91a2353a5",
+      "checked_versions": 100,
+      "dependencies": [
+        "mii",
+        "usbnet"
+      ]
+    },
+    {
+      "module": "ax88179_178a",
+      "bytes": 480576,
+      "sha256": "7e7215009fc9fc90256b65e918838a616f505b529c5d3ab2f5a079eed1f71ab2",
+      "checked_versions": 58,
+      "dependencies": [
+        "mii",
+        "usbnet"
+      ]
+    },
+    {
+      "module": "cdc_ether",
+      "bytes": 376728,
+      "sha256": "07685cf88e7ba35ce7a8e180f7c081418c48432cbbc815c15bb4a87d4c75ba46",
+      "checked_versions": 34,
+      "dependencies": [
+        "usbnet"
+      ]
+    },
+    {
+      "module": "cdc_eem",
+      "bytes": 352304,
+      "sha256": "0a42526270b7c60319928ef6bab2db59a9411b383c8b8254b471099bb0516983",
+      "checked_versions": 24,
+      "dependencies": [
+        "usbnet"
+      ]
+    },
+    {
+      "module": "usbnet",
+      "bytes": 494616,
+      "sha256": "24eda249351121ca0aad109a98432c8c45303add6286a09661787cd03aaef6f0",
+      "checked_versions": 94,
+      "dependencies": [
+        "mii"
+      ]
+    },
+    {
+      "module": "cdc_ncm",
+      "bytes": 443312,
+      "sha256": "2623ab89cb9062e94164399a656434e93afb5d5867c82b0927076f540dafaa88",
+      "checked_versions": 72,
+      "dependencies": [
+        "cdc_ether",
+        "usbnet"
+      ]
+    },
+    {
+      "module": "aqc111",
+      "bytes": 422232,
+      "sha256": "9b0ee7b745a5efa0a670d3ee4d3149083f4f58d1fcf48e890c17190e9e6da08e",
+      "checked_versions": 53,
+      "dependencies": [
+        "usbnet"
+      ]
+    },
+    {
+      "module": "r8153_ecm",
+      "bytes": 341512,
+      "sha256": "0870b05a14b844257437e6356306d0088fa4ee43f8a3b27bc3da0019eea3cf57",
+      "checked_versions": 15,
+      "dependencies": [
+        "cdc_ether",
+        "r8152",
+        "usbnet"
+      ]
+    },
+    {
+      "module": "msm_sharedmem",
+      "bytes": 217352,
+      "sha256": "5bcc3e417fb00d00a5cfed79339ce05b2177081b4bcf792b848c5349e4b9cf44",
+      "checked_versions": 18,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "phy_generic",
+      "bytes": 275352,
+      "sha256": "bf5e5ad444e5af2bbb952f1cafb262eea7e2935aef3790c084fb69e40ed62b8b",
+      "checked_versions": 32,
+      "dependencies": []
+    },
+    {
+      "module": "phy_msm_m31_eusb2",
+      "bytes": 289808,
+      "sha256": "3b9c125a042e417aaaff63f349b2e68f9b497e00c022e7ec560f9967d889fbbb",
+      "checked_versions": 46,
+      "dependencies": [
+        "qcom_scm",
+        "repeater"
+      ]
+    },
+    {
+      "module": "phy_msm_snps_hs",
+      "bytes": 323080,
+      "sha256": "7599eecfc3929367ffeb2a9d790c72555d8f30fbf50ed7069a356337e0adbcec",
+      "checked_versions": 64,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "phy_msm_ssusb_qmp",
+      "bytes": 303808,
+      "sha256": "8a5263cb139a117c8a7af176365d009a124e5a2d57f7adee56f0484ea114c583",
+      "checked_versions": 48,
+      "dependencies": [
+        "eom_driver"
+      ]
+    },
+    {
+      "module": "dwc3_msm",
+      "bytes": 1083592,
+      "sha256": "d62cec5d571933d113a758434d3d7600ccc723e1ef763b5ba112882b698e1c38",
+      "checked_versions": 223,
+      "dependencies": [
+        "clk_qcom",
+        "qcom_ipc_logging",
+        "redriver",
+        "repeater",
+        "wcd_usbss_i2c"
+      ]
+    },
+    {
+      "module": "xhci_pci_renesas",
+      "bytes": 232800,
+      "sha256": "433148059a15d4195cb36e78a3cf84ddb13ee7fa1034660df8fbdebc0c1f7e82",
+      "checked_versions": 23,
+      "dependencies": []
+    },
+    {
+      "module": "ehset",
+      "bytes": 210232,
+      "sha256": "5ffca7ef4137b6d2bd61020ce57d1a988a75d2a8c2396fd1ff775e22632bb89c",
+      "checked_versions": 9,
+      "dependencies": []
+    },
+    {
+      "module": "usb_f_gsi",
+      "bytes": 836808,
+      "sha256": "985389548894e624daca297b6e51b66e6ceef5c86ba3bfa756665bcfca9fbea3",
+      "checked_versions": 110,
+      "dependencies": [
+        "dwc3_msm",
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "ucsi_qti_glink",
+      "bytes": 245304,
+      "sha256": "816dd6d63378f1af6e4fca577f4e8bf4f815bbd0cd1e40d987634c03c32a10b0",
+      "checked_versions": 39,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "qti_pmic_glink"
+      ]
+    },
+    {
+      "module": "nb7vpq904m",
+      "bytes": 296672,
+      "sha256": "7026442f96458006492db1b30dab871997c89981ac16412952b9ffaef6c926c6",
+      "checked_versions": 40,
+      "dependencies": [
+        "redriver"
+      ]
+    },
+    {
+      "module": "redriver",
+      "bytes": 204088,
+      "sha256": "a6690db6c2d56a8fc6b09b3427971761b4bdb98859c46cd6cc0c026c28d87c32",
+      "checked_versions": 9,
+      "dependencies": []
+    },
+    {
+      "module": "repeater",
+      "bytes": 207072,
+      "sha256": "d135027489f637b680c55991cb1eb417b68e259c3d467217931d8bbc772eab0c",
+      "checked_versions": 19,
+      "dependencies": []
+    },
+    {
+      "module": "repeater_qti_pmic_eusb2",
+      "bytes": 260864,
+      "sha256": "2fb69654cf79b3c5f56095c20ae155f395335348dc63d5cb0bf5ba24a4f3b8e7",
+      "checked_versions": 24,
+      "dependencies": [
+        "repeater"
+      ]
+    },
+    {
+      "module": "usbmon",
+      "bytes": 664576,
+      "sha256": "ba2860a17150a1bf5dfebbabe3556426b7879840270376760b191a1a90b85742",
+      "checked_versions": 62,
+      "dependencies": []
+    },
+    {
+      "module": "cdc_acm",
+      "bytes": 354032,
+      "sha256": "5327fe840c1e506e6e83ccb28b980a9539ab09d7e1551b3c0b2b6827d1e50703",
+      "checked_versions": 94,
+      "dependencies": []
+    },
+    {
+      "module": "usbserial",
+      "bytes": 577448,
+      "sha256": "dd0478144bd53c7a4e23fb750960ac1c3fe7728063e08959ca74a3588939239c",
+      "checked_versions": 108,
+      "dependencies": []
+    },
+    {
+      "module": "ftdi_sio",
+      "bytes": 467456,
+      "sha256": "d468cd93ab924486d6c8a78a58f732b42365b63c6f743c9bb75fbffc802f65d7",
+      "checked_versions": 48,
+      "dependencies": [
+        "usbserial"
+      ]
+    },
+    {
+      "module": "focaltech_myron",
+      "bytes": 294680,
+      "sha256": "fc3e828859346432e6022386347082550e8c98242f592cb2f30b0582fe5845e4",
+      "checked_versions": 49,
+      "dependencies": []
+    },
+    {
+      "module": "pm8941_pwrkey",
+      "bytes": 263360,
+      "sha256": "169b1d097645e7be7b731c688a8ee50ce01af2aa4cd784bfd581a8eec83ad09c",
+      "checked_versions": 31,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_hv_haptics",
+      "bytes": 661480,
+      "sha256": "41119b27a901e1bd7adf368d7fe87c03357fcaefcf4aab95fa82c10236cc1afa",
+      "checked_versions": 123,
+      "dependencies": [
+        "qti_battery_charger",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "mi_fp",
+      "bytes": 1152976,
+      "sha256": "9244dd615761cf03b8170c21bb80f82645f20ab02ab990a4549980185f91d5a0",
+      "checked_versions": 111,
+      "dependencies": [
+        "panel_event_notifier"
+      ]
+    },
+    {
+      "module": "input_test",
+      "bytes": 219832,
+      "sha256": "38852743b003405453a5372583878adc98314d06ad445ccde8da61d00efddc7b",
+      "checked_versions": 24,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "lib_test",
+      "bytes": 187232,
+      "sha256": "9337d6434fd8804b7dbb9d963ff66eeef00377a4c55dd762cdd1627848bb28af",
+      "checked_versions": 7,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "rtc_pm8xxx",
+      "bytes": 258816,
+      "sha256": "925d85ceaa8edf928f95d85a43a3ea31f39d571069116b4d3dd88566f2df7db7",
+      "checked_versions": 30,
+      "dependencies": []
+    },
+    {
+      "module": "i2c_msm_geni",
+      "bytes": 546024,
+      "sha256": "031ccd42925fe3c257c60a13d7db9b831b2ce47354a1ba5bc183bf7d312da9e3",
+      "checked_versions": 105,
+      "dependencies": [
+        "msm_gpi",
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "ptp",
+      "bytes": 696912,
+      "sha256": "85281729b60ad303753d621f04bbddea67c5c5ff3fb03d35cf2381ae2b7febd6",
+      "checked_versions": 81,
+      "dependencies": [
+        "pps_core"
+      ]
+    },
+    {
+      "module": "ptp_kvm",
+      "bytes": 211296,
+      "sha256": "e0e5e0f5429abe718f5684594b9fb0238ceecb2ba84a801df6aec6d02532f551",
+      "checked_versions": 12,
+      "dependencies": [
+        "ptp"
+      ]
+    },
+    {
+      "module": "qcom_dload_mode",
+      "bytes": 262464,
+      "sha256": "1558a0c13a058ea0dac358780ec4f54ddc4e033acbccadf56a0643cbba4e65c4",
+      "checked_versions": 40,
+      "dependencies": [
+        "minidump",
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "qcom_pon",
+      "bytes": 201200,
+      "sha256": "4a7679425e242ff7bda944ac8771ded570af28ec5706c64272eb00a571a277c7",
+      "checked_versions": 11,
+      "dependencies": [
+        "reboot_mode"
+      ]
+    },
+    {
+      "module": "qcom_reboot_reason",
+      "bytes": 199224,
+      "sha256": "7b3926f2b4cb45e4c9256f660a253cb276c739343e897ad463db471bad2f4446",
+      "checked_versions": 9,
+      "dependencies": []
+    },
+    {
+      "module": "reboot_mode",
+      "bytes": 202640,
+      "sha256": "8fa1bbcd8d1a064ac67bf3911fbed398b9cba267362dd9955214e105b7b39a31",
+      "checked_versions": 16,
+      "dependencies": []
+    },
+    {
+      "module": "mca_business_battery_comp",
+      "bytes": 335600,
+      "sha256": "793ef3c011ce9a026feb5672096082507840355dfed214ff197fa4d2585cc217",
+      "checked_versions": 37,
+      "dependencies": [
+        "mca_event",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_strategy_fg_class",
+        "mca_voter"
+      ]
+    },
+    {
+      "module": "mca_business_charger_comp",
+      "bytes": 503104,
+      "sha256": "9481793c1ce2ed9c117b961852fdfad50c97ed1590639d7cdc5bf6b61001dabc",
+      "checked_versions": 92,
+      "dependencies": [
+        "charger_partition",
+        "fsa4480_i2c",
+        "mca_charge_mievent",
+        "mca_connector_antiburn",
+        "mca_event",
+        "mca_log",
+        "mca_lpd_detect",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_platform_wireless_class",
+        "mca_protocol_class",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_sysfs",
+        "mca_wireless_revchg"
+      ]
+    },
+    {
+      "module": "mca_adsp_glink",
+      "bytes": 228904,
+      "sha256": "ef086b11059fc2814fafd09e1dcdeb6c3d8a90578d27ad56acfa32189641f5d5",
+      "checked_versions": 24,
+      "dependencies": [
+        "mca_log",
+        "qti_pmic_glink"
+      ]
+    },
+    {
+      "module": "mca_charge_interface",
+      "bytes": 220800,
+      "sha256": "476d9352647e20647fcf943164a86497b08253c7bf1aae162a4532f45f5e7625",
+      "checked_versions": 20,
+      "dependencies": [
+        "mca_event",
+        "mca_log",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_charge_mievent",
+      "bytes": 150800,
+      "sha256": "7a567080f3d64065498818cb987c0310553e1ca9d289248f92adfee1c00f9618",
+      "checked_versions": 14,
+      "dependencies": [
+        "mca_event",
+        "mca_log",
+        "miev"
+      ]
+    },
+    {
+      "module": "mca_event",
+      "bytes": 215376,
+      "sha256": "3a2a921d32b8b174e71e8f7779a4e040a6cf7ea03d5783385da224841ceb21f0",
+      "checked_versions": 22,
+      "dependencies": [
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_qcom_panel",
+      "bytes": 208720,
+      "sha256": "86f0e634804298ba2853384ba6099b4fbb59c6bb2ffcad000e98d69650904e06",
+      "checked_versions": 19,
+      "dependencies": [
+        "mca_event",
+        "panel_event_notifier"
+      ]
+    },
+    {
+      "module": "mca_hwid",
+      "bytes": 187648,
+      "sha256": "c5e1f1cee290bbac901cd156536d3a499942a40a5be423d4ae8670beadf1c5d2",
+      "checked_versions": 17,
+      "dependencies": [
+        "hwid",
+        "mca_log"
+      ]
+    },
+    {
+      "module": "mca_log",
+      "bytes": 231072,
+      "sha256": "5fc0b0df683941fff091a361b9d24bf99e5c9c59e39ace4e608745e3bdd023dc",
+      "checked_versions": 25,
+      "dependencies": [
+        "mca_event",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_parse_dts",
+      "bytes": 198880,
+      "sha256": "237bed104bf1e286cc314824e861f0897eb8f1d6a9af15610cc4961abd6f8fee",
+      "checked_versions": 11,
+      "dependencies": [
+        "mca_log"
+      ]
+    },
+    {
+      "module": "mca_qcom_smem",
+      "bytes": 107872,
+      "sha256": "389f1760d2501b1a33b003a986bb260002039e37b76937aea73a917c60121135",
+      "checked_versions": 5,
+      "dependencies": [
+        "mca_log",
+        "smem"
+      ]
+    },
+    {
+      "module": "mca_sysfs",
+      "bytes": 241592,
+      "sha256": "b67aac734e7aba8b617332827ba800dab2efbff184b7118bc835fe2835c67f8c",
+      "checked_versions": 35,
+      "dependencies": []
+    },
+    {
+      "module": "mca_voter",
+      "bytes": 231152,
+      "sha256": "1ee0d470a55756e731d669ce3802e5ce950ecc9c7a6d4d6ad72fca2ae27b75e7",
+      "checked_versions": 34,
+      "dependencies": [
+        "mca_log"
+      ]
+    },
+    {
+      "module": "mca_workqueue",
+      "bytes": 113440,
+      "sha256": "237cbf22807cde7d1c144934ff6cabcbeacfb1e2223fc73ffac06333954192ce",
+      "checked_versions": 9,
+      "dependencies": [
+        "mca_log"
+      ]
+    },
+    {
+      "module": "sc8581",
+      "bytes": 387136,
+      "sha256": "1c9ef105605d45c0522478ea98f30d8f6e187e9eeaa1e93542ec831058df21b6",
+      "checked_versions": 49,
+      "dependencies": [
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_cp_class",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "bq27z561",
+      "bytes": 586784,
+      "sha256": "b4e3497549cfb24ae9df5e47c23f52b32f375b12cd779ca9840dbe5f08437be9",
+      "checked_versions": 60,
+      "dependencies": [
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_fg_ic_ops",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "hl7603",
+      "bytes": 253696,
+      "sha256": "977f609ba52d50a05d844b8fefb05da8d553b83e2ac2433c3b3961b9e5182c4f",
+      "checked_versions": 12,
+      "dependencies": [
+        "mca_event",
+        "mca_log",
+        "mca_parse_dts"
+      ]
+    },
+    {
+      "module": "sc96281_charger",
+      "bytes": 441704,
+      "sha256": "7b389be846ded2f8bffd20924d54b98d186e398654e22231c89edd1e80c31e05",
+      "checked_versions": 56,
+      "dependencies": [
+        "mca_adsp_glink",
+        "mca_basic_wireless",
+        "mca_event",
+        "mca_log",
+        "mca_platform_wireless_class",
+        "mca_strategy_class"
+      ]
+    },
+    {
+      "module": "mca_bmd",
+      "bytes": 239848,
+      "sha256": "8f1be86d0eb82b7b4814c1a1b471a74e5d4de4a50dc677ecc135f2c100333583",
+      "checked_versions": 33,
+      "dependencies": [
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_wireless_class",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_connector_antiburn",
+      "bytes": 262792,
+      "sha256": "6c25ae513a52e2ff0a91d5f6389bae24cc392a91f70d72d168ea785361cb5168",
+      "checked_versions": 49,
+      "dependencies": [
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_protocol_class",
+        "mca_protocol_pd_class",
+        "mca_sysfs",
+        "mca_workqueue"
+      ]
+    },
+    {
+      "module": "mca_ibat_ocp_monitor",
+      "bytes": 220544,
+      "sha256": "723c2e1271960c168eef72e67db8fdd764081743d46ecbdbb711cd9d0ac56228",
+      "checked_versions": 27,
+      "dependencies": [
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_fg_ic_ops",
+        "mca_platform_loadsw_class",
+        "mca_platform_wireless_class",
+        "mca_strategy_fg_class",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_lpd_detect",
+      "bytes": 208480,
+      "sha256": "174f7b1cf7b8143684390e6ca20aeae2fdf4b5ce224ca661f1f02e074139f304",
+      "checked_versions": 26,
+      "dependencies": [
+        "mca_log",
+        "mca_platform_buckchg_class",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_path_control",
+      "bytes": 254672,
+      "sha256": "5c6c99f4f63a3b678988b3d9ce76ae75a75bb15a0b9ada88d12ddd1bccc2e5c7",
+      "checked_versions": 40,
+      "dependencies": [
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_platform_wireless_class",
+        "mca_sysfs",
+        "mca_wireless_revchg"
+      ]
+    },
+    {
+      "module": "mca_vbat_ovp_monitor",
+      "bytes": 218304,
+      "sha256": "b0471e11c1fb29aa6fde7c0cf0a5b51f53825e1c23c1b994cd5532cd5740bdf2",
+      "checked_versions": 27,
+      "dependencies": [
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_wireless_class",
+        "mca_strategy_fg_class",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_platform_bc12_class",
+      "bytes": 214464,
+      "sha256": "d95d1de807063aeacdc3c730ed724d3271072b900a0ff2058037a742cd7213df",
+      "checked_versions": 20,
+      "dependencies": [
+        "mca_log",
+        "mca_protocol_class",
+        "mca_protocol_pd_class"
+      ]
+    },
+    {
+      "module": "mca_platform_buckchg_class",
+      "bytes": 360752,
+      "sha256": "7e9798d26bea0d76352900595db0c23d79f5a6f98f6517dabbc83dacfe9cf9d4",
+      "checked_versions": 14,
+      "dependencies": []
+    },
+    {
+      "module": "mca_platform_cp_class",
+      "bytes": 299528,
+      "sha256": "1986391ddc1f822602c8908f4c168b68181d15d648c19b7ae43309f991528dca",
+      "checked_versions": 21,
+      "dependencies": [
+        "mca_log",
+        "mca_parse_dts",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_platform_fg_ic_ops",
+      "bytes": 333896,
+      "sha256": "be3043c5416495bf2b84486b9bb723f6d0bbd80179272a3cd5f8a0c14291f08b",
+      "checked_versions": 14,
+      "dependencies": []
+    },
+    {
+      "module": "mca_platform_loadsw_class",
+      "bytes": 220936,
+      "sha256": "fc1eb87835ee500386e3701121aa586e7ff6cc3e1e7dd759c3543928107f089c",
+      "checked_versions": 17,
+      "dependencies": [
+        "mca_log",
+        "mca_parse_dts",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_platform_wireless_class",
+      "bytes": 325032,
+      "sha256": "df3c1314236af0948f9482b4376fb59aac403cf1e2eb8a37fe34c6d5659b7b98",
+      "checked_versions": 16,
+      "dependencies": [
+        "mca_log",
+        "mca_parse_dts",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "qcom_adsp_pd_protocol",
+      "bytes": 277544,
+      "sha256": "8418145ea29c0c086cabf72e9b75007640efbb0f82099ccd4d18b35844975120",
+      "checked_versions": 18,
+      "dependencies": [
+        "mca_adsp_glink",
+        "mca_event",
+        "mca_log",
+        "mca_protocol_pd_class"
+      ]
+    },
+    {
+      "module": "mca_protocol_pd_class",
+      "bytes": 349872,
+      "sha256": "1773222ff290ac79c2c3d4e1c69d52477da6a3a91a8da72d8aacdf9c96d67a52",
+      "checked_versions": 27,
+      "dependencies": [
+        "mca_event",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_protocol_class",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_protocol_qc_class",
+      "bytes": 204360,
+      "sha256": "b80ab5e9b041d0cab230cc5ebc650176fb055130cb718e1ea1b1a8f41d7e6e53",
+      "checked_versions": 5,
+      "dependencies": [
+        "mca_protocol_class"
+      ]
+    },
+    {
+      "module": "mca_protocol_class",
+      "bytes": 227368,
+      "sha256": "75ca046295fd2c712739ad04d4739de97e6ab292ce4829ec6595164fdae5b2e0",
+      "checked_versions": 13,
+      "dependencies": []
+    },
+    {
+      "module": "mca_qcom_subpmic_proxy",
+      "bytes": 289088,
+      "sha256": "caef53815f873897b5e4886bce9fbc4d3024dd2e690c4c5723dc2bc5845d1ac8",
+      "checked_versions": 51,
+      "dependencies": [
+        "mca_adsp_glink",
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_bc12_class",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_protocol_pd_class",
+        "mca_protocol_qc_class",
+        "mca_strategy_class"
+      ]
+    },
+    {
+      "module": "mca_qcom_sysfs",
+      "bytes": 243936,
+      "sha256": "6b4b29d18823fbc3a7c3e0e409baafe84e45a796cfac8af143150aa76dd5d2bf",
+      "checked_versions": 47,
+      "dependencies": [
+        "mca_basic_wireless",
+        "mca_charger_thermal",
+        "mca_log",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_platform_wireless_class",
+        "mca_protocol_class",
+        "mca_protocol_pd_class",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_wireless_revchg"
+      ]
+    },
+    {
+      "module": "charger_partition",
+      "bytes": 318712,
+      "sha256": "a3a2e3b2d12adb53480e84459f0002a16a1e59fb52ac92a8a0798f07768987e2",
+      "checked_versions": 43,
+      "dependencies": [
+        "mca_event",
+        "mca_log",
+        "mca_strategy_class",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_smart_charge",
+      "bytes": 325520,
+      "sha256": "0f46b1478023a71a81ec144c0a2d4085a21bbafd80fd6d31566c146739b0a991",
+      "checked_versions": 62,
+      "dependencies": [
+        "charger_partition",
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_sysfs",
+        "mca_voter"
+      ]
+    },
+    {
+      "module": "mca_buckchg_jeita",
+      "bytes": 277896,
+      "sha256": "782ba108326031eb63c0953c55ae9fdbbfbc6864791c4ada3205790e05f19885",
+      "checked_versions": 46,
+      "dependencies": [
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_fg_ic_ops",
+        "mca_platform_loadsw_class",
+        "mca_smart_charge",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_voter"
+      ]
+    },
+    {
+      "module": "mca_charger_thermal",
+      "bytes": 275432,
+      "sha256": "707dc6af3e4a4443d9829c3437a1747e8fcb931795c93f75f632ae89289789ac",
+      "checked_versions": 43,
+      "dependencies": [
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_fg_ic_ops",
+        "mca_protocol_class",
+        "mca_qcom_smem",
+        "mca_smart_charge",
+        "mca_strategy_class",
+        "mca_sysfs",
+        "mca_voter"
+      ]
+    },
+    {
+      "module": "mca_strategy_buckchg",
+      "bytes": 385656,
+      "sha256": "e954e41e1f76d498fd032e01e7210a544d4b4c1a48f5ad7367f580b3e4bc50f4",
+      "checked_versions": 112,
+      "dependencies": [
+        "mca_charge_interface",
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_platform_fg_ic_ops",
+        "mca_platform_loadsw_class",
+        "mca_protocol_class",
+        "mca_protocol_pd_class",
+        "mca_qcom_smem",
+        "mca_smart_charge",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_voter",
+        "mca_wireless_revchg",
+        "mca_workqueue"
+      ]
+    },
+    {
+      "module": "mca_strategy_quickchg",
+      "bytes": 502264,
+      "sha256": "5dbdc5177de59f64f0ff6992e2c6e18796062433c62b3470ed969d991f4c875f",
+      "checked_versions": 112,
+      "dependencies": [
+        "mca_charge_interface",
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_platform_fg_ic_ops",
+        "mca_platform_loadsw_class",
+        "mca_protocol_class",
+        "mca_protocol_pd_class",
+        "mca_protocol_qc_class",
+        "mca_smart_charge",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_sysfs",
+        "mca_voter"
+      ]
+    },
+    {
+      "module": "mca_strategy_fg_class",
+      "bytes": 223416,
+      "sha256": "195b24c57330ac2f923db49bf926cbae05ce4ceb09c5022d781383aa7432a5f5",
+      "checked_versions": 3,
+      "dependencies": []
+    },
+    {
+      "module": "mca_strategy_fg_comp",
+      "bytes": 660736,
+      "sha256": "b6e239b85df806cfcee22a3dda58a08b5f54f58289eb9907921a528f5d96c920",
+      "checked_versions": 143,
+      "dependencies": [
+        "charger_partition",
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_fg_ic_ops",
+        "mca_platform_loadsw_class",
+        "mca_protocol_class",
+        "mca_protocol_pd_class",
+        "mca_qcom_smem",
+        "mca_smart_charge",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_sysfs",
+        "mca_voter",
+        "mca_workqueue"
+      ]
+    },
+    {
+      "module": "mca_pd_auth",
+      "bytes": 229824,
+      "sha256": "e634dd265d55d8c38888720e5be46bf217b83dde6d5c635fa12fe73505f4db45",
+      "checked_versions": 32,
+      "dependencies": [
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_log",
+        "mca_platform_buckchg_class",
+        "mca_protocol_pd_class",
+        "mca_sysfs"
+      ]
+    },
+    {
+      "module": "mca_basic_wireless",
+      "bytes": 505648,
+      "sha256": "4ab8e7488488cc0287c409574743271eca56ff307a0049003ec95cefbe009373",
+      "checked_versions": 148,
+      "dependencies": [
+        "mca_charge_interface",
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_platform_loadsw_class",
+        "mca_platform_wireless_class",
+        "mca_protocol_pd_class",
+        "mca_smart_charge",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_sysfs",
+        "mca_voter",
+        "mca_wireless_revchg",
+        "mca_workqueue"
+      ]
+    },
+    {
+      "module": "mca_quick_wireless",
+      "bytes": 365912,
+      "sha256": "4b5fa2585df1c5e3dfa240c51d3fa29b1a1c6e95d1ba3492de3e2aa0cc1290bb",
+      "checked_versions": 85,
+      "dependencies": [
+        "mca_basic_wireless",
+        "mca_charge_interface",
+        "mca_hwid",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_platform_fg_ic_ops",
+        "mca_platform_loadsw_class",
+        "mca_platform_wireless_class",
+        "mca_smart_charge",
+        "mca_strategy_class",
+        "mca_strategy_fg_class",
+        "mca_voter"
+      ]
+    },
+    {
+      "module": "mca_wireless_revchg",
+      "bytes": 331264,
+      "sha256": "fa9c1daa2437147cf12fbca9873ccaed1e5d67517b5e2a08f9f3e2d1b6ebaf72",
+      "checked_versions": 75,
+      "dependencies": [
+        "mca_charge_mievent",
+        "mca_event",
+        "mca_log",
+        "mca_parse_dts",
+        "mca_platform_buckchg_class",
+        "mca_platform_cp_class",
+        "mca_platform_wireless_class",
+        "mca_protocol_class",
+        "mca_strategy_class",
+        "mca_sysfs",
+        "mca_voter"
+      ]
+    },
+    {
+      "module": "mca_strategy_class",
+      "bytes": 196504,
+      "sha256": "a3094c8057d849764e85ede68aa9c250b8081d30e2ad1309838135a20ad8e95e",
+      "checked_versions": 3,
+      "dependencies": []
+    },
+    {
+      "module": "myron_mca_readonly",
+      "bytes": 261824,
+      "sha256": "3eb68130b7aad0891269b23a470bf08784b72e352b83b64486fae88422f36f35",
+      "checked_versions": 40,
+      "dependencies": [
+        "qti_pmic_glink"
+      ]
+    },
+    {
+      "module": "myron_bq_readonly",
+      "bytes": 280472,
+      "sha256": "8eedd42d5100bd82cb4a5ecbb4d7931d709ce52324e165aa0e95dc3ee25d50eb",
+      "checked_versions": 27,
+      "dependencies": []
+    },
+    {
+      "module": "qti_battery_charger",
+      "bytes": 451392,
+      "sha256": "e2de8a4a1bb7dfc471965854e0c8eea0e443b459e31717680ec7134dcdd2246b",
+      "checked_versions": 88,
+      "dependencies": [
+        "panel_event_notifier",
+        "qti_pmic_glink"
+      ]
+    },
+    {
+      "module": "pwrseq_core",
+      "bytes": 259648,
+      "sha256": "30bffcda2304d79cd6a3b8db0557e5156f19ebb0c5314cdb943695ff5edf02c6",
+      "checked_versions": 54,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_spmi_temp_alarm",
+      "bytes": 213176,
+      "sha256": "0faa45d1485a18c9034f2f2d640687d7e77c8d936245d5696afd96b608f787a4",
+      "checked_versions": 24,
+      "dependencies": []
+    },
+    {
+      "module": "bcl_pmic5",
+      "bytes": 381792,
+      "sha256": "61d49ebb5fff1097cbe33417aa39deb0ba53604a6df36c742361124e7cc0f9db",
+      "checked_versions": 54,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "cpu_hotplug",
+      "bytes": 219960,
+      "sha256": "3f2782332c8288b981f17a459d87f5b9c95384f0833821d4f08f2e264068ba49",
+      "checked_versions": 29,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_tsens",
+      "bytes": 699544,
+      "sha256": "423ae47bfa16e413521d62293ea8e86ae97e02711ca4d4734444a1a2657ce116",
+      "checked_versions": 60,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "thermal_pause",
+      "bytes": 271288,
+      "sha256": "0da6c77ed7f4bf91ee37e35665d73d0991705ee44806188ba5130cc1191955f3",
+      "checked_versions": 35,
+      "dependencies": [
+        "sched_walt"
+      ]
+    },
+    {
+      "module": "qti_cpufreq_cdev",
+      "bytes": 228888,
+      "sha256": "e0e0b0e496f1592e3740f4f9e09ac954617b377e117f520ab060090597d0ace5",
+      "checked_versions": 35,
+      "dependencies": []
+    },
+    {
+      "module": "qti_devfreq_cdev",
+      "bytes": 206512,
+      "sha256": "9abf629725dc0f4719a999c07961ccec51ff775ca3f4012ffe2258940d987f85",
+      "checked_versions": 19,
+      "dependencies": []
+    },
+    {
+      "module": "qti_dynamic_hw_trip",
+      "bytes": 209272,
+      "sha256": "ff1e3fabc741c61c4cffd2156889749e1ce9a0c75efd28d0b14ac14fe8bb5dc4",
+      "checked_versions": 16,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "qcom_scmi_client"
+      ]
+    },
+    {
+      "module": "qti_userspace_cdev",
+      "bytes": 203768,
+      "sha256": "6a80f42a8fdb303def12b79f9ee84fdbb25712a2e0be9974913b73c077176c46",
+      "checked_versions": 13,
+      "dependencies": []
+    },
+    {
+      "module": "mi_thermal_interface",
+      "bytes": 204992,
+      "sha256": "d599050db5effefef1495b6d30a5c5b93ed8aabcd47528b27ad5c254de2bece4",
+      "checked_versions": 16,
+      "dependencies": [
+        "mca_event"
+      ]
+    },
+    {
+      "module": "pretimeout_dump",
+      "bytes": 193000,
+      "sha256": "7ba185197e79b1802710fbb883cc67e8112a6eb9fd964f0ddf8e0616eed53949",
+      "checked_versions": 6,
+      "dependencies": []
+    },
+    {
+      "module": "cqhci",
+      "bytes": 419264,
+      "sha256": "71e28a1e4d2554bd36f4006d1ec66d2cf06f4586fb94112b20bb0d2722b0b3d1",
+      "checked_versions": 37,
+      "dependencies": []
+    },
+    {
+      "module": "sdhci_msm",
+      "bytes": 506944,
+      "sha256": "a7b99650def1cd9d2281c9778c0303b01439b20bee954bcc789f8da38b27a0f6",
+      "checked_versions": 167,
+      "dependencies": [
+        "clk_qcom",
+        "cqhci",
+        "pinctrl_msm",
+        "qcom_ice",
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "ufs_qcom",
+      "bytes": 816552,
+      "sha256": "2db9c328206be50d3ad73e629eb88fd2193821348abc99eb04d2ff7312d9fcd3",
+      "checked_versions": 222,
+      "dependencies": [
+        "clk_qcom",
+        "minidump",
+        "phy_qcom_ufs",
+        "qcom_ice",
+        "qcom_ipc_logging",
+        "sched_walt",
+        "ufshcd_crypto_qti"
+      ]
+    },
+    {
+      "module": "ufshcd_crypto_qti",
+      "bytes": 303960,
+      "sha256": "78b6412529d39280d1803fc4c4fc1ecc699e67d23f68748a3f086c2bf530d0a6",
+      "checked_versions": 15,
+      "dependencies": [
+        "qcom_ice"
+      ]
+    },
+    {
+      "module": "qcom_scmi_vendor",
+      "bytes": 199816,
+      "sha256": "7fc60f0878ffe7177a38e0a3cf1ef8272c62ba3b9763a981fb4eafd0c1908b33",
+      "checked_versions": 7,
+      "dependencies": []
+    },
+    {
+      "module": "si_core_module",
+      "bytes": 822840,
+      "sha256": "563025a8cd0e02c7cf5221161f93bc7ffedb137dd18f44dbfc3c53ae6527b3c1",
+      "checked_versions": 93,
+      "dependencies": [
+        "mem_buf_dev",
+        "qcom_scm",
+        "qseecom_proxy"
+      ]
+    },
+    {
+      "module": "qcom_scm",
+      "bytes": 1129264,
+      "sha256": "93c71f390e8c3b2f8c9d5fcd801113a9c74b2dd45a81f6f4a498a92c00997a09",
+      "checked_versions": 117,
+      "dependencies": []
+    },
+    {
+      "module": "hid_uclogic_test",
+      "bytes": 189792,
+      "sha256": "9a79615d214bedea36a7fd0b53a18586ac6b6561d7edcad5fef14ab78d7bb61a",
+      "checked_versions": 10,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "of_kunit_helpers",
+      "bytes": 188616,
+      "sha256": "f76de444c9683e98d82a3752d735581d396659291dc1b2a910c519d0efba3d42",
+      "checked_versions": 10,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "msm_qmp",
+      "bytes": 310368,
+      "sha256": "716031fb0856378299b222fd379c68c6e69fd6eaa8b1ea54332efaa32d13ca6f",
+      "checked_versions": 59,
+      "dependencies": [
+        "qcom_aoss",
+        "qcom_ipc_logging",
+        "smem"
+      ]
+    },
+    {
+      "module": "qcom_ipcc",
+      "bytes": 263408,
+      "sha256": "1c13ff817bbf9ebf2beaff73af6eb2c12062f41efce8f84214f3ee391cde3def",
+      "checked_versions": 28,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_hwspinlock",
+      "bytes": 213840,
+      "sha256": "f9753609e8593163778733145d9d3f284265f355b4a8a8655e7fbae77e0ab0db",
+      "checked_versions": 18,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_pil_info",
+      "bytes": 192184,
+      "sha256": "fde2662dc87cde1939e15666c7c0191a089779b86e8fa05c98966a806913573f",
+      "checked_versions": 18,
+      "dependencies": []
+    },
+    {
+      "module": "qcom_q6v5",
+      "bytes": 243784,
+      "sha256": "830df95158cf4046c82957914286929b3b12a2172caadcab2254f7a0965b23a9",
+      "checked_versions": 48,
+      "dependencies": [
+        "qcom_aoss",
+        "qcom_sysmon",
+        "rproc_qcom_common",
+        "smem"
+      ]
+    },
+    {
+      "module": "qcom_q6v5_pas",
+      "bytes": 475392,
+      "sha256": "e26d6140fb2e4d845dbf2c2c92b8db5ee2db854764d0ff1728c07df58b44ac07",
+      "checked_versions": 149,
+      "dependencies": [
+        "mdt_loader",
+        "qcom_pil_info",
+        "qcom_q6v5",
+        "qcom_ramdump",
+        "qcom_scm",
+        "qcom_sysmon",
+        "rproc_qcom_common",
+        "smem"
+      ]
+    },
+    {
+      "module": "qcom_sysmon",
+      "bytes": 266920,
+      "sha256": "43b369a7bf23300afa981c49d0c6425e0a122f8f4305a44a2e370024586d9718",
+      "checked_versions": 54,
+      "dependencies": [
+        "qmi_helpers",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "rproc_qcom_common",
+      "bytes": 462304,
+      "sha256": "9328815368ecd7e48b2fcd832b6ef6554b0c021b23fa60624953238111b6e3e6",
+      "checked_versions": 83,
+      "dependencies": [
+        "qcom_glink",
+        "qcom_glink_smem",
+        "qcom_smd",
+        "smem"
+      ]
+    },
+    {
+      "module": "qcom_spss",
+      "bytes": 299552,
+      "sha256": "898f5ff5e393ff3ff6937c75ebbbbd240b0af7ffd43fdc220571dfe0afc12cb3",
+      "checked_versions": 78,
+      "dependencies": [
+        "mdt_loader",
+        "qcom_aoss",
+        "qcom_glink",
+        "qcom_glink_spss",
+        "qcom_scm",
+        "qcom_sysmon",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "glink_pkt",
+      "bytes": 331464,
+      "sha256": "66590085952f12ea053487a5dece8a5da36ac592eed373c086228272ef823935",
+      "checked_versions": 99,
+      "dependencies": [
+        "qcom_glink",
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "qcom_glink",
+      "bytes": 592184,
+      "sha256": "ff0a8d71f26c8126925eebcaf0e6faecb8428cda74cf479e40fbee699d460415",
+      "checked_versions": 81,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "qcom_glink_smem",
+      "bytes": 224752,
+      "sha256": "f93f5e4c0e8f57672da4b8a778accef5a4aca21dbb03abd9b4840f641e945d66",
+      "checked_versions": 35,
+      "dependencies": [
+        "qcom_glink",
+        "qcom_ipc_logging",
+        "smem"
+      ]
+    },
+    {
+      "module": "qcom_smd",
+      "bytes": 284544,
+      "sha256": "d185be9ec46a10ff4ce6386458842aebeb8e8fcab786e4fbed092df91eeb7a29",
+      "checked_versions": 68,
+      "dependencies": [
+        "smem"
+      ]
+    },
+    {
+      "module": "qcom_glink_spss",
+      "bytes": 225200,
+      "sha256": "2d6791fad48bdff14f323a837fea0198f96ba30860cbf74fedfc5cbe163bf01b",
+      "checked_versions": 41,
+      "dependencies": [
+        "qcom_glink",
+        "smem"
+      ]
+    },
+    {
+      "module": "gh_dbl",
+      "bytes": 216304,
+      "sha256": "36dc6481a686cc89027bee7ca878962869516a611d0a8bb66a53e819cdb185f7",
+      "checked_versions": 19,
+      "dependencies": []
+    },
+    {
+      "module": "gh_irq_lend",
+      "bytes": 133824,
+      "sha256": "ae4d20879b4f2f1601abb2d24f94df40ba6079d26dd39508983368a23e6c5568",
+      "checked_versions": 21,
+      "dependencies": [
+        "gh_rm_drv"
+      ]
+    },
+    {
+      "module": "gh_mem_notifier",
+      "bytes": 112720,
+      "sha256": "f930918d7b2cbf2286b85523b95e139ec073e6717164aedcbd8d6595379f601d",
+      "checked_versions": 6,
+      "dependencies": [
+        "gh_rm_drv"
+      ]
+    },
+    {
+      "module": "gh_msgq",
+      "bytes": 224248,
+      "sha256": "8c0d9811c2fd59fe7e7940690c16cb6719a2c779484cde713bc4eb7954912682",
+      "checked_versions": 24,
+      "dependencies": []
+    },
+    {
+      "module": "gh_rm_drv",
+      "bytes": 806592,
+      "sha256": "1bb1ae2b81df1525d5472b5d6819a84a426e10641d430405f517a0e71b2f249a",
+      "checked_versions": 90,
+      "dependencies": [
+        "gh_arm_drv",
+        "gh_dbl",
+        "gh_msgq",
+        "qcom_scm",
+        "secure_buffer"
+      ]
+    },
+    {
+      "module": "gh_rm_heap_manager",
+      "bytes": 218840,
+      "sha256": "8dfa70e19ab3dc81ab33c8f568f463befd15cbfca159dc330038bd99eb5f0423",
+      "checked_versions": 19,
+      "dependencies": [
+        "gh_rm_drv",
+        "mem_prot"
+      ]
+    },
+    {
+      "module": "gh_vcpu_mgr",
+      "bytes": 338104,
+      "sha256": "95f358c4e0ba1d844daf46de009c2f574416818decf0344b7cf419ce07069a86",
+      "checked_versions": 67,
+      "dependencies": [
+        "gh_rm_drv"
+      ]
+    },
+    {
+      "module": "exynos_hvm",
+      "bytes": 1110704,
+      "sha256": "3d86c5a152c5f0c30fab53a95adf1bbda10d6aba2d38cf663ceb525b91f9aafd",
+      "checked_versions": 98,
+      "dependencies": []
+    },
+    {
+      "module": "governor_gpubw_mon",
+      "bytes": 211160,
+      "sha256": "fd36bd4c53cb0e93da658760a16e0bc0f28420ca317a5b62ed1a8fc3f8c27ea1",
+      "checked_versions": 15,
+      "dependencies": []
+    },
+    {
+      "module": "governor_msm_adreno_ro",
+      "bytes": 193992,
+      "sha256": "9ba6332a252dc9b264c596b40ec82f78659b331a0f21d4a88ad4fa4d444df13f",
+      "checked_versions": 4,
+      "dependencies": []
+    },
+    {
+      "module": "governor_msm_adreno_tz",
+      "bytes": 236768,
+      "sha256": "8ba75f9f1681fdcc249c03f3e405051686609df104dbf71f77ac103b1b837d97",
+      "checked_versions": 34,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "qcom_spmi_adc5_gen3",
+      "bytes": 354312,
+      "sha256": "662180b4369f8cd6b4d57c97bf3f430ec179a0819c42352a197f43c02d4c18bf",
+      "checked_versions": 57,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "qcom_vadc_common"
+      ]
+    },
+    {
+      "module": "qcom_vadc_common",
+      "bytes": 150264,
+      "sha256": "08a97eff9602757413223d25b140106fa72be2661bce27c55c9fc1848e3d1272",
+      "checked_versions": 2,
+      "dependencies": []
+    },
+    {
+      "module": "iio_test_format",
+      "bytes": 256648,
+      "sha256": "2bc515c85cbb38808498f6276aa296e92ab14c6ebca06ab215e5141be3d2f0bd",
+      "checked_versions": 11,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "arm_smmu_pmu",
+      "bytes": 325328,
+      "sha256": "ec467588b839827fdebc82f38c137ae06af99b3ed31abf1151eab1c6fccebb91",
+      "checked_versions": 35,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "qcom_llcc_pmu",
+      "bytes": 293144,
+      "sha256": "4812a778bd29c6f3c2c254f3c23bf8038eb48a71cad471843e84d04a1951cbb6",
+      "checked_versions": 29,
+      "dependencies": [
+        "cpu_phys_log_map"
+      ]
+    },
+    {
+      "module": "nvmem_qcom_spmi_sdam",
+      "bytes": 202776,
+      "sha256": "5ec882632ef0c92a91d47fbc78a5e134315505b318189dd30b7f82072e02a2a9",
+      "checked_versions": 12,
+      "dependencies": []
+    },
+    {
+      "module": "nvmem_qfprom",
+      "bytes": 275616,
+      "sha256": "30e5de578d17dbe1dda3649829e184ac0ad9dedda75501963105ce26535a4c50",
+      "checked_versions": 45,
+      "dependencies": []
+    },
+    {
+      "module": "icc_bcm_voter",
+      "bytes": 318944,
+      "sha256": "f42ae7eee1f3423b4dee9e2693d29a18139bff69654677c39042dd379d53a5c6",
+      "checked_versions": 38,
+      "dependencies": [
+        "crm_v2",
+        "qcom_rpmh"
+      ]
+    },
+    {
+      "module": "icc_debug",
+      "bytes": 286928,
+      "sha256": "e52f21ca913de01d0035ea2b4960feed58740628809bded295db562524d8cd53",
+      "checked_versions": 21,
+      "dependencies": []
+    },
+    {
+      "module": "icc_rpmh",
+      "bytes": 234320,
+      "sha256": "c40742b989eda56c5ce584ae159c9f12544be7bdb49a0c5c44cb30dddc51d302",
+      "checked_versions": 44,
+      "dependencies": [
+        "cmd_db",
+        "icc_bcm_voter",
+        "icc_debug",
+        "socinfo"
+      ]
+    },
+    {
+      "module": "qnoc_alor",
+      "bytes": 882592,
+      "sha256": "689278043af70b51b596968b7dbd2beed54f1ebda8c1992f7c941726089333ae",
+      "checked_versions": 9,
+      "dependencies": [
+        "icc_rpmh",
+        "qnoc_qos"
+      ]
+    },
+    {
+      "module": "qnoc_canoe",
+      "bytes": 873688,
+      "sha256": "8b21eb51c7bd678799b582aeb4ac3a8f954b122ebac20691adaf8ed85d3efc52",
+      "checked_versions": 9,
+      "dependencies": [
+        "icc_rpmh",
+        "qnoc_qos"
+      ]
+    },
+    {
+      "module": "qnoc_qos",
+      "bytes": 108552,
+      "sha256": "c121b4ecc30a84ed247f51062760462e5caca7b0d0b665a02be7ec612bb4d72c",
+      "checked_versions": 2,
+      "dependencies": []
+    },
+    {
+      "module": "icc_clk",
+      "bytes": 201960,
+      "sha256": "63655666662797938f697bf5fbfddf7d4b4b8a3a8f876d4d571f7ff38b40cc02",
+      "checked_versions": 19,
+      "dependencies": []
+    },
+    {
+      "module": "eom_driver",
+      "bytes": 337096,
+      "sha256": "628329e525e23b10e7e56894ab95c3e511cfda641f7d93edc46bc9aee652513a",
+      "checked_versions": 29,
+      "dependencies": []
+    },
+    {
+      "module": "tfa98xx_dlkm",
+      "bytes": 1346152,
+      "sha256": "50e2a5c5001bc05cadc74ea03639b1da0e0c64f19771615634c4ff20cc0bdd6f",
+      "checked_versions": 106,
+      "dependencies": []
+    },
+    {
+      "module": "pps_core",
+      "bytes": 421800,
+      "sha256": "6c05a3e88d0d19410a110a0b2e125f66c15f3c858b0e0052117c17718e924523",
+      "checked_versions": 46,
+      "dependencies": []
+    },
+    {
+      "module": "hci_uart",
+      "bytes": 1784112,
+      "sha256": "df69e3697da8faa3ac054c429a130c04615cb0a6137ae3f88ec271c81b148c5a",
+      "checked_versions": 183,
+      "dependencies": [
+        "bluetooth",
+        "btbcm",
+        "btqca",
+        "pwrseq_core"
+      ]
+    },
+    {
+      "module": "btsdio",
+      "bytes": 380184,
+      "sha256": "0bc60056b0e0afe3eab448284f76e9d11ca49ce89237007f0c20ca33cd144df5",
+      "checked_versions": 33,
+      "dependencies": [
+        "bluetooth"
+      ]
+    },
+    {
+      "module": "btbcm",
+      "bytes": 386824,
+      "sha256": "468e7a697bfbe6d005e36d6e48f87a191c5a817563b3fee18e261233a6de7811",
+      "checked_versions": 22,
+      "dependencies": [
+        "bluetooth"
+      ]
+    },
+    {
+      "module": "btqca",
+      "bytes": 387400,
+      "sha256": "959edcd6a9d1632793f6d0e8024f08e5f9d4fc179af0f2ac5ba3d96df63cb8db",
+      "checked_versions": 31,
+      "dependencies": [
+        "bluetooth"
+      ]
+    },
+    {
+      "module": "coresight",
+      "bytes": 1618688,
+      "sha256": "d122749922678c9d5ef900a452f0dcbe8b989e9448a611df267ea6d1f0001f50",
+      "checked_versions": 114,
+      "dependencies": []
+    },
+    {
+      "module": "gnss",
+      "bytes": 233152,
+      "sha256": "e7be1efba1c18e37fe7d1c6068b1ba80962afd6cdd9c5609fb8978f4ab36becc",
+      "checked_versions": 50,
+      "dependencies": []
+    },
+    {
+      "module": "snd_hda_codec_hdmi",
+      "bytes": 585608,
+      "sha256": "ea55e25ab268653f94c61067784df4bf402386052542116b3f0db76cc5ce29e9",
+      "checked_versions": 101,
+      "dependencies": []
+    },
+    {
+      "module": "snd_soc_simple_card_utils",
+      "bytes": 312608,
+      "sha256": "aff7846ae51915aeb1afd5cfa1cf1c7dca7e46ab424638ffa7b9c90dd819ed78",
+      "checked_versions": 58,
+      "dependencies": []
+    },
+    {
+      "module": "snd_soc_audio_graph_card",
+      "bytes": 276040,
+      "sha256": "a563f6283d817fb9cf320d97b708242f0f49a5f54c6d6445caa46d0681fdbe10",
+      "checked_versions": 56,
+      "dependencies": [
+        "snd_soc_simple_card_utils"
+      ]
+    },
+    {
+      "module": "soc_topology_test",
+      "bytes": 303272,
+      "sha256": "852831896ae3283b22d0acd664e7762f8b54ef13bed7f4fbe5caac44bbf30a9e",
+      "checked_versions": 18,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "soc_utils_test",
+      "bytes": 193920,
+      "sha256": "9e11824e0f38f196d56de25cb319c0184077e9b477fc1ade2721fdfd719a10ee",
+      "checked_versions": 9,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "dev_addr_lists_test",
+      "bytes": 343552,
+      "sha256": "ff1681287ef56537b00ca863d75714fff000046697ec838505653210876f046f",
+      "checked_versions": 21,
+      "dependencies": [
+        "kunit"
+      ]
+    },
+    {
+      "module": "8021q",
+      "bytes": 1042872,
+      "sha256": "5ae43628ab451f7603f3de4dc28f78efe5174ce33f92399369c90c6a5df42bdd",
+      "checked_versions": 102,
+      "dependencies": []
+    },
+    {
+      "module": "cfg80211",
+      "bytes": 8019096,
+      "sha256": "572cf5ba0f3c13f2555b147c2624adc4a6c9f9f8db3aee77f5299126123a1853",
+      "checked_versions": 197,
+      "dependencies": [
+        "rfkill"
+      ]
+    },
+    {
+      "module": "vmw_vsock_virtio_transport",
+      "bytes": 390512,
+      "sha256": "bb4be7dbbafcaaea115302a162f0b82c4db4e17c001fcb9c1b6ac78432701bca",
+      "checked_versions": 79,
+      "dependencies": []
+    },
+    {
+      "module": "tls",
+      "bytes": 1610400,
+      "sha256": "3af7cee99d4d564125e7a58200462448b8ee1c2562ee4f28aa9d142781bf9856",
+      "checked_versions": 147,
+      "dependencies": []
+    },
+    {
+      "module": "can",
+      "bytes": 594136,
+      "sha256": "c0a1834e16d47bed2213c662106ac65d51ed8b94ae24035537bed95932612cba",
+      "checked_versions": 59,
+      "dependencies": []
+    },
+    {
+      "module": "can_raw",
+      "bytes": 435344,
+      "sha256": "d8ed23275a48a114b8186307fea7eec6682b05f07768c3ca0281ba074144993f",
+      "checked_versions": 62,
+      "dependencies": [
+        "can"
+      ]
+    },
+    {
+      "module": "can_bcm",
+      "bytes": 447568,
+      "sha256": "b5a9491b290680a094fae54191a703b8c93ebda7a6e21d07cb505c3925e7b9e4",
+      "checked_versions": 81,
+      "dependencies": [
+        "can"
+      ]
+    },
+    {
+      "module": "can_gw",
+      "bytes": 390736,
+      "sha256": "69f84f3c91098741062753c88437099861dc5772165c3984e4a024a1da5d6f58",
+      "checked_versions": 44,
+      "dependencies": [
+        "can"
+      ]
+    },
+    {
+      "module": "bluetooth",
+      "bytes": 7404848,
+      "sha256": "a9fc7562da1a3b7aa34d2e8372ca39786ccf3179e06143776adf5b6583f511ee",
+      "checked_versions": 246,
+      "dependencies": [
+        "rfkill"
+      ]
+    },
+    {
+      "module": "rfcomm",
+      "bytes": 1119704,
+      "sha256": "257cafb253d1e3e8e54b0b68c4b294059794a32db6576721c9b2f9a086f7652e",
+      "checked_versions": 145,
+      "dependencies": [
+        "bluetooth"
+      ]
+    },
+    {
+      "module": "hidp",
+      "bytes": 706648,
+      "sha256": "9ef003896bd29dae47233bc16799441a848885622fa7ebf490ce0fcf625bdcc9",
+      "checked_versions": 105,
+      "dependencies": [
+        "bluetooth"
+      ]
+    },
+    {
+      "module": "l2tp_core",
+      "bytes": 581176,
+      "sha256": "79a015d38ff95a737a08e035a94f59715bd8f3ebca8f18c4b5554612df79d82e",
+      "checked_versions": 84,
+      "dependencies": []
+    },
+    {
+      "module": "l2tp_ppp",
+      "bytes": 457168,
+      "sha256": "ff72ad5137d154f04b6833f2c1ff71ee46e392c81d6d511b4d942917ae4f510f",
+      "checked_versions": 83,
+      "dependencies": [
+        "l2tp_core",
+        "ppp_generic",
+        "pppox"
+      ]
+    },
+    {
+      "module": "tipc",
+      "bytes": 6413152,
+      "sha256": "3b05524f16de84056acd30ece8df86c5a66ff6f869c73704ec8cc77f991a8b2e",
+      "checked_versions": 256,
+      "dependencies": []
+    },
+    {
+      "module": "tipc_diag",
+      "bytes": 328344,
+      "sha256": "35192fc343a7fc347c761a963d05e81c8f407872bde35d88db1b977c6d66c0d9",
+      "checked_versions": 11,
+      "dependencies": [
+        "tipc"
+      ]
+    },
+    {
+      "module": "rfkill",
+      "bytes": 291488,
+      "sha256": "83e1db13b0a8fe7b71a06691d065550184942f69856a917d29154718a4b3b2f8",
+      "checked_versions": 58,
+      "dependencies": []
+    },
+    {
+      "module": "9pnet",
+      "bytes": 839368,
+      "sha256": "e4b1940fc426e5c8ed69dddde3f0c5ee18c283e15b18fd25131c1ded9602e332",
+      "checked_versions": 85,
+      "dependencies": [
+        "netfs"
+      ]
+    },
+    {
+      "module": "9pnet_fd",
+      "bytes": 408600,
+      "sha256": "3286a143d2c93074f9eda56814f61037c895f67046bd822aa30ee555a0f409c8",
+      "checked_versions": 45,
+      "dependencies": [
+        "9pnet"
+      ]
+    },
+    {
+      "module": "6lowpan",
+      "bytes": 1037480,
+      "sha256": "aee5fd8c736b7513e8fb05dbccca8e959e7d5ca6bb98339bda4a4e4cca9af9ae",
+      "checked_versions": 29,
+      "dependencies": []
+    },
+    {
+      "module": "nhc_dest",
+      "bytes": 333328,
+      "sha256": "3897e264e97a3d9525e097f0269cb53e9a73aaaeadb024fc5dde489b5a154e9d",
+      "checked_versions": 3,
+      "dependencies": [
+        "6lowpan"
+      ]
+    },
+    {
+      "module": "nhc_fragment",
+      "bytes": 333272,
+      "sha256": "e534856e4067a97392be0c27b379f7c7b9ef3d970f090282f85a090fa0512dc9",
+      "checked_versions": 3,
+      "dependencies": [
+        "6lowpan"
+      ]
+    },
+    {
+      "module": "nhc_hop",
+      "bytes": 333312,
+      "sha256": "66292fa17b8ef6b10a9eee7472807fac3aff8edef5ce8f9890c357ce86456118",
+      "checked_versions": 3,
+      "dependencies": [
+        "6lowpan"
+      ]
+    },
+    {
+      "module": "nhc_ipv6",
+      "bytes": 333264,
+      "sha256": "a241ef0043b87b57fdc66fd1c4e073eb8b173212025fbe64a07515f68ef1297b",
+      "checked_versions": 3,
+      "dependencies": [
+        "6lowpan"
+      ]
+    },
+    {
+      "module": "nhc_mobility",
+      "bytes": 333280,
+      "sha256": "a6302b93689d1707bc4b52e430b8e3577f7ead69546566143d3dfcdd31208880",
+      "checked_versions": 3,
+      "dependencies": [
+        "6lowpan"
+      ]
+    },
+    {
+      "module": "nhc_routing",
+      "bytes": 333416,
+      "sha256": "d761f35678143185e902d766d886b3b0346a034e4a9085c1023c0f2f104531ed",
+      "checked_versions": 3,
+      "dependencies": [
+        "6lowpan"
+      ]
+    },
+    {
+      "module": "nhc_udp",
+      "bytes": 345944,
+      "sha256": "b8dc0457d0bced701f339b1f41b9675bd21d7f7f096c42f13f89a10d3229f3f3",
+      "checked_versions": 7,
+      "dependencies": [
+        "6lowpan"
+      ]
+    },
+    {
+      "module": "ieee802154_6lowpan",
+      "bytes": 1055208,
+      "sha256": "f5b9ef0718e9f7313454ac5ab4393c8c99904af467c86f5769fc5bdc7a3e9d4b",
+      "checked_versions": 66,
+      "dependencies": [
+        "6lowpan",
+        "ieee802154"
+      ]
+    },
+    {
+      "module": "ieee802154",
+      "bytes": 2318112,
+      "sha256": "71bb72cc1e77aa92a23b33b6837538c534e4dfba5b840109f40d2180fa731516",
+      "checked_versions": 96,
+      "dependencies": []
+    },
+    {
+      "module": "ieee802154_socket",
+      "bytes": 428936,
+      "sha256": "f49d57a9f6c1db49c475415dd57661c7355c6e8c372ad513d616d554860b1aff",
+      "checked_versions": 74,
+      "dependencies": [
+        "ieee802154"
+      ]
+    },
+    {
+      "module": "mac802154",
+      "bytes": 2752872,
+      "sha256": "c3000faff25fb6a7cfedec32890ec6bafb4e4278ff5d106c6eaa76ed61f199bb",
+      "checked_versions": 143,
+      "dependencies": [
+        "ieee802154"
+      ]
+    },
+    {
+      "module": "nfc",
+      "bytes": 1991000,
+      "sha256": "a1f5f9c1164ec224c78c81c3139d4d097dc6bf0ddbd18bb66a0afbbb9ff62239",
+      "checked_versions": 132,
+      "dependencies": [
+        "rfkill"
+      ]
+    },
+    {
+      "module": "qrtr",
+      "bytes": 793600,
+      "sha256": "84b0371519af6470af5139ed5b1b12e7f3a9b638d105d1ba314a45ee1ced951a",
+      "checked_versions": 147,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "qrtr_mhi",
+      "bytes": 358704,
+      "sha256": "646ce85511f39175adafc89022c65b34f503d5e9b8e63231e4d59a6240f2a04a",
+      "checked_versions": 30,
+      "dependencies": [
+        "mhi",
+        "qrtr"
+      ]
+    },
+    {
+      "module": "qrtr_smd",
+      "bytes": 220984,
+      "sha256": "2532f44fb48196d9d1ff1317e4717abd2ad030af09ed4ae7a7748e144e7310c7",
+      "checked_versions": 23,
+      "dependencies": [
+        "qcom_glink",
+        "qrtr"
+      ]
+    },
+    {
+      "module": "msm_ext_display",
+      "bytes": 227912,
+      "sha256": "7b2a6ad2ba29bdc21d733cd5197f1b54c231f2f0720a6311f9e8567e6a43d07d",
+      "checked_versions": 20,
+      "dependencies": []
+    },
+    {
+      "module": "msm_hfi_core",
+      "bytes": 1804856,
+      "sha256": "35622397e45ddb500eeb775b4d87303f19b491a14112be951b870ff0858dbe52",
+      "checked_versions": 120,
+      "dependencies": [
+        "mdt_loader",
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "msm_hw_fence",
+      "bytes": 1780264,
+      "sha256": "1726cef9b4369cd8d0c07b05cd68eeb951563a42c413c3a112ef680a019980f2",
+      "checked_versions": 129,
+      "dependencies": [
+        "gh_dbl",
+        "gh_rm_drv",
+        "qcom_scm",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "sync_fence",
+      "bytes": 264736,
+      "sha256": "4acde84f8111b4f15812a4f980f3db1f3327052c827ad0d8003ab7e5c40e47a6",
+      "checked_versions": 55,
+      "dependencies": []
+    },
+    {
+      "module": "adsp_loader_dlkm",
+      "bytes": 234744,
+      "sha256": "6c39202c28e9c7afb266764c07a9491c241fb1234b067ca6191d785538b4deaa",
+      "checked_versions": 44,
+      "dependencies": [
+        "rproc_qcom_common",
+        "spf_core_dlkm"
+      ]
+    },
+    {
+      "module": "audio_pkt_dlkm",
+      "bytes": 276768,
+      "sha256": "e818d86a878845b52f3a5219ef0210f6d5a9812384b4588981add5df61a6b1d3",
+      "checked_versions": 55,
+      "dependencies": [
+        "audpkt_ion_dlkm",
+        "gpr_dlkm",
+        "qcom_ipc_logging",
+        "spf_core_dlkm"
+      ]
+    },
+    {
+      "module": "audio_prm_dlkm",
+      "bytes": 233992,
+      "sha256": "e267c7304377ff9ace2aa164b3c4935043a27f04676210ebdf44dc84a2d4238d",
+      "checked_versions": 26,
+      "dependencies": [
+        "gpr_dlkm",
+        "q6_notifier_dlkm",
+        "spf_core_dlkm"
+      ]
+    },
+    {
+      "module": "audpkt_ion_dlkm",
+      "bytes": 259832,
+      "sha256": "1c5fcd9c60007ba92b819c327409263a0bba48b284266a6c7f4531f12d26bcd4",
+      "checked_versions": 42,
+      "dependencies": [
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "gpr_dlkm",
+      "bytes": 253856,
+      "sha256": "32dd197bd23e8c050c889798e5894d6283d2b335c02c1b3f44a5a6350385d9b8",
+      "checked_versions": 52,
+      "dependencies": [
+        "q6_notifier_dlkm",
+        "snd_event_dlkm"
+      ]
+    },
+    {
+      "module": "hdmi_dlkm",
+      "bytes": 289128,
+      "sha256": "0645384612284bb558385030c09f00d408a82db236ced47b8ada31904685be52",
+      "checked_versions": 24,
+      "dependencies": [
+        "msm_ext_display"
+      ]
+    },
+    {
+      "module": "lpass_bt_swr_dlkm",
+      "bytes": 236640,
+      "sha256": "5d32a8c6b1f25397ebdb31b7570a93e1d084bdb831b6f546a9b5b7c6f15c97ff",
+      "checked_versions": 48,
+      "dependencies": [
+        "snd_event_dlkm",
+        "spf_core_dlkm",
+        "swr_ctrl_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "lpass_cdc_dlkm",
+      "bytes": 900472,
+      "sha256": "e6118d9aa3d93e896b55211f971f48bbb512637741211072f51d97d539f69a76",
+      "checked_versions": 84,
+      "dependencies": [
+        "qti_regmap_debugfs",
+        "snd_event_dlkm",
+        "spf_core_dlkm"
+      ]
+    },
+    {
+      "module": "lpass_cdc_rx_macro_dlkm",
+      "bytes": 534712,
+      "sha256": "e56aaea71a2a63497539517df96c1e5a49618576b29aa41f3ed6735ca2f4f800",
+      "checked_versions": 93,
+      "dependencies": [
+        "lpass_cdc_dlkm",
+        "swr_ctrl_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "lpass_cdc_tx_macro_dlkm",
+      "bytes": 413080,
+      "sha256": "6e6cec296f5db2e5c5855d811327f82c62db804afaca6651b4c0f233a72ff5ff",
+      "checked_versions": 73,
+      "dependencies": [
+        "lpass_cdc_dlkm"
+      ]
+    },
+    {
+      "module": "lpass_cdc_va_macro_dlkm",
+      "bytes": 450680,
+      "sha256": "5e2840777cbb3f6ef7d8ced758d3206dc0035c156d3e442993f3925b718a4374",
+      "checked_versions": 102,
+      "dependencies": [
+        "lpass_cdc_dlkm",
+        "swr_ctrl_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "lpass_cdc_wsa2_macro_dlkm",
+      "bytes": 532920,
+      "sha256": "b9ca3bfd463c5854564926d7f69615cc7c6e2f7a340465b2036b01d7f95cc5ce",
+      "checked_versions": 91,
+      "dependencies": [
+        "lpass_cdc_dlkm",
+        "swr_ctrl_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "lpass_cdc_wsa_macro_dlkm",
+      "bytes": 527696,
+      "sha256": "a722e2b076e8c252e3064fb623d0ee226067919cea191cd51f71f2f18ec6d66f",
+      "checked_versions": 96,
+      "dependencies": [
+        "lpass_cdc_dlkm",
+        "swr_ctrl_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "machine_dlkm",
+      "bytes": 704856,
+      "sha256": "41ee075fdd6c881ff9fb92c683b016bfbe63136c6cc1ad065c59fdce2dea111c",
+      "checked_versions": 121,
+      "dependencies": [
+        "audio_prm_dlkm",
+        "fsa4480_i2c",
+        "lpass_cdc_dlkm",
+        "lpass_cdc_rx_macro_dlkm",
+        "snd_event_dlkm",
+        "socinfo",
+        "spf_core_dlkm",
+        "wcd9378_dlkm",
+        "wcd937x_dlkm",
+        "wcd939x_dlkm",
+        "wcd_core_dlkm",
+        "wcd_usbss_i2c",
+        "wsa883x_dlkm",
+        "wsa884x_dlkm"
+      ]
+    },
+    {
+      "module": "mbhc_dlkm",
+      "bytes": 580120,
+      "sha256": "4664dd782f151a21899759c14f05738518902d34b2790765fcb28e80b93ec320",
+      "checked_versions": 44,
+      "dependencies": [
+        "fsa4480_i2c",
+        "wcd_usbss_i2c"
+      ]
+    },
+    {
+      "module": "pinctrl_lpi_dlkm",
+      "bytes": 276296,
+      "sha256": "cc5608851841707073eaeb87aa790212c324f9ae950e9c02de1290c3339be119",
+      "checked_versions": 50,
+      "dependencies": [
+        "machine_dlkm",
+        "q6_notifier_dlkm",
+        "snd_event_dlkm",
+        "spf_core_dlkm"
+      ]
+    },
+    {
+      "module": "q6_dlkm",
+      "bytes": 114008,
+      "sha256": "4312daeb14e392b1b861d11b359ef2d9da76c5442424ae94099e99bb9d7b415f",
+      "checked_versions": 7,
+      "dependencies": []
+    },
+    {
+      "module": "q6_notifier_dlkm",
+      "bytes": 249400,
+      "sha256": "c2046e79ee7f59e8944e7a0499827f83894f9c83d17159e19574105e170111f8",
+      "checked_versions": 32,
+      "dependencies": [
+        "q6_pdr_dlkm",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "q6_pdr_dlkm",
+      "bytes": 107752,
+      "sha256": "a9cff9c37cd315718242476e611742a95f362ba39fd6887fe5bf7f89f37dad6e",
+      "checked_versions": 5,
+      "dependencies": [
+        "pdr_interface"
+      ]
+    },
+    {
+      "module": "sdca_registers_dlkm",
+      "bytes": 254056,
+      "sha256": "849f764f7bc97e38270f65a1741d5f37dc4a6b5da6f01559c27a54b9b27d5844",
+      "checked_versions": 19,
+      "dependencies": []
+    },
+    {
+      "module": "snd_event_dlkm",
+      "bytes": 221488,
+      "sha256": "963ed3fba52da18f475b84f0448ffe23d2f670feaf731c61b3ed0e5ead3fe9fe",
+      "checked_versions": 13,
+      "dependencies": []
+    },
+    {
+      "module": "spf_core_dlkm",
+      "bytes": 238584,
+      "sha256": "b1e9a69f4d8ba36b4db342f4caddf2a6e2c88e7c3f357deba37bf47230f3d280",
+      "checked_versions": 36,
+      "dependencies": [
+        "gpr_dlkm"
+      ]
+    },
+    {
+      "module": "stub_dlkm",
+      "bytes": 233688,
+      "sha256": "7ad4c3ad6915830f1edb9cc7831619a798a933e2a05092db9fc964e199bb11f9",
+      "checked_versions": 5,
+      "dependencies": []
+    },
+    {
+      "module": "swr_ctrl_dlkm",
+      "bytes": 457184,
+      "sha256": "ad369506b24418ae636fc6f4138e363e3e126a959265a3f5568c8567bf266eb9",
+      "checked_versions": 101,
+      "dependencies": [
+        "spf_core_dlkm",
+        "swr_dlkm"
+      ]
+    },
+    {
+      "module": "swr_dlkm",
+      "bytes": 383016,
+      "sha256": "6d4568da6e604ca77790e0f976c5b6e3111444e6f8993d7e3d370fecd7cbe9bd",
+      "checked_versions": 44,
+      "dependencies": []
+    },
+    {
+      "module": "swr_haptics_dlkm",
+      "bytes": 329960,
+      "sha256": "936c11e8477dec78b6ae5b6be26f04256fcea9dceeba15c1dc557a7af775838a",
+      "checked_versions": 41,
+      "dependencies": [
+        "qti_battery_charger",
+        "rproc_qcom_common",
+        "swr_dlkm"
+      ]
+    },
+    {
+      "module": "wcd9378_dlkm",
+      "bytes": 1124904,
+      "sha256": "09aba63a7f095d023ffef767fa1636a10db86fe9c16f6e1139dd723824a9d681",
+      "checked_versions": 113,
+      "dependencies": [
+        "mbhc_dlkm",
+        "qti_regmap_debugfs",
+        "sdca_registers_dlkm",
+        "swr_dlkm",
+        "wcd9xxx_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "wcd937x_dlkm",
+      "bytes": 790200,
+      "sha256": "70753400cc1129f7bf872b786b3b56a2c23161f7b36b3fbda7f30cd8218ff64e",
+      "checked_versions": 105,
+      "dependencies": [
+        "mbhc_dlkm",
+        "qti_regmap_debugfs",
+        "swr_dlkm",
+        "wcd9xxx_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "wcd939x_dlkm",
+      "bytes": 1110504,
+      "sha256": "5a8e64ef874f2e58e61b66ec1fac2faf02e353928c5c9387e1a586fd57280093",
+      "checked_versions": 136,
+      "dependencies": [
+        "mbhc_dlkm",
+        "qti_regmap_debugfs",
+        "swr_dlkm",
+        "wcd939x_slave_dlkm",
+        "wcd9xxx_dlkm",
+        "wcd_core_dlkm",
+        "wcd_usbss_i2c"
+      ]
+    },
+    {
+      "module": "wcd939x_slave_dlkm",
+      "bytes": 230888,
+      "sha256": "ffbb081f50c19ba39791efcd94421df23b575d4771ce9275caa3d0fc6e504ad9",
+      "checked_versions": 30,
+      "dependencies": [
+        "swr_dlkm"
+      ]
+    },
+    {
+      "module": "wcd9xxx_dlkm",
+      "bytes": 504328,
+      "sha256": "33d6b7967f7bd18033096eacb49eb397726fbb0ffa25cb83f1390df91fd543fc",
+      "checked_versions": 33,
+      "dependencies": [
+        "audio_prm_dlkm"
+      ]
+    },
+    {
+      "module": "wcd_core_dlkm",
+      "bytes": 673528,
+      "sha256": "ceca3b5773d0fb98233729a788ea5eb58afb4e0765da6606adf10b53ed544bb3",
+      "checked_versions": 57,
+      "dependencies": [
+        "pinctrl_msm"
+      ]
+    },
+    {
+      "module": "wsa883x_dlkm",
+      "bytes": 521312,
+      "sha256": "7f386bdbc8a9284802ebb711d4ba51bc7ac9c171d9da5ecb3139612d9d695c22",
+      "checked_versions": 92,
+      "dependencies": [
+        "qti_regmap_debugfs",
+        "swr_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "wsa884x_dlkm",
+      "bytes": 585144,
+      "sha256": "9f36e325238e8f25b14d9fe357e770c3447f106066eff8063fe1c32a83bf23fc",
+      "checked_versions": 97,
+      "dependencies": [
+        "qti_regmap_debugfs",
+        "swr_dlkm",
+        "wcd_core_dlkm"
+      ]
+    },
+    {
+      "module": "frpc_adsprpc",
+      "bytes": 1469712,
+      "sha256": "5f86a204b817cf1d8d77f2bdec9aa06c049e06a5b14fcc65199581372f129d9f",
+      "checked_versions": 195,
+      "dependencies": [
+        "mem_buf_dev",
+        "pdr_interface",
+        "qcom_glink",
+        "qcom_scm"
+      ]
+    },
+    {
+      "module": "msm_mmrm",
+      "bytes": 821960,
+      "sha256": "258baaebe78f4f5d6b8503c88f922419d2099878b907c27edd3ae5790458feb3",
+      "checked_versions": 44,
+      "dependencies": [
+        "clk_qcom"
+      ]
+    },
+    {
+      "module": "synx_driver",
+      "bytes": 1572736,
+      "sha256": "5ba7a9e9f9c0bda4e7ae592e6946aff47429a7b7c5fdb0e8d614e62914cfd186",
+      "checked_versions": 108,
+      "dependencies": [
+        "ipclite",
+        "msm_hw_fence",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "ipclite",
+      "bytes": 467376,
+      "sha256": "e07306c5b5a50a412f6ae4e19cc3818ae98660e8271cb0e5bb191c40151b6984",
+      "checked_versions": 51,
+      "dependencies": []
+    },
+    {
+      "module": "smcinvoke_dlkm",
+      "bytes": 694584,
+      "sha256": "9c0e1ad59e8ccf799dd765d92d5506f2624b61081008feb2f9b91c21c08789ba",
+      "checked_versions": 92,
+      "dependencies": [
+        "qcom_scm",
+        "qseecom_proxy",
+        "si_core_module"
+      ]
+    },
+    {
+      "module": "hdcp_qseecom_dlkm",
+      "bytes": 505944,
+      "sha256": "e66b94821e660f3c7fdd303436c281dfe24956abdb41039bf2cffc2190c02699",
+      "checked_versions": 22,
+      "dependencies": [
+        "qcom_scm",
+        "qseecom_proxy",
+        "smcinvoke_dlkm"
+      ]
+    },
+    {
+      "module": "smmu_proxy_dlkm",
+      "bytes": 353176,
+      "sha256": "9a358af4278fdba2b1b0fd8db0f83526387af540dc6c226d671b799c95199933",
+      "checked_versions": 44,
+      "dependencies": [
+        "gh_msgq",
+        "mem_buf_dev",
+        "qcom_dma_heaps",
+        "smcinvoke_dlkm"
+      ]
+    },
+    {
+      "module": "qce50_dlkm",
+      "bytes": 495544,
+      "sha256": "32c22bcb7dfd54a7bfa36702c4842521c4e2d5e58110ad1ec300b9f04f871750",
+      "checked_versions": 77,
+      "dependencies": [
+        "sps_drv"
+      ]
+    },
+    {
+      "module": "qcedev_mod_dlkm",
+      "bytes": 918736,
+      "sha256": "09255b833ee6f48ca2bc0803d767a29c64b1e29b92dbd73490040fba805a8f5a",
+      "checked_versions": 91,
+      "dependencies": [
+        "mem_buf_dev",
+        "qce50_dlkm"
+      ]
+    },
+    {
+      "module": "spcom",
+      "bytes": 492928,
+      "sha256": "6dcadf597389d4e2d76ef69a05a29ed0e09dc0db442196bca0295dd84d1e0421",
+      "checked_versions": 72,
+      "dependencies": [
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "spss_utils",
+      "bytes": 290888,
+      "sha256": "1b665930bb5afb0e22ed757d026155aa37a4dfd626b09d3f5b79a82c1834871b",
+      "checked_versions": 55,
+      "dependencies": [
+        "qcom_spss",
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "rmnet_mem",
+      "bytes": 772456,
+      "sha256": "ba1e42ca6b69235191b46e8678cd7a2d996e23a51a5765d362254af49256e298",
+      "checked_versions": 45,
+      "dependencies": []
+    },
+    {
+      "module": "gsim",
+      "bytes": 1425352,
+      "sha256": "e61a992977150d6140f195467df9f544db17a70d57ce4d9f1319c4273201f472",
+      "checked_versions": 81,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "qcom_va_minidump"
+      ]
+    },
+    {
+      "module": "ipam",
+      "bytes": 23499224,
+      "sha256": "00e818e1a509d1063d9bbd8ac99cfb7bb84016f3a74253e072e8bc8fbbb30901",
+      "checked_versions": 383,
+      "dependencies": [
+        "gsim",
+        "mdt_loader",
+        "qcom_aoss",
+        "qcom_iommu_util",
+        "qcom_ipc_logging",
+        "qcom_ramdump",
+        "qcom_scm",
+        "qcom_va_minidump",
+        "qmi_helpers",
+        "rmnet_mem",
+        "rproc_qcom_common",
+        "smem",
+        "usb_f_gsi"
+      ]
+    },
+    {
+      "module": "rmnet_ctl",
+      "bytes": 440368,
+      "sha256": "c896b614c67f4a71b0ca64f41960f832fc7e03473adfd97b76baca2e9a371568",
+      "checked_versions": 27,
+      "dependencies": [
+        "ipam",
+        "qcom_ipc_logging"
+      ]
+    },
+    {
+      "module": "rmnet_core",
+      "bytes": 4456248,
+      "sha256": "92be891e695ffe79c2a436052e7cebeb06397475b83f26692c0eda06a2fad04c",
+      "checked_versions": 164,
+      "dependencies": [
+        "ipam",
+        "qmi_helpers",
+        "rmnet_ctl",
+        "rmnet_mem"
+      ]
+    },
+    {
+      "module": "rmnet_shs",
+      "bytes": 2512952,
+      "sha256": "157ba166166c5e47e582b797bbb47f609696831bf5fe92162ecc38636b737a90",
+      "checked_versions": 138,
+      "dependencies": [
+        "rmnet_core",
+        "sched_walt"
+      ]
+    },
+    {
+      "module": "rmnet_perf",
+      "bytes": 892536,
+      "sha256": "b8df01962fae17bea05c7514805116c8cefd205127ee8614a1653f4fc5dbb983",
+      "checked_versions": 66,
+      "dependencies": [
+        "rmnet_core"
+      ]
+    },
+    {
+      "module": "smem_mailbox",
+      "bytes": 321936,
+      "sha256": "178755638bf4f0a5448c43b130dcfb51ab089f0886c0aaa21afab45022326570",
+      "checked_versions": 21,
+      "dependencies": [
+        "smem"
+      ]
+    },
+    {
+      "module": "nxp_nci",
+      "bytes": 908544,
+      "sha256": "24675dfcd14796ce3e01a889cfed1e0c7aa6cd5ecd7ab20d2c66706e07508dcb",
+      "checked_versions": 79,
+      "dependencies": [
+        "pinctrl_msm",
+        "qcom_ipc_logging",
+        "smcinvoke_dlkm"
+      ]
+    },
+    {
+      "module": "camera",
+      "bytes": 33573152,
+      "sha256": "2e5be06399df8d11866fa77b45e71ad83cf66f942a9a46e09fd96401c14c9086",
+      "checked_versions": 417,
+      "dependencies": [
+        "clk_qcom",
+        "crm_v2",
+        "leds_qcom_flash",
+        "llcc_qcom",
+        "mdt_loader",
+        "mem_buf_dev",
+        "msm_mmrm",
+        "qcom_iommu_util",
+        "qcom_rpmh",
+        "qcom_scm",
+        "qcom_spmi_wled",
+        "qcom_va_minidump",
+        "smcinvoke_dlkm",
+        "smmu_proxy_dlkm",
+        "socinfo",
+        "synx_driver"
+      ]
+    },
+    {
+      "module": "msm_kgsl",
+      "bytes": 22157240,
+      "sha256": "a25397eb6996d119c7b9d80bcdc26b0945d5f4cdca70d7d2bb7036e11724064d",
+      "checked_versions": 552,
+      "dependencies": [
+        "clk_qcom",
+        "cmd_db",
+        "coresight",
+        "llcc_qcom",
+        "mdt_loader",
+        "mem_buf_dev",
+        "minidump",
+        "msm_performance",
+        "msm_sysstats",
+        "qcom_aoss",
+        "qcom_dcvs",
+        "qcom_iommu_util",
+        "qcom_scm",
+        "qcom_va_minidump",
+        "secure_buffer",
+        "socinfo",
+        "synx_driver"
+      ]
+    },
+    {
+      "module": "msm_drm",
+      "bytes": 44728560,
+      "sha256": "22cc1da2a352a5a3aa4e158aae71b40976ef9b7282af5b5d46eaf23522c14c83",
+      "checked_versions": 833,
+      "dependencies": [
+        "altmode_glink",
+        "clk_qcom",
+        "crm_v2",
+        "drm_display_helper",
+        "dwc3_msm",
+        "fsa4480_i2c",
+        "gh_irq_lend",
+        "gh_mem_notifier",
+        "gh_msgq",
+        "gh_rm_drv",
+        "hdcp_qseecom_dlkm",
+        "llcc_qcom",
+        "mem_buf_dev",
+        "msm_dma_iommu_mapping",
+        "msm_ext_display",
+        "msm_hfi_core",
+        "msm_hw_fence",
+        "panel_event_notifier",
+        "pinctrl_msm",
+        "qcom_iommu_util",
+        "qcom_ipc_logging",
+        "qcom_rpmh",
+        "qcom_scm",
+        "qcom_va_minidump",
+        "smmu_proxy_dlkm",
+        "socinfo",
+        "spmi_pmic_arb",
+        "sync_fence",
+        "synx_driver",
+        "wcd_usbss_i2c"
+      ]
+    },
+    {
+      "module": "msm_eva",
+      "bytes": 5494768,
+      "sha256": "4f6badfbe5b516f0de63223f7d4f729f598e97efa45e1fa9adb31790b2220606",
+      "checked_versions": 262,
+      "dependencies": [
+        "frpc_adsprpc",
+        "gh_msgq",
+        "gh_rm_drv",
+        "llcc_qcom",
+        "mdt_loader",
+        "mem_buf_dev",
+        "msm_mmrm",
+        "qcom_scm",
+        "synx_driver"
+      ]
+    },
+    {
+      "module": "msm_video",
+      "bytes": 10584000,
+      "sha256": "62ca12f0a756639d4f861b9708fea3d1b27cdcaa67acb80738b72ada3e95614d",
+      "checked_versions": 270,
+      "dependencies": [
+        "clk_qcom",
+        "llcc_qcom",
+        "mdt_loader",
+        "mem_buf_dev",
+        "minidump",
+        "msm_dma_iommu_mapping",
+        "msm_mmrm",
+        "qcom_scm",
+        "qcom_va_minidump",
+        "socinfo"
+      ]
+    },
+    {
+      "module": "cnss2",
+      "bytes": 3759320,
+      "sha256": "b556b734d000f0c62098d10bc58dfec7802ddedc2af12d174c01f06921df8d9b",
+      "checked_versions": 376,
+      "dependencies": [
+        "cmd_db",
+        "cnss_plat_ipc_qmi_svc",
+        "cnss_prealloc",
+        "cnss_utils",
+        "hwid",
+        "memory_dump_v2",
+        "mhi",
+        "minidump",
+        "pci_msm_drv",
+        "pinctrl_msm",
+        "qcom_aoss",
+        "qcom_ipc_logging",
+        "qcom_ramdump",
+        "qmi_helpers",
+        "smem",
+        "wlan_firmware_service"
+      ]
+    },
+    {
+      "module": "cnss_nl",
+      "bytes": 289120,
+      "sha256": "4b700f6fd42216429c06936aa2efeaeee032d5964f9989d26dd261051d8a202a",
+      "checked_versions": 7,
+      "dependencies": []
+    },
+    {
+      "module": "cnss_prealloc",
+      "bytes": 255352,
+      "sha256": "fc35e66c73cf3f2b798c55245b5abce3d18fe7b750ad8384dcad08e07c0a7736",
+      "checked_versions": 41,
+      "dependencies": []
+    },
+    {
+      "module": "cnss_utils",
+      "bytes": 353560,
+      "sha256": "9984763f28c48848a76f83fda03b1f6c206a9508a97f9806caa90f8d2c761665",
+      "checked_versions": 36,
+      "dependencies": [
+        "smem_mailbox"
+      ]
+    },
+    {
+      "module": "wlan_firmware_service",
+      "bytes": 311720,
+      "sha256": "73c43c2558b767c9fbc445fae096824113609fd00710ca0023ac37bd3ccc085c",
+      "checked_versions": 4,
+      "dependencies": [
+        "qmi_helpers"
+      ]
+    },
+    {
+      "module": "cnss_plat_ipc_qmi_svc",
+      "bytes": 267968,
+      "sha256": "73e34f836d21886c5095831e94ead06c6942befa0ad13a35ad31e7ee43d87058",
+      "checked_versions": 37,
+      "dependencies": [
+        "qcom_ipc_logging",
+        "qmi_helpers"
+      ]
+    },
+    {
+      "module": "btpower",
+      "bytes": 484792,
+      "sha256": "cac193727ca8042f50bb6a4b82453d2278f2e394bde922aee7bf6db6d2bf95c1",
+      "checked_versions": 101,
+      "dependencies": [
+        "cnss_utils",
+        "pinctrl_msm",
+        "qcom_aoss",
+        "rfkill"
+      ]
+    },
+    {
+      "module": "btfmcodec",
+      "bytes": 802528,
+      "sha256": "65192000ca2f3e82ab4d6e92bb8bbaaeb12a8e84adcbb88f3686387603801683",
+      "checked_versions": 64,
+      "dependencies": [
+        "rproc_qcom_common"
+      ]
+    },
+    {
+      "module": "bt_fm_swr",
+      "bytes": 394008,
+      "sha256": "eda12d24707690d34e27e30f3cf563a21f733572eec284f3cc2487aa0a947809",
+      "checked_versions": 28,
+      "dependencies": [
+        "btfmcodec",
+        "btpower",
+        "swr_dlkm"
+      ]
+    },
+    {
+      "module": "qca_cld3_peach_v2",
+      "bytes": 417158240,
+      "sha256": "ef06af22b8efad52f8bad9a7c24524f871246914b6eff1e559fd465ae6f4a8b5",
+      "checked_versions": 592,
+      "dependencies": [
+        "cfg80211",
+        "cnss2",
+        "cnss_nl",
+        "cnss_prealloc",
+        "cnss_utils",
+        "ipam",
+        "qcom_iommu_util",
+        "qcom_va_minidump",
+        "qmi_helpers",
+        "rproc_qcom_common",
+        "sched_walt"
+      ]
+    }
+  ],
+  "signature_checked": false,
+  "final_images_checked": false,
+  "hardware_checked": false,
+  "kernel_source": "d199ff171e49e1b1e4c62fa7202c146e76b26e3b",
+  "paired_module_source": "5638362f5eeb3cc0c8bbcd7d9cbf456e0fd9cc74",
+  "device_source": "83bb1e170ff8755205bb436ca21ca4967002fc41",
+  "source_match": {
+    "module_commit": "5638362f5eeb3cc0c8bbcd7d9cbf456e0fd9cc74",
+    "tracked_inputs_matched": 6316,
+    "groups": [
+      "qcom/opensource/mm-drivers/msm_ext_display",
+      "qcom/opensource/mm-drivers/hfi_core",
+      "qcom/opensource/mm-drivers/hw_fence",
+      "qcom/opensource/mm-drivers/sync_fence",
+      "qcom/opensource/audio-kernel",
+      "qcom/opensource/dsp-kernel",
+      "qcom/opensource/mmrm-driver",
+      "qcom/opensource/synx-kernel",
+      "qcom/opensource/securemsm-kernel",
+      "qcom/opensource/spu-kernel",
+      "qcom/opensource/datarmnet-ext/mem",
+      "qcom/opensource/dataipa",
+      "qcom/opensource/datarmnet",
+      "qcom/opensource/datarmnet-ext/shs",
+      "qcom/opensource/datarmnet-ext/perf",
+      "qcom/opensource/data-kernel/drivers/smem-mailbox",
+      "nxp/opensource/driver",
+      "qcom/opensource/camera-kernel",
+      "qcom/opensource/graphics-kernel",
+      "qcom/opensource/display-drivers",
+      "qcom/opensource/eva-kernel",
+      "qcom/opensource/video-driver",
+      "qcom/opensource/wlan/platform",
+      "qcom/opensource/bt-kernel",
+      "qcom/opensource/wlan/qcacld-3.0"
+    ]
+  },
+  "checker_negative_controls": {
+    "artifact_negative_controls": [
+      {
+        "case": "crc",
+        "rejected": "CRC mismatch: gh_arm_drv -> module_layout"
+      },
+      {
+        "case": "missing_export",
+        "rejected": "missing provider: gh_arm_drv -> module_layout"
+      },
+      {
+        "case": "release",
+        "rejected": "vermagic differs from kernel output release"
+      },
+      {
+        "case": "duplicate_module",
+        "rejected": "duplicate module identity gh_arm_drv"
+      },
+      {
+        "case": "missing_module",
+        "rejected": "missing built dependency: qcom_pdc -> ['qcom_scm']"
+      },
+      {
+        "case": "duplicate_export",
+        "rejected": "duplicate symbol provider: system_state"
+      }
+    ],
+    "extended_versions_positive": true,
+    "malformed_elf_and_versions_rejected": 5
+  },
+  "packaging_inputs": {
+    "MYRON_ALL_MODULES": {
+      "entries": 314,
+      "missing": [],
+      "duplicates": []
+    },
+    "MYRON_SYSTEM_MODULES": {
+      "entries": 3,
+      "missing": [],
+      "duplicates": []
+    },
+    "MYRON_RAMDISK_MODULES": {
+      "entries": 234,
+      "missing": [],
+      "duplicates": []
+    },
+    "MYRON_VENDOR_MODULES": {
+      "entries": 314,
+      "missing": [],
+      "duplicates": []
+    },
+    "MYRON_BOOT_LOAD_MODULES": {
+      "entries": 116,
+      "missing": [],
+      "duplicates": []
+    },
+    "MYRON_VENDOR_LOAD_MODULES": {
+      "entries": 245,
+      "missing": [],
+      "duplicates": []
+    }
+  },
+  "in_tree_modules": 354,
+  "external_modules": 73,
+  "external_build_groups": 25,
+  "compiler": "Clang 19.1.7",
+  "CFI": true,
+  "MODVERSIONS": true,
+  "LTO": "none",
+  "Rust": false,
+  "BTF": false,
+  "KERNELRELEASE_override": "Preserved the existing matched core qualification output release; not a production build flag recommendation.",
+  "production_android_build": false,
+  "all_configured_native_external_groups_built": true,
+  "build_logs": {
+    "qcom/opensource/mm-drivers/msm_ext_display": {
+      "log": "native-0-msm_ext_display-build.log",
+      "sha256": "0695ba18d5b809a6f50354d623ff4c3ff40949b5659f792cabdb05ae56c5385f",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/mm-drivers/hfi_core": {
+      "log": "native-1-hfi_core-build.log",
+      "sha256": "68bbdb101fb8b2d3bfc2a5e4bace05d174691de3b380c581166fd79f245d4721",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/mm-drivers/hw_fence": {
+      "log": "native-2-hw_fence-build.log",
+      "sha256": "d7144549a909d2bb595a791756ebf36fcf4ebef1b17ebcfb38b73f26f98a7bfd",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/mm-drivers/sync_fence": {
+      "log": "native-3-sync_fence-build.log",
+      "sha256": "963449b5bcbc2dbc74bcc1dc2ccf4caabaf38e08717bb289917f177839f0ea2d",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/audio-kernel": {
+      "log": "native-4-audio-kernel-build.log",
+      "sha256": "8f197afe6de826d50e58837161700c084f6c7700af23807fc3109d15bc0503d3",
+      "module_count": 34,
+      "warnings": []
+    },
+    "qcom/opensource/dsp-kernel": {
+      "log": "native-5-dsp-kernel-build.log",
+      "sha256": "bd2432b5fb1d4e67f5fd7c9ace7d65d3e847046e03c7ef6afe26412b3e818d46",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/mmrm-driver": {
+      "log": "native-6-mmrm-driver-build.log",
+      "sha256": "77138b5e9a834ab4ad101d1db139fef7207c7f8ffae826e70794dc8892b04c06",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/synx-kernel": {
+      "log": "native-7-synx-kernel-build.log",
+      "sha256": "7f7a7021dd649550a5ce825386d51dd2c885a301d3795958a507253cb33ff90a",
+      "module_count": 2,
+      "warnings": []
+    },
+    "qcom/opensource/securemsm-kernel": {
+      "log": "securemsm-full-build.log",
+      "sha256": "e217fe89e2651bc15df0ea41168257cc41159857adae87d3034350b43167d1a0",
+      "module_count": 5,
+      "warnings": [
+        "/workspace/scratch/caff86d9a311/kernel-followup-1125/ext-check/qcom/opensource/securemsm-kernel/include/uapi/linux/qseecom_api.h:10:9: warning: Warning: This header file will be deprecated in future [-W#pragma-messages]",
+        "/workspace/scratch/caff86d9a311/kernel-followup-1125/ext-check/qcom/opensource/securemsm-kernel/include/uapi/linux/qseecom.h:10:9: warning: Warning: This header file will be deprecated in future [-W#pragma-messages]",
+        "/workspace/scratch/caff86d9a311/kernel-followup-1125/ext-check/qcom/opensource/securemsm-kernel/include/uapi/linux/qseecom_api.h:10:9: warning: Warning: This header file will be deprecated in future [-W#pragma-messages]",
+        "/workspace/scratch/caff86d9a311/kernel-followup-1125/ext-check/qcom/opensource/securemsm-kernel/include/uapi/linux/qseecom.h:10:9: warning: Warning: This header file will be deprecated in future [-W#pragma-messages]"
+      ]
+    },
+    "qcom/opensource/spu-kernel": {
+      "log": "native-9-spu-kernel-build.log",
+      "sha256": "ae9bf4d3d0bb01b4e8d356ca403ae978ef0fc7b1b5406b8a3ff19efa5275a38b",
+      "module_count": 2,
+      "warnings": []
+    },
+    "qcom/opensource/datarmnet-ext/mem": {
+      "log": "rmnet-mem-full-build.log",
+      "sha256": "b3d49ae9b32d5334fd0c02df4ea671ab52b4e3668314414fe8e15d8368edbbd0",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/dataipa": {
+      "log": "ipa-full-build.log",
+      "sha256": "b4d7b0724252302e3cd8ca0a453ce17937e14a38a74dedb1af6a55dbaa2a542f",
+      "module_count": 2,
+      "warnings": []
+    },
+    "qcom/opensource/datarmnet": {
+      "log": "rmnet-full-build.log",
+      "sha256": "3a488e2d90cc38c682266322b533157f0784cd6f314c0dcb418430e600bd2b1b",
+      "module_count": 2,
+      "warnings": []
+    },
+    "qcom/opensource/datarmnet-ext/shs": {
+      "log": "native-13-shs-build.log",
+      "sha256": "a22f82bc9bc552c096c15d9457385c62962a14a21fcd606a85fa49e85e82645d",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/datarmnet-ext/perf": {
+      "log": "native-14-perf-build.log",
+      "sha256": "f3c8ca088494705938d15123563db47151675ebdba1c5b372fb6d9cb50b99a3d",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/data-kernel/drivers/smem-mailbox": {
+      "log": "smem-full-build.log",
+      "sha256": "44ed047bd2bdcfb1d5ffe492bd08db2867d14946477db63fc2e370c1f254db5f",
+      "module_count": 1,
+      "warnings": []
+    },
+    "nxp/opensource/driver": {
+      "log": "native-16-driver-build.log",
+      "sha256": "50b248959b437855763be96a7fc2e55b976f36f3117f44a5f5ef9f8db19f98bf",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/camera-kernel": {
+      "log": "native-17-camera-kernel-build.log",
+      "sha256": "6096987e56dc18f4f959943dd23e4539156314c6e144d2f0ff85ce86efda93fc",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/graphics-kernel": {
+      "log": "native-18-graphics-kernel-build.log",
+      "sha256": "12db913a23f553acf396ae2784c3c20abe77d5e464f89cfd3aeb3492ff6a924f",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/display-drivers": {
+      "log": "native-19-display-drivers-build.log",
+      "sha256": "6a219fec6e4e658149515bd2cdaa6c22d06c3ed9f712612db0b0ff3579928057",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/eva-kernel": {
+      "log": "native-20-eva-kernel-build.log",
+      "sha256": "c379842498ddc36baf7b954478436fab832ee8d1c9d8f0187427024514a23886",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/video-driver": {
+      "log": "native-21-video-driver-build.log",
+      "sha256": "a03b7208a7125d58671153f0943286e50a52aee6ec2018903735f714e812735a",
+      "module_count": 1,
+      "warnings": []
+    },
+    "qcom/opensource/wlan/platform": {
+      "log": "cnss-full-retry.log",
+      "sha256": "57015b15bbe9e0d0b74a843787d3d7d38ad1fcfd4b4750889ec423e3fe57d3fe",
+      "module_count": 6,
+      "warnings": []
+    },
+    "qcom/opensource/bt-kernel": {
+      "log": "native-23-bt-kernel-build.log",
+      "sha256": "57ba0ee000407f9b5b4fe45c474a6f45277faaef6765b21cbc0155db4e488062",
+      "module_count": 3,
+      "warnings": []
+    },
+    "qcom/opensource/wlan/qcacld-3.0": {
+      "log": "wlan-full-build.log",
+      "sha256": "0069065486220332bf9698d48f450fc1e3fbd6c628840412f1ee593953afece5",
+      "module_count": 1,
+      "warnings": []
+    }
+  },
+  "audio_pre_fix_failure": {
+    "log_sha256": "4422c50e918c7f569a13b96f3b959e69543a2f4a511731bc8918dada4e509546",
+    "symbols": [
+      "msm_ext_disp_register_audio_codec",
+      "msm_ext_disp_select_audio_codec"
+    ],
+    "resolution": "Declare the provider Module.symvers in audio Kbuild.canoe; retain existing build order."
+  },
+  "checker_sha256": "b5fc3630e27dffa50b4e760f98f049055708c7dc1e1e883ef5493bd698c1116e"
+}

@@ -1,6 +1,13 @@
 # Myron runtime-gap follow-up — 2026-11-25
 
-Latest source update: [command application and retry](wireless-apply-followup.md)
+Latest build/integration update: [complete native external qualification](external-native-qualification.md)
+completes all 25 configured external groups (73 modules). Together with 354
+in-tree modules, all 427 pass CRC/provider/dependency checks; the device's 314
+packaging inputs are present. The old device source entry points and a missing
+audio Kbuild symbol-table dependency are corrected. Production images and
+hardware behavior remain unverified.
+
+Prior source update: [command application and retry](wireless-apply-followup.md)
 repairs failed-vote retries and voltage/current cache commits. The newest host
 qualification passes Image plus 354 in-tree modules; the earlier no-full-build
 statements below describe their respective checkpoints, not this latest build.
