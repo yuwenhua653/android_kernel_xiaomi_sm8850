@@ -11,7 +11,7 @@
 | 有线充电 | **本轮接入 Nezha sub-PMIC 基础提供者**：USB 在线/电压/电流、BC1.2 类型、buck 限流/限压/启停回调；按 4.0.7 命令编号实现，并加入配置、DT 和加载清单。GLINK 订阅增加同步注销。 | **P0**：charge interface、JEITA/温控、策略与保护链路仍需接通。此提供者不在 probe 写入充电参数，不代表快充完成；后续接口必须复用已有 `usb` power_supply，避免重名注册。 |
 | 无线充电 | 已确认本机 SC96281 与原厂标定结构。 | **P0**：接收器、配件状态、薄厚壳 FOD 表和 MCA 控制链路尚未接通；这是 17 Ultra 的适配缺口，不引用 Myron 的掉电现象作为本机实测。 |
 | 触摸 | `xiaomi_touch.ko`、`synaptics_tcm2.ko` 有构建和加载入口，SPI SE19 节点与父总线启用。固件按 DDIC 选择。 | OS4 固件/THP 文件、上电下载、正常输入、息屏唤醒与恢复模式触摸需在本机验收。尚无证据可标记运行正常。 |
-| 相机 | **本轮补入 Canoe 相机 SoC、四路 sensor、供电/CCI/I²C/闪光灯节点**；CSI0/3/4 增加真正的 `v2.4.0-1` 默认表。共享 pinctrl 改用 TLMM GPIO92/105 引用，驱动解析时转换为当前全局编号，保留旧属性兼容。 | **P0**：长焦 `qcom,zoom` 驱动、HAL 消息/私有 ABI、开流与多摄切换仍未完成验证。原厂 AutoEQ 重试选择未移植，本轮使用 choice zero 默认设置；闪光灯及前后摄需实测。 |
+| 相机 | Canoe 四路 sensor、供电/CCI/I²C/闪光灯节点及 `v2.4.0-1` 默认表已接入。**本轮移植官方 `qcom,zoom` / SEM1218S、组件注册、请求接口和 `zoom-src` 查询；按原厂证据补齐 Nezha 44 字节能力查询，保留通用 40 字节 ABI。** 固件错误路径和共享时钟错误码修复，整个 `camera.o` 编译链接及 200 个 I²C 故障注入通过。 | **P0**：CSI PHY AutoEQ/backup-EQ 与 CSID 联动、其余 HAL 私有 ABI/OIS/actuator 行为仍需核对；长焦运动、固件、开流、重开、多摄切换、闪光灯及前后摄均未实机验证。不能把驱动已接入标为相机已可用。 |
 | 基带 | Modem PAS、SMP2P/GLINK、QRTR、IPA/RMNET 有源码/配置或加载入口，原生 modem 节点启用；保留双卡默认路由。 | 验证固件启动、RIL/IMS、两张 SIM、通话/短信/数据和休眠恢复。现阶段没有基础模块整体缺席的证据，也没有实机通过记录。 |
 | Wi-Fi | **已补 Canoe 板级遗漏**：Peach CNSS、PCIe 电源域、WLAN 内存/IOMMU、复位/唤醒引脚、供电和 XO 校准单元。CNSS 与 Peach WLAN 模块已有构建/加载入口。 | 固件/板级校准文件、PCIe 枚举、扫描连接、热点与休眠恢复待实测。原厂 SG/Whale 小型入口也没有这组节点；本次以原厂 Canoe 整机入口为范围，不扩展其它板型。 |
 | 蓝牙 | **已补 Canoe 板级遗漏**：原厂电源节点、共享复位、PMIC pinctrl/NVMEM 及 SE18 UART；`btpower`、`btfmcodec`、`bt_fm_swr` 已列入构建/加载。 | HCI 固件、HAL/串口初始化、配对/重连及通话音频待实测；SoundWire 板级音频链路尚未接入。原厂 `bt_uwb_en` 是蓝牙也使用的共享复位状态，暂缓 UWB 不等于删除它。 |
@@ -322,6 +322,20 @@ SC96281 正向无线充电仍待适配。原厂常规异物检测表有 32 行�
 | `wcd938x_slave_dlkm.ko` | Vendor | 按硬件选择 |  | WCD938X Swr Slave driver |
 | `wsa885x_i2c_dlkm.ko` | Vendor | 按硬件选择 |  | Qualcomm Technologies, Inc |
 | `xiaomi_rsmc.ko` | 恢复、Vendor | 卫星通信 |  | X801 SPI 通道，共用卫星 PA 电源；保留普通 GNSS 验收 |
+
+## 官方 songyuan-w-oss 对照补全（2026-11-26）
+
+本轮相机模块实现与验证详见模块仓库 `qcom/opensource/camera-kernel/NEZHA-PORT.md`。
+内核 manifest 已固定本轮模块提交；设备树沿用上一轮已核对的 OS4.0.7 接线。
+
+| 官方来源 | 已确认的用途 | 当前边界 |
+|---|---|---|
+| `MiCode/vendor_qcom_opensource_camera-kernel@798f548761f381b056f2e1fe615f9db930aa5c7e` | Nezha zoom 驱动、93 字节配置 ABI、44 字节传感器查询；已移植并做主机验证。 | AutoEQ/CSID 和其他私有相机接口仍需适配与实测。 |
+| `MiCode/vendor_qcom_proprietary_camera-devicetree@f82a3debe8ed8dc2529d90473d73ab9a49d8aa13` | Nezha 长焦 zoom 接线与已有原厂还原节点相符。 | 不用更新整份板级树来覆盖已核对的 4.0.7 配置。 |
+| `MiCode/kernel_devicetree@396596c6d1ec3c349402c50913f781efbf343d9c` | Nezha JEITA、SC96281、磁吸薄厚壳 FOD 等公开配置，可继续核对国内底包。 | 配置公开不等于 MCA 策略/无线接收器驱动已完成；保持有线/无线 P0。 |
+| `MiCode/Xiaomi_Kernel_OpenSource@da9af1b6d83e1f53e4b8e4f4421e3c4161d2133d` | 包含 Nezha 目标及模块清单。 | MCA 是外部 vendor 路径符号链接，且部分 Nezha build 配置不在这次发布内；不能把该链接当作完整驱动源码。 |
+
+卫星、UWB、厂商诊断仍后排。触摸、基带、Wi-Fi、蓝牙本轮未据此新增完成标记。
 
 ## 核对输入
 

@@ -303,8 +303,8 @@ uses `shared-pinctrl-gpios` controller-relative GPIO specifiers paired with
 `gpios-shared-pinctrl` support and propagates GPIO-provider probe deferral.
 
 CSIPHY v2.4.0-1 has its own D-PHY and C-PHY baseline settings. It uses the
-factory default AutoEQ choice zero; the proprietary retry mechanism and
-long-telephoto zoom driver remain pending. Validate the compiled data with
+factory default AutoEQ choice zero; the retry mechanism remains pending.
+The zoom driver is integrated as described below. Validate the compiled data with
 pyelftools installed:
 
 ```sh
@@ -314,3 +314,14 @@ python3 tools/verify-nezha-csiphy.py /path/to/stock407/camera.ko \
 
 This checks actual ELF data and relocation targets. It does not replace HAL,
 streaming, suspend/resume, protection or physical-device acceptance tests.
+
+## Official Nezha zoom source integration (2026-11-26)
+
+The pinned module revision now builds the MiCode songyuan-w-oss zoom/SEM1218S
+implementation for Nezha and exposes the stock 44-byte sensor capability query.
+The generic query remains 40 bytes. See the module repository's
+`qcom/opensource/camera-kernel/NEZHA-PORT.md` for source provenance, firmware
+failure-path fixes and the host fault-injection test. Complete ARM64 camera.o
+compilation/link passed; full kernel modpost and hardware camera qualification
+remain outstanding. The DT pin is unchanged because the zoom wiring is already
+present in the reviewed OS4.0.7 overlay.
