@@ -41,8 +41,22 @@ A wireless FFC termination-current query with no selected voltage profile now re
 - Allocation failures and every table-read failure are injected; the caller's previously published table remains owned and intact. Nine-column input is rejected, not silently reinterpreted. Short and long stage arrays fail.
 - Three deliberate regressions fail runtime assertions: checking the wrong allocation pointer, ignoring the SCMI initialization write error, and ignoring the initial online-status error.
 - All three modified translation units compile for ARM64 with Clang 19.1.7, CFI, MODVERSIONS and GENDWARFKSYMS. Qualification uses LTO_NONE and disables Rust/BTF in the output config, matching the preceding qualification; shipping fragments are unchanged.
-- Driver checkpatch: zero errors and warnings. Full-image/module qualification, if completed, is recorded below and in the companion JSON.
+- Driver checkpatch: zero errors and warnings. Full-image/module qualification is recorded below and in the companion JSON.
 
 ## Remaining device evidence
 
 Wireless net charge gain remains unverified. Actual QTI cooling/thermal HAL behavior, mi_thermald private interfaces, firmware SCMI responses, live deferred probes and Wi-Fi suspend behavior still require the paired build on the phone. Generic PSCI remains selected; no vendor LPM governor or libperfmgr was substituted. The UFS boot correction and `yuzuli` release label are retained. This batch changes only the kernel repository; shared EvolutionX, device policy and companion module/DT repositories are not rewritten.
+
+## Completed full kernel qualification
+
+Source commit `6e244c9442dba309ec15a2cb64dadf0832722572` builds the complete
+ARM64 `Image modules` target successfully. Image size is 34,580,992 bytes;
+release is `6.12.118-g6e244c9442db-yuzuli`. All 354 in-tree modules pass the
+read-only module audit, including 17,738 symbol-version records, exported
+providers, declared dependencies and vermagic. No compiler or modpost warnings
+appear in the final build log. Build configuration limitations above still apply.
+
+External modules have not been rebuilt in this batch. This is not a boot,
+vendor_boot, dtbo, dlkm or AVB qualification and supplies no new phone charging
+or thermal result. Rebuild the paired external modules and ROM images together
+for device testing; do not combine this kernel with older module binaries.

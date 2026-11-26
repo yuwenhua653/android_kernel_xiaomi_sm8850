@@ -165,5 +165,32 @@
     "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_quick_wireless.o": "3c5a98d3ac1c38c3b072761ad95389af61933b1881a361dfebed540dffd852fc",
     "drivers/power/supply/mca/mca_strategy/strategy_fg/mca_strategy_fg.o": "1c1ca913086e624db372f0d316d1c32a2ef1414dfe6460abcdbe2986118f88b9"
   },
-  "qualification": "ARM64 changed objects; full build pending; no device result"
+  "qualification": "Full ARM64 Image and 354 in-tree modules pass; 17738 symbol-version records verified; no external-module rebuild, ROM image or phone result",
+  "full_build": {
+    "source_commit": "6e244c9442dba309ec15a2cb64dadf0832722572",
+    "exit_code": 0,
+    "kernel_release": "6.12.118-g6e244c9442db-yuzuli",
+    "image_bytes": 34580992,
+    "image_sha256": "02b20579d741a75b89a584853a8c951eccc557335385dadc31dc2657ecbb2d80",
+    "config_sha256": "09c9352e833e0e9601e0aada4768e707cc0d7517bffc12de9a73d8b4e3fd9b39",
+    "module_audit": {
+      "pass": true,
+      "scope": "ELF/CRC/provider/depends/vermagic only",
+      "kernel_release": "6.12.118-g6e244c9442db-yuzuli",
+      "vermagic": "6.12.118-g6e244c9442db-yuzuli SMP preempt mod_unload modversions aarch64",
+      "module_count": 354,
+      "export_count": 20308,
+      "version_records_checked": 17738,
+      "symvers_inputs": [
+        {
+          "root": "kernel",
+          "symvers_sha256": "a3981a9d286173ae599b084bf1faa48dafda443021b2c7345421d21a75114e29"
+        }
+      ],
+      "signature_checked": false,
+      "final_images_checked": false,
+      "hardware_checked": false
+    },
+    "build_log_sha256": "b6098dd419f9de5ad28d6fe98225f4c3f6bbbd6535937ba3bbb2a9d743f653bb"
+  }
 }
