@@ -65,6 +65,7 @@ mca_adsp_glink.ko
 mca_qcom_panel.ko
 qcom_adsp_pd_protocol.ko
 mca_protocol_pd_class.ko
+mca_qcom_subpmic_proxy.ko
 mca_protocol_qc_class.ko
 qti_battery_charger.ko
 qti-fixed-regulator.ko

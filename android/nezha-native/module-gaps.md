@@ -8,10 +8,10 @@
 
 | 功能 | 本轮确认的状态 | 未完成事项 |
 |---|---|---|
-| 有线充电 | 电量计、SC8585、MCA GLINK 和 PD 接口已有源码及板级入口。 | **P0**：当前 Nezha 配置未接通 buck/sub-PMIC 提供者、charge interface 与配套充电策略。原生 DT 中通用 `qcom,battery-charger` 仍禁用；电量计不能代替 USB 在线、输入限流和充电控制。核对 OS4 协议及 JEITA/保护后接入，不能直接启用 Myron 全套服务。 |
+| 有线充电 | **本轮接入 Nezha sub-PMIC 基础提供者**：USB 在线/电压/电流、BC1.2 类型、buck 限流/限压/启停回调；按 4.0.7 命令编号实现，并加入配置、DT 和加载清单。GLINK 订阅增加同步注销。 | **P0**：charge interface、JEITA/温控、策略与保护链路仍需接通。此提供者不在 probe 写入充电参数，不代表快充完成；后续接口必须复用已有 `usb` power_supply，避免重名注册。 |
 | 无线充电 | 已确认本机 SC96281 与原厂标定结构。 | **P0**：接收器、配件状态、薄厚壳 FOD 表和 MCA 控制链路尚未接通；这是 17 Ultra 的适配缺口，不引用 Myron 的掉电现象作为本机实测。 |
 | 触摸 | `xiaomi_touch.ko`、`synaptics_tcm2.ko` 有构建和加载入口，SPI SE19 节点与父总线启用。固件按 DDIC 选择。 | OS4 固件/THP 文件、上电下载、正常输入、息屏唤醒与恢复模式触摸需在本机验收。尚无证据可标记运行正常。 |
-| 相机 | `camera.ko` 有构建和加载入口；原厂四路 sensor 使用 CCI0、SE8/SE9 I2C，现有代码有 I2C sensor/actuator 匹配。 | **P0**：原生整机入口缺相机 SoC 和四路板级配置。原厂 CSI0/3/4 为 `qcom,csiphy-v2.4.0-1`，现有 `cam_csiphy_parse_dt_info()` 不识别此版本并返回 `-EINVAL`；核对的 MiCode popsicle 分支也无 `-1` 分支。需对应寄存器表，不能直接冒充普通 v2.4.0。长焦 `qcom,zoom` 也缺匹配，随后核对 HAL 消息与多摄切换。 |
+| 相机 | **本轮补入 Canoe 相机 SoC、四路 sensor、供电/CCI/I²C/闪光灯节点**；CSI0/3/4 增加真正的 `v2.4.0-1` 默认表。共享 pinctrl 改用 TLMM GPIO92/105 引用，驱动解析时转换为当前全局编号，保留旧属性兼容。 | **P0**：长焦 `qcom,zoom` 驱动、HAL 消息/私有 ABI、开流与多摄切换仍未完成验证。原厂 AutoEQ 重试选择未移植，本轮使用 choice zero 默认设置；闪光灯及前后摄需实测。 |
 | 基带 | Modem PAS、SMP2P/GLINK、QRTR、IPA/RMNET 有源码/配置或加载入口，原生 modem 节点启用；保留双卡默认路由。 | 验证固件启动、RIL/IMS、两张 SIM、通话/短信/数据和休眠恢复。现阶段没有基础模块整体缺席的证据，也没有实机通过记录。 |
 | Wi-Fi | **已补 Canoe 板级遗漏**：Peach CNSS、PCIe 电源域、WLAN 内存/IOMMU、复位/唤醒引脚、供电和 XO 校准单元。CNSS 与 Peach WLAN 模块已有构建/加载入口。 | 固件/板级校准文件、PCIe 枚举、扫描连接、热点与休眠恢复待实测。原厂 SG/Whale 小型入口也没有这组节点；本次以原厂 Canoe 整机入口为范围，不扩展其它板型。 |
 | 蓝牙 | **已补 Canoe 板级遗漏**：原厂电源节点、共享复位、PMIC pinctrl/NVMEM 及 SE18 UART；`btpower`、`btfmcodec`、`bt_fm_swr` 已列入构建/加载。 | HCI 固件、HAL/串口初始化、配对/重连及通话音频待实测；SoundWire 板级音频链路尚未接入。原厂 `bt_uwb_en` 是蓝牙也使用的共享复位状态，暂缓 UWB 不等于删除它。 |
@@ -23,11 +23,19 @@
 - 从同一 4.0.7 OTA 恢复并核对 `dtbo` 和 `vendor_boot`，SHA-256 分别为 `1b78a4cc5fe5ee46fcf1ea3af0ee5a1287c0b4a2ef78a30f4b62f745d31505ac`、`68a80b12e8210e0683fb0f275e0df2134db591113c9d6d91acbd34f54f4409cf`。验证了所取分区及操作数据哈希，不声称本次重验整个 OTA 签名。
 - 12 个原生 base 与对应板级入口完成主机编译/合并；本次连接功能修补只接入六个已使用 Canoe 完整入口的 base：canoe、canoe-v2、canoe-tp、canoe-tp-v2、canoep、canoep-v2。
 - 六个 Canoe 合并结果分别核对 194 项原厂连接功能属性，含 phandle 指向；不是通过替换数字地址消除错误。Canoe 原厂完整合并树也确认两个蓝牙电源节点均存在且未禁用。
-- 新增设备树仓库 `tools/check-nezha-basics.py`，对最终 DTB 检查基础节点及所有祖先的启用状态，拒绝用未合并 DTBO 充当验收结果。它只检查节点存在性，不证明驱动绑定、供电值、固件、HAL 或硬件正常。当前仍应报告充电和相机缺口。
+- 新增设备树仓库 `tools/check-nezha-basics.py`，对最终 DTB 检查基础节点及所有祖先的启用状态，拒绝用未合并 DTBO 充当验收结果。它只检查节点存在性，不证明驱动绑定、供电值、固件、HAL 或硬件正常。六个 Canoe 最终树现已具有基础相机节点；仍应报告 charge interface 和无线接收器缺失。节点检查不覆盖相机驱动/HAL 的剩余缺口。
+
+### 本轮补充验证：sub-PMIC 与相机
+
+- ARM64 / Clang 19：当前 Nezha 配置下 MCA 子树、修改的 CSI PHY 和相机资源管理对象编译通过；新 sub-PMIC 复合对象链接通过。当前主机验证使用 C Binder，未完成 Android Rust Binder 生产配置、完整 vmlinux/modpost、签名与可刷镜像验证。
+- 正常 Kbuild 入口 `vendor/qcom/nezha-canoe-board-overlay.dtbo` 编译通过；DTC 仍有原厂风格节点/overlay 上下文警告，不称为无警告。
+- 六个 Canoe 最终合并树各通过 648 项原厂相机属性/引用核对，以及共享 GPIO 的一项等价转换检查；Wi-Fi/蓝牙的 194 项属性回归检查通过。共享引脚不再依赖原厂固定基址 512。
+- `tools/verify-nezha-csiphy.py` 对实际 ARM64 编译对象和原厂 `camera.ko` 校验：29 档默认速率、全部 PHY/variant 指针、8 组寄存器表、lane offsets 一致。该工具不验证 OEM AutoEQ 重试、HAL 或实机出图。
+- 本轮额外核对 `vendor_dlkm` SHA-256：`094b779c61c8b1736025230e545838001b0d4037ff2473dcbc413af128738cb4`；其中 `camera.ko` SHA-256：`9c5f719297511f0e54c03dbe225acd1d179c2b83deb5fff8997dd5b7e2d39774`。原厂二进制仅作比对材料，不随 Git 提交。
 
 ## 原厂模块取舍
 
-四份原厂加载清单共有 655 个不同模块名。ARM64 4 KiB、Clang 19 的 6.12.118 构建产出 374 个树内和 87 个外置模块，其中 419 个与原厂加载项同名。下列 236 项是名称差异。一个功能可能有通用替代实现，也可能要由多个模块共同提供。
+以下名称统计是此前构建快照，本轮增加的 sub-PMIC 尚未计入全量重编统计。四份原厂加载清单共有 655 个不同模块名。ARM64 4 KiB、Clang 19 的 6.12.118 构建产出 374 个树内和 87 个外置模块，其中 419 个与原厂加载项同名。下列 236 项是名称差异。一个功能可能有通用替代实现，也可能要由多个模块共同提供。
 
 | 范围 | 名称数 | 处理方式 |
 |---|---:|---|
@@ -196,7 +204,7 @@ SC96281 正向无线充电仍待适配。原厂常规异物检测表有 32 行�
 | `mca_platform_base.ko` | 恢复、Vendor | 核对调用方 |  | mca platform base |
 | `mca_platform_wireless_class.ko` | 恢复、Vendor | 日用功能 | bq27z561、mca_basic_wireless、mca_bmd（另 11） | platform wireless charge class |
 | `mca_qcom_smem.ko` | 恢复、Vendor | 核对调用方 | mca_charger_thermal、mca_strategy_buckchg、mca_strategy_fg_comp | mca get smem info |
-| `mca_qcom_subpmic_proxy.ko` | 恢复、Vendor | 日用功能 | leds-qcom-flash、qcom-spmi-wled | qcom subpmic  driver |
+| `mca_qcom_subpmic_proxy.ko` | 恢复、Vendor | 日用功能 | leds-qcom-flash、qcom-spmi-wled | 已接入 Nezha 基础提供者；原厂完整策略/OTG/保护尚未完成 |
 | `mca_qcom_sysfs.ko` | 恢复、Vendor | 核对调用方 |  | mca qcom sysfs |
 | `mca_quick_wireless.ko` | 恢复、Vendor | 核对调用方 |  | Xiaomi Wireless Quick Charge |
 | `mca_smart_charge.ko` | 恢复、Vendor | 核对调用方 | mca_basic_wireless、mca_buckchg_jeita、mca_charger_thermal（另 5） | smart charge driver |

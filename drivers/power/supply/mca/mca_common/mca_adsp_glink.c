@@ -8,6 +8,8 @@
 #include <linux/completion.h>
 #include <linux/workqueue.h>
 #include <linux/list.h>
+#include <linux/rculist.h>
+#include <linux/srcu.h>
 #include <linux/string.h>
 #include <linux/err.h>
 #include <linux/mod_devicetable.h>
@@ -210,20 +212,65 @@ out:
 }
 EXPORT_SYMBOL(mca_adsp_glink_read_prop);
 
-int mca_adsp_glink_resister_ops(struct mca_adsp_glink_ops *ops, void *priv)
-{
-	struct mca_adsp_ops_node *n;
+/* Registration/removal is sleepable and must not run from a callback. */
+static DEFINE_MUTEX(mca_ops_lock);
+DEFINE_STATIC_SRCU(mca_ops_srcu);
 
+static int mca_glink_register_ops(struct list_head *head,
+		struct mca_adsp_glink_ops *ops, void *priv)
+{
+	struct mca_adsp_ops_node *n, *entry;
+
+	if (!ops)
+		return -EINVAL;
 	n = kzalloc(sizeof(*n), GFP_KERNEL);
 	if (!n)
 		return -ENOMEM;
-
 	n->ops = ops;
 	n->priv = priv;
-	list_add(&n->node, &g_mca_adsp_glink_ops_head);
+	mutex_lock(&mca_ops_lock);
+	list_for_each_entry(entry, head, node) {
+		if (entry->ops == ops && entry->priv == priv) {
+			mutex_unlock(&mca_ops_lock);
+			kfree(n);
+			return -EEXIST;
+		}
+	}
+	list_add_rcu(&n->node, head);
+	mutex_unlock(&mca_ops_lock);
 	return 0;
 }
+
+static int mca_glink_unregister_ops(struct list_head *head,
+		struct mca_adsp_glink_ops *ops, void *priv)
+{
+	struct mca_adsp_ops_node *n;
+
+	mutex_lock(&mca_ops_lock);
+	list_for_each_entry(n, head, node) {
+		if (n->ops == ops && n->priv == priv) {
+			list_del_rcu(&n->node);
+			mutex_unlock(&mca_ops_lock);
+			synchronize_srcu(&mca_ops_srcu);
+			kfree(n);
+			return 0;
+		}
+	}
+	mutex_unlock(&mca_ops_lock);
+	return -ENOENT;
+}
+
+int mca_adsp_glink_resister_ops(struct mca_adsp_glink_ops *ops, void *priv)
+{
+	return mca_glink_register_ops(&g_mca_adsp_glink_ops_head, ops, priv);
+}
 EXPORT_SYMBOL(mca_adsp_glink_resister_ops);
+
+int mca_adsp_glink_unregister_ops(struct mca_adsp_glink_ops *ops, void *priv)
+{
+	return mca_glink_unregister_ops(&g_mca_adsp_glink_ops_head, ops, priv);
+}
+EXPORT_SYMBOL(mca_adsp_glink_unregister_ops);
 
 int mca_adsp_glink_qbg_write_prop(int prop_id, void *value, size_t size)
 {
@@ -321,18 +368,15 @@ EXPORT_SYMBOL(mca_adsp_glink_qbg_read_prop);
 
 int mca_adsp_glink_qbg_resister_ops(struct mca_adsp_glink_ops *ops, void *priv)
 {
-	struct mca_adsp_ops_node *n;
-
-	n = kzalloc(sizeof(*n), GFP_KERNEL);
-	if (!n)
-		return -ENOMEM;
-
-	n->ops = ops;
-	n->priv = priv;
-	list_add(&n->node, &g_mca_adsp_glink_qbg_ops_head);
-	return 0;
+	return mca_glink_register_ops(&g_mca_adsp_glink_qbg_ops_head, ops, priv);
 }
 EXPORT_SYMBOL(mca_adsp_glink_qbg_resister_ops);
+
+int mca_adsp_glink_qbg_unregister_ops(struct mca_adsp_glink_ops *ops, void *priv)
+{
+	return mca_glink_unregister_ops(&g_mca_adsp_glink_qbg_ops_head, ops, priv);
+}
+EXPORT_SYMBOL(mca_adsp_glink_qbg_unregister_ops);
 
 static int
 mca_adsp_glink_handle_notification(struct mca_adsp_glink_dev *mca,
@@ -340,6 +384,7 @@ mca_adsp_glink_handle_notification(struct mca_adsp_glink_dev *mca,
 {
 	struct mca_adsp_ops_node *n;
 	struct list_head *head;
+	int idx;
 
 	head = (msg->hdr.owner == MCA_ADSP_GLINK_QBG_OWNER) ?
 		       &g_mca_adsp_glink_qbg_ops_head :
@@ -347,11 +392,13 @@ mca_adsp_glink_handle_notification(struct mca_adsp_glink_dev *mca,
 
 	mca_log_info("mca_adsp receive notification %d, owner %d\n",
 		     msg->property_id, msg->hdr.owner);
-	list_for_each_entry(n, head, node) {
+	idx = srcu_read_lock(&mca_ops_srcu);
+	list_for_each_entry_rcu(n, head, node, srcu_read_lock_held(&mca_ops_srcu)) {
 		if (n->ops && n->ops->notification)
 			n->ops->notification(msg->property_id, msg->data,
 					     MCA_ADSP_PROP_DATA_LEN, n->priv);
 	}
+	srcu_read_unlock(&mca_ops_srcu, idx);
 	return 0;
 }
 
@@ -416,15 +463,19 @@ static int mca_adsp_glink_callback(void *priv, void *data, size_t len)
 static void mca_adsp_glink_sync_work(struct work_struct *work)
 {
 	struct mca_adsp_ops_node *n;
+	int idx = srcu_read_lock(&mca_ops_srcu);
 
-	list_for_each_entry(n, &g_mca_adsp_glink_ops_head, node) {
+	list_for_each_entry_rcu(n, &g_mca_adsp_glink_ops_head, node,
+				 srcu_read_lock_held(&mca_ops_srcu)) {
 		if (n->ops && n->ops->glink_state_up)
 			n->ops->glink_state_up(n->priv);
 	}
-	list_for_each_entry(n, &g_mca_adsp_glink_qbg_ops_head, node) {
+	list_for_each_entry_rcu(n, &g_mca_adsp_glink_qbg_ops_head, node,
+				 srcu_read_lock_held(&mca_ops_srcu)) {
 		if (n->ops && n->ops->glink_state_up)
 			n->ops->glink_state_up(n->priv);
 	}
+	srcu_read_unlock(&mca_ops_srcu, idx);
 }
 
 static void mca_adsp_glink_state_cb(void *priv, enum pmic_glink_state state)
@@ -432,6 +483,7 @@ static void mca_adsp_glink_state_cb(void *priv, enum pmic_glink_state state)
 	struct mca_adsp_glink_dev *mca = priv;
 	struct mca_adsp_ops_node *n;
 	unsigned long flags;
+	int idx;
 
 	/* Serialize link loss with request admission and response completion. */
 	spin_lock_irqsave(&mca->pending_lock, flags);
@@ -445,14 +497,18 @@ static void mca_adsp_glink_state_cb(void *priv, enum pmic_glink_state state)
 	if (state == PMIC_GLINK_STATE_UP) {
 		queue_work(system_wq, &mca->sync_work);
 	} else {
-		list_for_each_entry(n, &g_mca_adsp_glink_ops_head, node) {
+		idx = srcu_read_lock(&mca_ops_srcu);
+		list_for_each_entry_rcu(n, &g_mca_adsp_glink_ops_head, node,
+				 srcu_read_lock_held(&mca_ops_srcu)) {
 			if (n->ops && n->ops->glink_state_down)
 				n->ops->glink_state_down(n->priv);
 		}
-		list_for_each_entry(n, &g_mca_adsp_glink_qbg_ops_head, node) {
+		list_for_each_entry_rcu(n, &g_mca_adsp_glink_qbg_ops_head, node,
+				 srcu_read_lock_held(&mca_ops_srcu)) {
 			if (n->ops && n->ops->glink_state_down)
 				n->ops->glink_state_down(n->priv);
 		}
+		srcu_read_unlock(&mca_ops_srcu, idx);
 	}
 }
 

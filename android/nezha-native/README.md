@@ -281,4 +281,36 @@ Use the actual final merged file, not an individual DTBO. Exit 1 means missing
 or disabled required node groups; exit 2 means invalid input. Exit 0 means only
 the listed DT nodes exist, including enabled ancestors. It does not validate
 drivers, firmware, HALs, regulator/GPIO values or operation on the phone.
-The current source tree is expected to report charging and camera gaps.
+The current Canoe DT presence audit still reports missing charge-interface and
+wireless-receiver nodes. Camera driver/HAL gaps remain outside that node audit.
+
+
+## Nezha sub-PMIC and camera baseline
+
+`CONFIG_XIAOMI_MCA_NEZHA_SUBPMIC` selects the Nezha implementation under the
+existing `mca_qcom_subpmic_proxy.ko` name. It uses OS4.0.7 property IDs (not the
+legacy Myron enum), exposes read-only USB telemetry and registers BC1.2/basic
+buck callbacks. Transport failures propagate to callers. Notifications refresh
+state through bounded work; GLINK unsubscribe waits for in-flight callbacks.
+No charging limits, charge-enable or OTG commands are issued during probe.
+Charging policy, JEITA, thermal/port protection and wireless are still pending.
+A future charge-interface implementation must reuse, not duplicate, `usb`.
+
+The existing Canoe board overlay now includes the camera SoC and Nezha board
+wiring, so the documented overlay order is unchanged. Shared camera pinctrl
+uses `shared-pinctrl-gpios` controller-relative GPIO specifiers paired with
+`shared-pctrl-gpio-names`; the camera resource manager retains legacy
+`gpios-shared-pinctrl` support and propagates GPIO-provider probe deferral.
+
+CSIPHY v2.4.0-1 has its own D-PHY and C-PHY baseline settings. It uses the
+factory default AutoEQ choice zero; the proprietary retry mechanism and
+long-telephoto zoom driver remain pending. Validate the compiled data with
+pyelftools installed:
+
+```sh
+python3 tools/verify-nezha-csiphy.py /path/to/stock407/camera.ko \
+  /path/to/camera-kernel/drivers/cam_sensor_module/cam_csiphy/cam_csiphy_soc.o
+```
+
+This checks actual ELF data and relocation targets. It does not replace HAL,
+streaming, suspend/resume, protection or physical-device acceptance tests.

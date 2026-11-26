@@ -1050,4 +1050,12 @@ config XIAOMI_MCA_ADSP_PD
 	help
 	  Build the MCA GLINK transport and the USB PD protocol provider.
 
+config XIAOMI_MCA_NEZHA_SUBPMIC
+	tristate "Nezha OS4 sub-PMIC basic charging provider"
+	depends on TARGET_PRODUCT_NEZHA && XIAOMI_MCA_ADSP_PD
+	help
+	  Provide USB telemetry, BC1.2 charger type and basic buck operations
+	  using the Nezha OS4 firmware protocol. Charging policy and wireless
+	  receiver support must be supplied separately.
+
 endif # POWER_SUPPLY

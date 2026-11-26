@@ -4,4 +4,9 @@
 # Platform drivers reference private in-tree headers by source-root paths.
 ccflags-y += -I$(srctree)
 ccflags-y += -I$(srctree)/drivers/misc/hwid -I$(srctree)/drivers/power/supply/mca/include -I$(srctree)/drivers/power/supply/mca/mca_qcom_subpmic_proxy -I$(srctree)/include
+ifeq ($(CONFIG_TARGET_PRODUCT_NEZHA),y)
+obj-$(CONFIG_XIAOMI_MCA_NEZHA_SUBPMIC) += mca_qcom_subpmic_proxy.o
+mca_qcom_subpmic_proxy-y := mca_nezha_subpmic.o
+else
 obj-$(CONFIG_MYRON_MCA_SERVICES) += mca_qcom_subpmic_proxy.o
+endif
