@@ -153,6 +153,7 @@ mbhc_dlkm.ko
 sdca_registers_dlkm.ko
 wcd9xxx_dlkm.ko
 stub_dlkm.ko
+tas25xx_dlkm.ko
 machine_dlkm.ko
 swr_haptics_dlkm.ko
 lpass_cdc_wsa2_macro_dlkm.ko

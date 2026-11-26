@@ -650,7 +650,7 @@ static void mca_buckchg_jeita_monitor_work(struct work_struct *work)
 		goto out;
 	}
 
-	if (!info->online) {
+	if (!READ_ONCE(info->online)) {
 		mca_log_info("adapter is plugout\n");
 		return;
 	}
@@ -663,8 +663,25 @@ out:
 	schedule_delayed_work(&info->monitor_work, msecs_to_jiffies(interval));
 }
 
+static bool mca_jeita_table_valid(const struct mca_buckchg_jeita_data *table,
+	int count)
+{
+	int i;
+
+	for (i = 0; i < count; i++) {
+		const struct mca_buckchg_jeita_data *row = &table[i];
+
+		if (row->temp_low >= row->temp_high || row->low_temp_hys < 0 ||
+		    row->high_temp_hys < 0 || row->max_current < 0 ||
+		    row->vterm <= 0 || row->iterm < 0 ||
+		    (i && row->temp_low != table[i - 1].temp_high))
+			return false;
+	}
+	return count > 0;
+}
+
 static int
-mca_buckchg_parse_volt_para(struct device_node *node, const char *name,
+mca_buckchg_parse_volt_para(struct device *dev, struct device_node *node, const char *name,
 			    struct mca_buckchg_jeita_volt_para *volt_para)
 {
 	struct mca_buckchg_jeita_volt_data *volt_data;
@@ -678,14 +695,15 @@ mca_buckchg_parse_volt_para(struct device_node *node, const char *name,
 	array_len = mca_parse_dts_count_strings(node, name,
 						JEITA_VOLT_DATA_MAX_GROUP,
 						BUCKCHG_VOLTAGE_PARA_MAX);
-	if (array_len < 0) {
+	if (array_len <= 0 || array_len % BUCKCHG_VOLTAGE_PARA_MAX ||
+	    array_len > JEITA_VOLT_DATA_MAX_GROUP * BUCKCHG_VOLTAGE_PARA_MAX) {
 		mca_log_err("parse %s failed\n", name);
-		return -1;
+		return -EINVAL;
 	}
 
 	volt_para->size = array_len / BUCKCHG_VOLTAGE_PARA_MAX;
 	volt_para->volt_data =
-		kcalloc(volt_para->size, sizeof(*volt_data), GFP_KERNEL);
+		devm_kcalloc(dev, volt_para->size, sizeof(*volt_data), GFP_KERNEL);
 	if (!volt_para->volt_data) {
 		mca_log_err("volt para no mem\n");
 		return -ENOMEM;
@@ -693,7 +711,7 @@ mca_buckchg_parse_volt_para(struct device_node *node, const char *name,
 	volt_data = volt_para->volt_data;
 	for (i = 0; i < array_len; i++) {
 		if (mca_parse_dts_string_index(node, name, i, &tmp_string))
-			return -1;
+			return -EINVAL;
 
 		row = i / BUCKCHG_VOLTAGE_PARA_MAX;
 		col = i % BUCKCHG_VOLTAGE_PARA_MAX;
@@ -713,19 +731,22 @@ mca_buckchg_parse_volt_para(struct device_node *node, const char *name,
 		}
 	}
 
+	for (i = 0; i < volt_para->size; i++) {
+		if (volt_data[i].voltage <= 0 || volt_data[i].max_current < 0 ||
+		    (i && volt_data[i].voltage <= volt_data[i - 1].voltage))
+			return -EINVAL;
+	}
 	for (i = 0; i < volt_para->size; i++)
 		mca_log_debug("volt_para %d %d\n", volt_data[i].voltage,
 			      volt_data[i].max_current);
 
 	return 0;
 error:
-	kfree(volt_data);
-	volt_data = NULL;
-	return -1;
+	return -EINVAL;
 }
 
 static int
-mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
+mca_buckchg_jeita_parse_para(struct device *dev, struct device_node *node, const char *name,
 			     struct mca_buckchg_jeita_para *jeita_info)
 {
 	int array_len, row, col, i;
@@ -735,18 +756,19 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 
 	if (!node) {
 		mca_log_err("node in null\n");
-		return -1;
+		return -EINVAL;
 	}
 
 	array_len = mca_parse_dts_count_strings(
 		node, name, JEITA_DATA_MAX_GROUP, JEITA_TEMP_PARA_MAX);
-	if (array_len < 0) {
+	if (array_len <= 0 || array_len % JEITA_TEMP_PARA_MAX ||
+	    array_len > JEITA_DATA_MAX_GROUP * JEITA_TEMP_PARA_MAX) {
 		mca_log_err("parse jeita failed\n");
-		return -1;
+		return -EINVAL;
 	}
 
 	jeita_info->size = array_len / JEITA_TEMP_PARA_MAX;
-	jeita_info->jeita_data = kcalloc(
+	jeita_info->jeita_data = devm_kcalloc(dev,
 		jeita_info->size, sizeof(*jeita_info->jeita_data), GFP_KERNEL);
 	if (!jeita_info->jeita_data) {
 		mca_log_err("temp para no mem\n");
@@ -755,7 +777,7 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 	jeita_data = jeita_info->jeita_data;
 	for (i = 0; i < array_len; i++) {
 		if (mca_parse_dts_string_index(node, name, i, &tmp_string))
-			return -1;
+			return -EINVAL;
 
 		row = i / JEITA_TEMP_PARA_MAX;
 		col = i % JEITA_TEMP_PARA_MAX;
@@ -795,7 +817,7 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 			break;
 		case JEITA_TEMP_PARA_VOLT_PARA_NAME:
 			if (mca_buckchg_parse_volt_para(
-				    node, tmp_string,
+				    dev, node, tmp_string,
 				    &jeita_data[row].volt_para))
 				goto error;
 			break;
@@ -803,6 +825,9 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 			break;
 		}
 	}
+
+	if (!mca_jeita_table_valid(jeita_data, jeita_info->size))
+		return -EINVAL;
 
 	for (i = 0; i < jeita_info->size; i++)
 		mca_log_err("jeita para %d %d %d %d %d %d %d %d\n",
@@ -816,17 +841,21 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 	snprintf(ffc_name + strlen(ffc_name),
 		 sizeof(ffc_name) - strlen(ffc_name), "_ffc");
 	mca_log_err("new name:%s\n", ffc_name);
+	/* FFC is optional; a present but malformed table is not optional. */
+	if (!of_find_property(node, ffc_name, NULL))
+		return 0;
 	array_len = mca_parse_dts_count_strings(
 		node, ffc_name, JEITA_DATA_MAX_GROUP, JEITA_TEMP_PARA_MAX);
-	if (array_len < 0) {
+	if (array_len <= 0 || array_len % JEITA_TEMP_PARA_MAX ||
+	    array_len > JEITA_DATA_MAX_GROUP * JEITA_TEMP_PARA_MAX) {
 		mca_log_err("parse jeita para ffc failed\n");
-		return 0;
+		return -EINVAL;
 	}
 
 	jeita_info->fcc_size = array_len / JEITA_TEMP_PARA_MAX;
 
 	jeita_info->jeita_ffc_data =
-		kcalloc(jeita_info->fcc_size,
+		devm_kcalloc(dev, jeita_info->fcc_size,
 			sizeof(*jeita_info->jeita_ffc_data), GFP_KERNEL);
 	if (!jeita_info->jeita_ffc_data) {
 		mca_log_err("temp para no mem\n");
@@ -835,7 +864,7 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 	jeita_ffc_data = jeita_info->jeita_ffc_data;
 	for (i = 0; i < array_len; i++) {
 		if (mca_parse_dts_string_index(node, ffc_name, i, &tmp_string))
-			return -1;
+			return -EINVAL;
 
 		row = i / JEITA_TEMP_PARA_MAX;
 		col = i % JEITA_TEMP_PARA_MAX;
@@ -877,7 +906,7 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 			break;
 		case JEITA_TEMP_PARA_VOLT_PARA_NAME:
 			if (mca_buckchg_parse_volt_para(
-				    node, tmp_string,
+				    dev, node, tmp_string,
 				    &jeita_ffc_data[row].volt_para))
 				goto error1;
 			break;
@@ -885,6 +914,9 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 			break;
 		}
 	}
+	if (!mca_jeita_table_valid(jeita_ffc_data, jeita_info->fcc_size))
+		return -EINVAL;
+
 	for (i = 0; i < jeita_info->fcc_size; i++)
 		mca_log_err("jeita ffc para %d %d %d %d %d %d %d %d\n",
 			    jeita_ffc_data[i].temp_low,
@@ -896,12 +928,8 @@ mca_buckchg_jeita_parse_para(struct device_node *node, const char *name,
 			    jeita_ffc_data[i].volt_para.size);
 	return 0;
 error1:
-	kfree(jeita_ffc_data);
-	jeita_ffc_data = NULL;
 error:
-	kfree(jeita_data);
-	jeita_data = NULL;
-	return -1;
+	return -EINVAL;
 }
 
 static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
@@ -909,7 +937,7 @@ static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
 	struct mca_buckchg_jeita_para *jeita_info = &info->jeita_para;
 	struct mca_buckchg_jeita_para *base_jeita_info = &info->base_jeita_para;
 	struct mca_buckchg_jeita_para *flip_jeita_info = &info->flip_jeita_para;
-	struct device_node *node = info->dev->of_node;
+	struct device_node *node = of_node_get(info->dev->of_node);
 	const struct mca_hwid *hwid = mca_get_hwid_info();
 	const char *dev_name = NULL;
 	int ret;
@@ -932,12 +960,15 @@ static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
 	info->has_gbl_batt_para =
 		of_property_read_bool(node, "has-global-batt-para");
 	if (hwid && info->has_gbl_batt_para &&
-	    hwid->country_version != CountryCN)
+	    hwid->country_version != CountryCN) {
+		of_node_put(node);
 		node = of_find_node_by_name(NULL, "mca_buckchg_jeita_gbl_para");
+	}
 
 	if (!node) {
 		mca_log_err("node in null\n");
-		return -1;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	info->has_tmp_batt_para =
@@ -946,32 +977,92 @@ static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
 		platform_fg_ops_get_device_name(FG_IC_MASTER, &dev_name);
 		if (!dev_name) {
 			mca_log_err("get device name fail, wait for it\n");
-			return -EINVAL;
+			ret = -EPROBE_DEFER;
+			goto out;
 		}
 		mca_log_err("project O9 tmp test: device name: %s\n", dev_name);
 		if (!strcmp(dev_name, "2@BP")) {
+			of_node_put(node);
 			node = of_find_node_by_name(
 				NULL, "mca_buckchg_jeita_tmp_para");
 			if (!node) {
 				mca_log_err("has-tmp-batt-para node in null\n");
-				return -1;
+				ret = -EINVAL;
+				goto out;
 			}
 		}
 	}
 
-	ret = mca_buckchg_jeita_parse_para(node, "jeita_para", jeita_info);
+	ret = mca_buckchg_jeita_parse_para(info->dev, node, "jeita_para", jeita_info);
+	if (ret)
+		goto out;
 	info->support_base_flip =
 		of_property_read_bool(node, "support-base-flip");
 	info->base_flip_same = of_property_read_bool(node, "base-flip-same");
 	if (info->support_base_flip) {
 		mca_log_err("support base flip, start config buckchg jeita\n");
-		ret = mca_buckchg_jeita_parse_para(node, "base_jeita_para",
+		ret = mca_buckchg_jeita_parse_para(info->dev, node, "base_jeita_para",
 						   base_jeita_info);
-		ret = mca_buckchg_jeita_parse_para(node, "flip_jeita_para",
+		if (ret)
+			goto out;
+		ret = mca_buckchg_jeita_parse_para(info->dev, node, "flip_jeita_para",
 						   flip_jeita_info);
 	}
 
+out:
+	of_node_put(node);
 	return ret;
+}
+
+/* Nezha stock keeps each power source separately: unplugging USB while
+ * wireless remains online must not stop battery temperature monitoring. */
+static int mca_nezha_jeita_process_event(struct mca_buckchg_jeita_dev *info,
+	int event, int value)
+{
+	bool online;
+
+	mutex_lock(&info->event_lock);
+	/* OS4.0.7 mca_buckchg_jeita.ko process_event .text+0x187c. */
+	if (event == 0x37) {
+		info->dtpt_status = value;
+		goto out;
+	}
+	switch (event) {
+	case MCA_EVENT_USB_CONNECT:
+		info->usb_online = true;
+		break;
+	case MCA_EVENT_USB_DISCONNECT:
+		info->usb_online = false;
+		break;
+	case MCA_EVENT_WIRELESS_CONNECT:
+		info->wireless_online = true;
+		break;
+	case MCA_EVENT_WIRELESS_DISCONNECT:
+		info->wireless_online = false;
+		break;
+	default:
+		goto out;
+	}
+	online = info->usb_online || info->wireless_online;
+	if (online == !!info->online)
+		goto out;
+	WRITE_ONCE(info->online, online);
+	cancel_delayed_work_sync(&info->monitor_work);
+	if (online) {
+		info->proc_data.cur_jeita_index = -1;
+		info->proc_data.max_chg_curr = 0;
+		schedule_delayed_work(&info->monitor_work, 0);
+	} else {
+		info->flip_proc_data.cur_jeita_index = 0;
+		info->flip_proc_data.temp_hys_en = 0;
+		info->flip_proc_data.max_chg_curr = -1;
+		info->base_proc_data.cur_jeita_index = 0;
+		info->base_proc_data.temp_hys_en = 0;
+		info->base_proc_data.max_chg_curr = -1;
+	}
+out:
+	mutex_unlock(&info->event_lock);
+	return 0;
 }
 
 static int mca_buckchg_jeita_process_event(int event, int value, void *data)
@@ -980,6 +1071,9 @@ static int mca_buckchg_jeita_process_event(int event, int value, void *data)
 
 	if (!info)
 		return -1;
+
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA))
+		return mca_nezha_jeita_process_event(info, event, value);
 
 	mca_log_info("receive event %d, value %d\n", event, value);
 	switch (event) {
@@ -1236,26 +1330,17 @@ static int mca_buckchg_jeita_probe(struct platform_device *pdev)
 {
 	struct mca_buckchg_jeita_dev *info;
 	int ret;
-	int online = 0, wireless_online;
+	int online = 0, wireless_online = 0;
 
 	info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
 
 	info->dev = &pdev->dev;
+	mutex_init(&info->event_lock);
 	ret = mca_buckchg_jeita_parse_dt(info);
-	if (ret) {
-		mca_log_err("parse dts failed, ret: %d\n", ret);
-		if (ret != -1) {
-			static int parse_dt_cnt;
-
-			dev_err(&pdev->dev,
-				"%s buckchg_jeita parse_dt_cnt = %d\n",
-				__func__, ++parse_dt_cnt);
-			msleep(100);
-			return parse_dt_cnt <= 49 ? -EPROBE_DEFER : -1;
-		}
-	}
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret, "invalid/unavailable JEITA parameters\n");
 	INIT_DELAYED_WORK(&info->monitor_work, mca_buckchg_jeita_monitor_work);
 	mca_buckchg_jeita_init_voter(info);
 	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_JEITA,
@@ -1272,6 +1357,8 @@ static int mca_buckchg_jeita_probe(struct platform_device *pdev)
 					   STRATEGY_STATUS_TYPE_ONLINE,
 					   &wireless_online);
 
+	info->usb_online = !!online;
+	info->wireless_online = !!wireless_online;
 	if (online || wireless_online) {
 		info->online = 1;
 		schedule_delayed_work(&info->monitor_work, 0);

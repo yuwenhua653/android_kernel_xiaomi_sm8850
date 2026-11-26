@@ -1,0 +1,58 @@
+{
+  "scope": "build outputs only; not image/signature/runtime validation",
+  "modules": 463,
+  "kernel_modules": 375,
+  "external_directories": 32,
+  "crc_checks": 26739,
+  "vermagic": [
+    "6.12.118 SMP preempt mod_unload modversions aarch64"
+  ],
+  "load_lists": {
+    "modules.list.ramdisk_deps": {
+      "entries": 2,
+      "missing": []
+    },
+    "modules.list.system_dlkm": {
+      "entries": 101,
+      "missing": []
+    },
+    "modules.load.recovery": {
+      "entries": 266,
+      "missing": []
+    },
+    "modules.load.system_dlkm": {
+      "entries": 80,
+      "missing": []
+    },
+    "modules.load.vendor_boot": {
+      "entries": 129,
+      "missing": []
+    },
+    "modules.load.vendor_dlkm": {
+      "entries": 217,
+      "missing": []
+    }
+  },
+  "explicit_host_exceptions": [
+    "modules.list.system_dlkm:rust_binder.ko",
+    "modules.load.system_dlkm:rust_binder.ko"
+  ],
+  "errors": [],
+  "date": "2026-11-26",
+  "firmware": "OS4.0.7.0.XPACNXM",
+  "branch": "nazha",
+  "compiler": "Debian Clang 19",
+  "binder": "built-in C Binder; Android Rust Binder not tested",
+  "image_sha256": "5fb4753a68e957b09d19eae6a6e64e37bebece048be34837944c0b633eb478c0",
+  "vmlinux_sha256": "2cc9bc68b05aeaac22a3a4c965a0fe1ea13b0d5c7b1241722b7394e609340a6a",
+  "inactive_object_tests": [
+    "mca_charge_interface.o",
+    "sc96281_core.o",
+    "mca_buckchg_jeita.o"
+  ],
+  "not_validated": [
+    "production Android toolchain and Rust Binder",
+    "final DLKM/vendor_boot/signatures/load order",
+    "device probe, charging protection, camera HAL, audio protection and runtime behavior"
+  ]
+}

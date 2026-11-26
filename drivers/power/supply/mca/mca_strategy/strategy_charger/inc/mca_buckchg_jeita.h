@@ -19,6 +19,8 @@
 #ifndef __MCA_BUCKCHG_JEITA_H__
 #define __MCA_BUCKCHG_JEITA_H__
 
+#include <linux/mutex.h>
+
 #define MCA_BUCKCHG_JEITA_INIT_VOTER_INTERVAL 1000
 #define MCA_BUCKCHG_JEITA_UPDATE_FAST_INTERVAL 5000
 #define MCA_BUCKCHG_JEITA_UPDATE_NORMAL_INTERVAL 3000
@@ -89,6 +91,8 @@ struct mca_buck_jeita_smartchg_data {
 struct mca_buckchg_jeita_dev {
 	struct device *dev;
 	int online;
+	bool usb_online, wireless_online;
+	struct mutex event_lock;
 	int voter_ok;
 	int dtpt_status;
 	int has_gbl_batt_para;

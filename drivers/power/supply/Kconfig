@@ -1050,6 +1050,14 @@ config XIAOMI_MCA_ADSP_PD
 	help
 	  Build the MCA GLINK transport and the USB PD protocol provider.
 
+config XIAOMI_MCA_CHARGE_INTERFACE
+	tristate "Xiaomi MCA charge control interface"
+	depends on XIAOMI_MCA_CORE && TREE_SRCU
+	default MYRON_MCA_INTERFACE
+	help
+	  Expose registered charger policy callbacks through the MCA interface.
+	  Does not provide a policy, and reports absent operations as unsupported.
+
 config XIAOMI_MCA_NEZHA_SUBPMIC
 	tristate "Nezha OS4 sub-PMIC basic charging provider"
 	depends on TARGET_PRODUCT_NEZHA && XIAOMI_MCA_ADSP_PD

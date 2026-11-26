@@ -369,6 +369,7 @@ typedef struct fod_params_t {
 	int uuid;
 	fod_type_t params[DEFAULT_FOD_PARAM_LEN];
 	fod_type_t params_mag[DEFAULT_FOD_PARAM_LEN];
+	fod_type_t params_mag_thick[DEFAULT_FOD_PARAM_LEN];
 } fod_params_t;
 
 typedef struct fw_params_t {
@@ -789,7 +790,9 @@ struct sc96281 {
 	// fod & debug_fod
 	fod_params_t fod_params[FOD_PARA_MAX_GROUP];
 	fod_params_t fod_params_default;
-	fod_params_t fod_params_2_1;
+	fod_params_t fod_params_2_1[FOD_PARA_MAX_GROUP];
+	int fod_params_2_1_size;
+	u8 fod_case;
 	uint8_t wls_debug_one_fod_index;
 	int wls_debug_set_fod_type;
 	fod_type_t wls_debug_one_fod_param;
@@ -798,6 +801,7 @@ struct sc96281 {
 	//lock
 	struct mutex i2c_rw_lock;
 	struct mutex data_transfer_lock;
+	struct mutex fod_lock;
 	struct mutex wireless_chg_int_lock;
 	//notifier
 	struct notifier_block shutdown_notifier;

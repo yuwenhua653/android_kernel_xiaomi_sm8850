@@ -17,6 +17,8 @@
  *
  */
 #include <linux/slab.h>
+#include <linux/mutex.h>
+#include <linux/srcu.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
@@ -40,6 +42,8 @@
  * mca_event_code table is still being audited.
  */
 #define MCA_MYRON_CHARGE_IF_BATTERY_STS_CHANGE 0x10
+/* Nezha OS4.0.7: stock .text+0xb70..0xb7c sends type 2, event 0x13. */
+#define MCA_NEZHA_CHARGE_IF_BATTERY_STS_CHANGE 0x13
 
 enum mca_charge_if_sysfs_type {
 	MCA_CHRAGE_IF_SYSFS_BEGIN = 0,
@@ -81,7 +85,9 @@ static const char *const
 		[MCA_CHARGE_IF_CHG_TYPE_ALL] = "all",
 	};
 
-static struct mca_charge_if_ops *g_mca_charge_if_ops[MCA_CHARGE_IF_CHG_TYPE_END];
+static struct mca_charge_if_ops __rcu *g_mca_charge_if_ops[MCA_CHARGE_IF_CHG_TYPE_END];
+static DEFINE_MUTEX(charge_if_lock);
+DEFINE_STATIC_SRCU(charge_if_srcu);
 
 static int mca_charge_if_get_op_type(const char *type_name)
 {
@@ -102,7 +108,7 @@ static struct mca_charge_if_ops *mca_charge_if_get_ops(unsigned int type)
 	if (type >= ARRAY_SIZE(g_mca_charge_if_ops))
 		return NULL;
 
-	return g_mca_charge_if_ops[type];
+	return srcu_dereference(g_mca_charge_if_ops[type], &charge_if_srcu);
 }
 
 static const char *mca_charge_if_get_type_name(unsigned int type)
@@ -113,15 +119,15 @@ static const char *mca_charge_if_get_type_name(unsigned int type)
 	return g_mca_charge_if_op_type_table[type];
 }
 
-static int mca_charge_if_op_set(char *user, unsigned int type,
+static int mca_charge_if_op_set_locked(char *user, unsigned int type,
 				unsigned int sysfs_type, char *value)
 {
 	struct mca_charge_if_ops *if_ops = mca_charge_if_get_ops(type);
-	int ret = 0;
+	int ret = -EOPNOTSUPP;
 	unsigned int uint_value = 0;
 
 	if (!if_ops)
-		return 0;
+		return -ENODEV;
 
 	switch (sysfs_type) {
 	case MCA_CHRAGE_IF_SYSFS_INPUT_SUSPEND:
@@ -135,6 +141,7 @@ static int mca_charge_if_op_set(char *user, unsigned int type,
 		ret = kstrtouint(value, 0, &uint_value);
 		if (ret)
 			return ret;
+		ret = -EOPNOTSUPP;
 		if (if_ops->set_charge_enable)
 			ret = if_ops->set_charge_enable(user, uint_value,
 							if_ops->data);
@@ -153,6 +160,7 @@ static int mca_charge_if_op_set(char *user, unsigned int type,
 		ret = kstrtouint(value, 0, &uint_value);
 		if (ret)
 			return ret;
+		ret = -EOPNOTSUPP;
 		if (if_ops->set_charge_power_limit)
 			ret = if_ops->set_charge_power_limit(user, uint_value,
 							     if_ops->data);
@@ -161,6 +169,7 @@ static int mca_charge_if_op_set(char *user, unsigned int type,
 		ret = kstrtouint(value, 10, &uint_value);
 		if (ret)
 			return ret;
+		ret = -EOPNOTSUPP;
 		if (if_ops->set_ship_mode_en)
 			ret = if_ops->set_ship_mode_en(user, uint_value,
 						       if_ops->data);
@@ -172,11 +181,22 @@ static int mca_charge_if_op_set(char *user, unsigned int type,
 	return ret;
 }
 
+static int mca_charge_if_op_set(char *user, unsigned int type,
+		unsigned int sysfs_type, char *value)
+{
+	int idx = srcu_read_lock(&charge_if_srcu);
+	int ret = mca_charge_if_op_set_locked(user, type, sysfs_type, value);
+
+	srcu_read_unlock(&charge_if_srcu, idx);
+	return ret;
+}
+
 static int mca_charge_if_common_sysfs_set(char *user, unsigned int type,
 					  unsigned int sysfs_type, char *value)
 {
 	int begin, end;
 	int ret = 0;
+	bool applied = false;
 
 	mca_log_info("user %s set node %d type %d value %s\n", user, sysfs_type,
 		     type, value);
@@ -195,26 +215,33 @@ static int mca_charge_if_common_sysfs_set(char *user, unsigned int type,
 	for (; begin < end; begin++) {
 		int err = mca_charge_if_op_set(user, begin, sysfs_type, value);
 
-		if (err && !ret)
+		if (type == MCA_CHARGE_IF_CHG_TYPE_ALL &&
+		    (err == -ENODEV || err == -EOPNOTSUPP))
+			continue;
+		if (!err)
+			applied = true;
+		else if (!ret)
 			ret = err;
 	}
 
-	if (sysfs_type == MCA_CHRAGE_IF_SYSFS_INPUT_SUSPEND)
+	if (!ret && applied && sysfs_type == MCA_CHRAGE_IF_SYSFS_INPUT_SUSPEND)
 		mca_event_block_notify(MCA_EVENT_TYPE_BATTERY_INFO,
+				       IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA) ?
+				       MCA_NEZHA_CHARGE_IF_BATTERY_STS_CHANGE :
 				       MCA_MYRON_CHARGE_IF_BATTERY_STS_CHANGE, NULL);
 
-	return ret;
+	return ret ? ret : applied ? 0 : -EOPNOTSUPP;
 }
 
-static int mca_charge_if_op_get(unsigned int sys_type, int chg_type, char *buf)
+static int mca_charge_if_op_get_locked(unsigned int sys_type, int chg_type, char *buf)
 {
 	struct mca_charge_if_ops *if_ops = NULL;
-	int ret = -1;
+	int ret = -EOPNOTSUPP;
 	char value_buf[MCA_CHARGE_IF_MAX_VALUE_BUFF] = { 0 };
 
 	if_ops = mca_charge_if_get_ops(chg_type);
 	if (!if_ops)
-		return -1;
+		return -ENODEV;
 
 	switch (sys_type) {
 	case MCA_CHRAGE_IF_SYSFS_INPUT_SUSPEND:
@@ -243,7 +270,7 @@ static int mca_charge_if_op_get(unsigned int sys_type, int chg_type, char *buf)
 							     if_ops->data);
 		break;
 	default:
-		ret = -1;
+		ret = -EOPNOTSUPP;
 		break;
 	}
 
@@ -257,49 +284,49 @@ static int mca_charge_if_op_get(unsigned int sys_type, int chg_type, char *buf)
 	return 0;
 }
 
+static int mca_charge_if_op_get(unsigned int sys_type, int chg_type, char *buf)
+{
+	int idx = srcu_read_lock(&charge_if_srcu);
+	int ret = mca_charge_if_op_get_locked(sys_type, chg_type, buf);
+
+	srcu_read_unlock(&charge_if_srcu, idx);
+	return ret;
+}
+
 static int mca_charge_suspend_state_show(bool *suspend_sts)
 {
-	int ret = 0;
-	char rd_buf[MCA_CHARGE_IF_MAX_RW_BUFF] = { 0 };
-	char last_chars[MCA_CHARGE_IF_CHG_TYPE_ALL];
-
-	for (int i = 0; i < MCA_CHARGE_IF_CHG_TYPE_ALL; i++) {
-		last_chars[i] = '\0';
-		ret = mca_charge_if_op_get(MCA_CHRAGE_IF_SYSFS_INPUT_SUSPEND, i,
-					   rd_buf);
-		if (ret != 0 || strlen(rd_buf) < 2) {
-			last_chars[i] = '0';
-			continue;
-		}
-		size_t last_char_index = strlen(rd_buf) - 2;
-
-		last_chars[i] = rd_buf[last_char_index];
-		memset(rd_buf, 0, MCA_CHARGE_IF_MAX_RW_BUFF);
-	}
+	char buf[MCA_CHARGE_IF_MAX_RW_BUFF];
+	bool found = false;
+	int i, ret;
+	size_t len;
 
 	*suspend_sts = false;
-	for (int j = 0; j < MCA_CHARGE_IF_CHG_TYPE_ALL; j++) {
-		if (last_chars[j] != '0') {
-			*suspend_sts = true;
-			break;
-		}
+	for (i = 0; i < MCA_CHARGE_IF_CHG_TYPE_ALL; i++) {
+		ret = mca_charge_if_op_get(MCA_CHRAGE_IF_SYSFS_INPUT_SUSPEND, i, buf);
+		if (ret == -ENODEV || ret == -EOPNOTSUPP)
+			continue;
+		if (ret)
+			return ret;
+		len = strlen(buf);
+		if (len < 3 || buf[len - 3] != ' ' ||
+		    (buf[len - 2] != '0' && buf[len - 2] != '1'))
+			return -EINVAL;
+		found = true;
+		*suspend_sts |= buf[len - 2] == '1';
 	}
-	mca_log_info("suspend sts = %d", *suspend_sts);
-	return ret;
+	return found ? 0 : -ENODEV;
 }
 
 static int mca_charge_ship_mode_show(bool *pdata)
 {
-	struct mca_charge_if_ops *if_ops =
-		mca_charge_if_get_ops(MCA_CHARGE_IF_CHG_TYPE_BUCK);
-	int ret = 0;
+	struct mca_charge_if_ops *ops;
+	int idx = srcu_read_lock(&charge_if_srcu);
+	int ret = -ENODEV;
 
-	if (!if_ops)
-		return -ENODEV;
-
-	if (if_ops->get_ship_mode_status)
-		ret = if_ops->get_ship_mode_status(pdata, if_ops->data);
-
+	ops = mca_charge_if_get_ops(MCA_CHARGE_IF_CHG_TYPE_BUCK);
+	if (ops)
+		ret = ops->get_ship_mode_status ? ops->get_ship_mode_status(pdata, ops->data) : -EOPNOTSUPP;
+	srcu_read_unlock(&charge_if_srcu, idx);
 	return ret;
 }
 
@@ -356,7 +383,9 @@ static ssize_t mca_charge_if_sysfs_show(struct device *dev,
 		return -EINVAL;
 
 	if (info->sysfs_attr_name == MCA_CHRAGE_IF_SYSFS_SUSPEND_STATUS) {
-		mca_charge_suspend_state_show(&val);
+		ret = mca_charge_suspend_state_show(&val);
+		if (ret)
+			return ret;
 		return snprintf(buf, PAGE_SIZE, "%d\n", val);
 	} else if (info->sysfs_attr_name == MCA_CHRAGE_IF_SYSFS_SHIPMODE) {
 		ret = mca_charge_ship_mode_show(&val);
@@ -367,13 +396,15 @@ static ssize_t mca_charge_if_sysfs_show(struct device *dev,
 
 	for (i = 0; i < MCA_CHARGE_IF_CHG_TYPE_ALL; i++) {
 		ret = mca_charge_if_op_get(info->sysfs_attr_name, i, rd_buf);
-		if (ret)
+		if (ret == -ENODEV || ret == -EOPNOTSUPP)
 			continue;
+		if (ret)
+			return ret;
 		len += scnprintf(buf + len, PAGE_SIZE - len, "%s", rd_buf);
 		memset(rd_buf, 0, MCA_CHARGE_IF_MAX_RW_BUFF);
 	}
 
-	return len;
+	return len ? len : -ENODEV;
 }
 
 static ssize_t mca_charge_if_sysfs_store(struct device *dev,
@@ -454,24 +485,46 @@ static inline void mca_charge_if_sysfs_remove_group(struct device *dev)
 }
 #endif /* CONFIG_SYSFS */
 
+/* Register before exposing a provider; unregister before freeing its data.
+ * Call from sleepable context, never from a dispatched provider callback. */
 int mca_charge_if_ops_register(struct mca_charge_if_ops *ops)
 {
-	int type;
+	int type, ret = 0;
 
 	if (!ops || !ops->type_name)
-		return -1;
-
+		return -EINVAL;
 	type = mca_charge_if_get_op_type(ops->type_name);
-	if (type < 0) {
-		mca_log_err("type is invalid %s\n", ops->type_name);
-		return -1;
-	}
-
-	g_mca_charge_if_ops[type] = ops;
-
-	return 0;
+	if (type < 0 || type >= MCA_CHARGE_IF_CHG_TYPE_ALL)
+		return -EINVAL;
+	mutex_lock(&charge_if_lock);
+	if (rcu_access_pointer(g_mca_charge_if_ops[type]))
+		ret = -EBUSY;
+	else
+		rcu_assign_pointer(g_mca_charge_if_ops[type], ops);
+	mutex_unlock(&charge_if_lock);
+	return ret;
 }
 EXPORT_SYMBOL(mca_charge_if_ops_register);
+
+int mca_charge_if_ops_unregister(struct mca_charge_if_ops *ops)
+{
+	int type, ret = 0;
+
+	if (!ops || !ops->type_name)
+		return -EINVAL;
+	type = mca_charge_if_get_op_type(ops->type_name);
+	if (type < 0 || type >= MCA_CHARGE_IF_CHG_TYPE_ALL)
+		return -EINVAL;
+	mutex_lock(&charge_if_lock);
+	if (rcu_access_pointer(g_mca_charge_if_ops[type]) != ops)
+		ret = -ENOENT;
+	else
+		RCU_INIT_POINTER(g_mca_charge_if_ops[type], NULL);
+	mutex_unlock(&charge_if_lock);
+	synchronize_srcu(&charge_if_srcu);
+	return ret;
+}
+EXPORT_SYMBOL(mca_charge_if_ops_unregister);
 
 static int mca_charge_if_probe(struct platform_device *pdev)
 {

@@ -1635,31 +1635,68 @@ static int sc96281_get_tx_uuid(u8 *uuid, void *data)
 	return 0;
 }
 
-static int sc96281_set_fod_params(int value, void *data)
+/* OS4.0.7: Hall N low selects thick; N high/S low selects thin. */
+static u8 sc96281_fod_case(bool hall_n, bool hall_s)
+{
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA))
+		return !hall_n ? 2 : !hall_s;
+	return !hall_n || !hall_s;
+}
+
+static const fod_params_t *sc96281_find_fod(const fod_params_t *rows,
+		int count, u32 uuid)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+		if ((u32)rows[i].uuid == uuid)
+			return &rows[i];
+	return NULL;
+}
+
+static int sc96281_program_fod(int value, void *data)
 {
 	struct sc96281 *chip = data;
 	fod_params_t selected;
 	u32 uuid = ((u32)chip->proc_data.uuid[0] << 24) |
 		((u32)chip->proc_data.uuid[1] << 16) |
 		((u32)chip->proc_data.uuid[2] << 8) | chip->proc_data.uuid[3];
-	const fod_params_t *params = &chip->fod_params_default;
-	int i, mode, ret;
-	for (i = 0; i < chip->fod_params_size; i++) {
-		if ((u32)chip->fod_params[i].uuid == uuid) {
-			params = &chip->fod_params[i];
-			break;
-		}
-	}
-	if ((u32)chip->fod_params_2_1.uuid == uuid) {
+	const fod_params_t *params, *two_to_one;
+	u8 case_id = READ_ONCE(chip->fod_case);
+	int mode, ret;
+
+	params = sc96281_find_fod(chip->fod_params, chip->fod_params_size, uuid);
+	if (!params)
+		params = &chip->fod_params_default;
+	two_to_one = sc96281_find_fod(chip->fod_params_2_1,
+		chip->fod_params_2_1_size, uuid);
+	if (two_to_one) {
 		ret = strategy_class_wireless_ops_get_adapter_charger_mode(&mode);
-		if (ret) return ret;
+		if (ret)
+			return ret;
 		if (mode == SC96281_MCA_FORWARD_2_1)
-			params = &chip->fod_params_2_1;
+			params = two_to_one;
 	}
 	selected = *params;
-	if (READ_ONCE(chip->magnetic_case_flag))
+	if (case_id == 1)
 		memcpy(selected.params, selected.params_mag, sizeof(selected.params));
+	else if (case_id == 2)
+		memcpy(selected.params, selected.params_mag_thick, sizeof(selected.params));
+	else if (case_id)
+		return -EINVAL;
 	return sc96281_set_fod(chip, &selected);
+}
+
+/* Serialize selection with Hall updates as well as the hardware transaction. */
+static int sc96281_set_fod_params(int value, void *data)
+{
+	struct sc96281 *chip = data;
+	int ret;
+
+	mutex_lock(&chip->fod_lock);
+	ret = sc96281_program_fod(value, data);
+	mutex_unlock(&chip->fod_lock);
+	return ret;
 }
 
 static int sc96281_set_debug_fod_params(void *data)
@@ -2660,7 +2697,7 @@ static void sc96281_pg_det_work(struct work_struct *work)
 			}
 			ret = sc96281_set_fod_params(0, chip);
 			if (ret) {
-				mca_log_err("Myron initial FOD write failed: %d\n", ret);
+				mca_log_err("Initial FOD write failed: %d\n", ret);
 				return;
 			}
 			mca_log_info("power_good high, wireless attached\n");
@@ -2759,14 +2796,25 @@ static void sc96281_hall_interrupt_work(struct work_struct *work)
 	int s = gpio_get_value(chip->hall_int_gpio);
 	int n = gpio_get_value(chip->hall_n_gpio);
 	if (!READ_ONCE(chip->ready)) return;
-	/* Preserve the donor active-low Hall convention for either pole.
-	 * Myron thin/thick calibration must be identical (checked at probe). */
+	/* Cache both poles as a single selection before programming FOD. */
+	mutex_lock(&chip->fod_lock);
+	WRITE_ONCE(chip->fod_case, sc96281_fod_case(n, s));
 	attached = !s || !n;
 	chip->hall_gpio_status = !attached;
 	WRITE_ONCE(chip->magnetic_case_flag, attached);
-	mca_log_info("Myron Hall s=%d n=%d magnetic=%d\n", s, n, attached);
-	if (chip->proc_data.power_good_flag)
-		sc96281_set_fod_params(0, chip);
+	mca_log_info("Hall s=%d n=%d magnetic=%d\n", s, n, attached);
+	if (chip->proc_data.power_good_flag) {
+		int ret = sc96281_program_fod(0, chip);
+
+		if (ret) {
+			int stop_ret = sc96281_set_enable_mode(false, chip);
+
+			mca_log_err("Hall FOD programming failed %d; RX disable %d\n", ret, stop_ret);
+			mutex_unlock(&chip->fod_lock);
+			return;
+		}
+	}
+	mutex_unlock(&chip->fod_lock);
 	mca_strategy_func_process(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
 		MCA_EVENT_WIRELESS_MAGNETIC_CASE_INT, attached);
 	event_data.event_len = scnprintf(event, sizeof(event), "POWER_SUPPLY_WLS_HALL=%d", attached);
@@ -2810,7 +2858,9 @@ static int sc96281_parse_dt(struct sc96281 *chip)
 	}
 	if (ret > 0)
 		ret = sc96281_myron_parse_table(fod, "fod_params_2_1",
-				&chip->fod_params_2_1, 1);
+				chip->fod_params_2_1, ARRAY_SIZE(chip->fod_params_2_1));
+	if (ret > 0)
+		chip->fod_params_2_1_size = ret;
 	of_node_put(fod);
 	if (ret < 0) return ret;
 	chip->sc96281_pinctrl = devm_pinctrl_get_select_default(chip->dev);
@@ -2981,6 +3031,7 @@ static int sc96281_charger_probe(struct i2c_client *client,
 
 	mutex_init(&chip->i2c_rw_lock);
 	mutex_init(&chip->data_transfer_lock);
+	mutex_init(&chip->fod_lock);
 	mutex_init(&chip->wireless_chg_int_lock);
 	ret = devm_add_action_or_reset(chip->dev, sc96281_destroy_mutexes,
 					chip);
@@ -3026,6 +3077,10 @@ static int sc96281_charger_probe(struct i2c_client *client,
 		goto err_dev;
 	}
 
+	WRITE_ONCE(chip->fod_case, sc96281_fod_case(
+		gpio_get_value(chip->hall_n_gpio), gpio_get_value(chip->hall_int_gpio)));
+	WRITE_ONCE(chip->magnetic_case_flag, !!chip->fod_case);
+	chip->hall_gpio_status = !chip->magnetic_case_flag;
 	WRITE_ONCE(chip->ready, true);
 	schedule_delayed_work(&chip->init_detect_work, msecs_to_jiffies(1000));
 	if (chip->support_hall)

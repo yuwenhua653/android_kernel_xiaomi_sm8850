@@ -304,8 +304,8 @@ uses `shared-pinctrl-gpios` controller-relative GPIO specifiers paired with
 
 CSIPHY v2.4.0-1 has its own D-PHY and C-PHY baseline settings. It uses the
 factory default AutoEQ choice zero and an opt-in per-PHY CRC retry mechanism.
-UMD commands 0x1000–0x1004 are implemented; dynamic CSID masks (0x1005) remain
-unsupported. The backup table matches OS4.0.7 rather than the newer common write.
+UMD commands 0x1000–0x1005 are implemented, including bounded dynamic CSID
+error classification that preserves unspecified defaults and IRQ subscriptions. The backup table matches OS4.0.7 rather than the newer common write.
 The zoom driver is integrated as described below. Validate the compiled data with
 pyelftools installed:
 
@@ -324,16 +324,18 @@ implementation for Nezha and exposes the stock 44-byte sensor capability query.
 The generic query remains 40 bytes. See the module repository's
 `qcom/opensource/camera-kernel/NEZHA-PORT.md` for source provenance, firmware
 failure-path fixes and the host fault-injection test. Complete ARM64 camera.o
-compilation/link passed; full kernel modpost and hardware camera qualification
-remain outstanding. The DT pin also includes the reviewed OS4.0.7 audio/haptic wiring.
+compilation/link and subsequent full host module modpost/CRC checks passed;
+production Android toolchain and hardware camera qualification remain outstanding. The DT pin also includes the reviewed OS4.0.7 audio/haptic wiring.
 
 ## Audio/haptic board integration (2026-11-26)
 
 The normal Canoe overlay includes `qcom/nezha-canoe-audio.dtsi`. WCD939x, LPASS,
 TAS25xx I2C, Bluetooth SoundWire, PMIH010x haptics and SDAM wiring come from
 OS4.0.7 entry 1. The DT repository's `tools/verify-nezha-audio.py` checks 1294
-properties/references on each of six final Canoe variants. TAS25xx driver source
-is still missing; board nodes do not prove functioning speakers.
+properties/references on each of six final Canoe variants. TAS25xx now has a
+public TI driver port, Nezha receiver pin control, actual stock tuning-file
+validation, and Primary TDM RX/TX codec links. See the modules repository's
+`qcom/opensource/audio-kernel/NEZHA-TAS25XX.md`. Runtime sound remains unverified.
 
 The kernel selectively ports Nezha custom-waveform/calibration voltages and F0
 fallback from MiCode kernel songyuan-w-oss commit
@@ -347,3 +349,51 @@ ASAN_OPTIONS=detect_leaks=0 python3 tools/test-nezha-haptics.py
 ```
 
 See module-gaps.md for the remaining source gaps and production-build limits.
+
+## Charging interface and wireless FOD hardening (2026-11-26)
+
+The shared charge-interface module has an independent Kconfig selector, preserves
+Myron selection, uses the verified Nezha notification event 0x13, propagates
+missing providers/callbacks and I/O errors, and supports synchronous SRCU
+unregistration. It is not enabled for Nezha until a reviewed charging policy is
+attached. This is an interface implementation, not a complete JEITA/thermal policy.
+
+SC96281 now represents all 32 ordinary and two 2:1 FOD rows with normal/thin/thick
+calibration, using OS4.0.7's dual-Hall mapping. Selection and Hall changes are
+serialized; a failed Hall-driven FOD update disables the receiver and reports
+failure. Myron continues to reject unequal thin/thick tables. The Nezha DT and
+load-list activation still require the full wireless strategy/protection chain.
+
+```sh
+python3 tools/test-mca-charge-interface.py
+ASAN_OPTIONS=detect_leaks=0 python3 tools/test-sc96281-fod.py STOCK_DTBO_ENTRY_1 ../sm8850-devicetrees
+```
+
+These tests execute production source with host stubs, including a pthread SRCU
+model; they do not prove in-kernel callback lifetime, GPIO effects or charging.
+
+
+## Current complete host build (2026-11-26)
+
+Clang 19 / ARM64 / C Binder build passed vmlinux, Image, 375 in-tree and 88
+external modules in the 32 BoardConfig external directories. Actual ELF audit
+passed 26739 imported CRCs, dependency presence and common vermagic. All six
+source module lists resolve, except explicitly permitted host-only Rust Binder.
+No undefined-symbol modpost bypass was used. This does not qualify Android Rust
+Binder, signed DLKM/vendor_boot images, module load ordering or hardware.
+
+```sh
+python3 tools/check-nezha-built-modules.py --out /path/to/kernel-out \
+  --external /path/to/external-output-1 --external /path/to/external-output-2 \
+  --host-c-binder --json audit.json
+# Supply every actual external output directory, not just the examples above.
+python3 tools/test-nezha-jeita-events.py
+python3 tools/test-nezha-jeita-parser.py /path/to/songyuan/nezha-charger-common.dtsi
+```
+
+JEITA now preserves monitoring across USB/wireless handover and rejects malformed
+protection tables before callback registration. Nested arrays are device-managed
+and selected DT-node references are released. This is still an inactive Nezha
+policy port: strategy/smart-charge callback teardown, the complete event ABI,
+provider/thermal/port-protection wiring and source selection need completion.
+See module-gaps.md and host-validation-20261126.json for explicit remaining work.
