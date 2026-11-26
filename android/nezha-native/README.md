@@ -255,3 +255,30 @@ the gauge's relative state of charge. Current is in µA, remaining and
 full charge are in µAh, and temperature is in tenths of a degree Celsius.
 The gauge provides battery telemetry. Charger presence, thermal policy and
 charge-pump control need their own providers.
+
+## Basic hardware priorities
+
+The current function-by-function status is in [module-gaps.md](module-gaps.md).
+Do not treat module counts or successful DT merges as a device qualification.
+Charging control/protection and camera remain blocking gaps for a full OSS build.
+
+The Canoe board overlay now includes `nezha-canoe-connectivity.dtsi`, with the
+OS4.0.7 Peach WLAN, PCIe power domain, Bluetooth power/UART and their PMIC
+pinctrl/NVMEM suppliers. It uses the existing overlay order documented above;
+there is no additional manual overlay or OTA extraction step for the build.
+This covers the six listed Canoe variants. The factory SG/Whale entry does not
+provide these connectivity nodes either; other boards are outside this change.
+Bluetooth SoundWire board audio wiring still needs integration. The shared
+`bt_uwb_en` reset state remains necessary for Bluetooth even with UWB deferred.
+
+After merging each selected base and its overlays, run the DT presence audit:
+
+```sh
+python3 kernel/xiaomi/sm8850-devicetrees/tools/check-nezha-basics.py final.dtb
+```
+
+Use the actual final merged file, not an individual DTBO. Exit 1 means missing
+or disabled required node groups; exit 2 means invalid input. Exit 0 means only
+the listed DT nodes exist, including enabled ancestors. It does not validate
+drivers, firmware, HALs, regulator/GPIO values or operation on the phone.
+The current source tree is expected to report charging and camera gaps.

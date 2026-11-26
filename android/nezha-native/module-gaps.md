@@ -2,6 +2,29 @@
 
 适用于国行 nezha 的 nazha 分支，底包 OS4.0.7.0.XPACNXM。以能开机、通信、拍摄、充电及正常待机为验收目标。
 
+## 当前优先级：六项基础功能（2026-11-26）
+
+本轮按最终合并设备树、构建入口和加载清单重新核对。此前的 461 个模块构建记录是历史主机结果，不是本轮重编或 17 Ultra 实测。源码能编译、DT 能合并和实机功能正常分别验收。
+
+| 功能 | 本轮确认的状态 | 未完成事项 |
+|---|---|---|
+| 有线充电 | 电量计、SC8585、MCA GLINK 和 PD 接口已有源码及板级入口。 | **P0**：当前 Nezha 配置未接通 buck/sub-PMIC 提供者、charge interface 与配套充电策略。原生 DT 中通用 `qcom,battery-charger` 仍禁用；电量计不能代替 USB 在线、输入限流和充电控制。核对 OS4 协议及 JEITA/保护后接入，不能直接启用 Myron 全套服务。 |
+| 无线充电 | 已确认本机 SC96281 与原厂标定结构。 | **P0**：接收器、配件状态、薄厚壳 FOD 表和 MCA 控制链路尚未接通；这是 17 Ultra 的适配缺口，不引用 Myron 的掉电现象作为本机实测。 |
+| 触摸 | `xiaomi_touch.ko`、`synaptics_tcm2.ko` 有构建和加载入口，SPI SE19 节点与父总线启用。固件按 DDIC 选择。 | OS4 固件/THP 文件、上电下载、正常输入、息屏唤醒与恢复模式触摸需在本机验收。尚无证据可标记运行正常。 |
+| 相机 | `camera.ko` 有构建和加载入口；原厂四路 sensor 使用 CCI0、SE8/SE9 I2C，现有代码有 I2C sensor/actuator 匹配。 | **P0**：原生整机入口缺相机 SoC 和四路板级配置。原厂 CSI0/3/4 为 `qcom,csiphy-v2.4.0-1`，现有 `cam_csiphy_parse_dt_info()` 不识别此版本并返回 `-EINVAL`；核对的 MiCode popsicle 分支也无 `-1` 分支。需对应寄存器表，不能直接冒充普通 v2.4.0。长焦 `qcom,zoom` 也缺匹配，随后核对 HAL 消息与多摄切换。 |
+| 基带 | Modem PAS、SMP2P/GLINK、QRTR、IPA/RMNET 有源码/配置或加载入口，原生 modem 节点启用；保留双卡默认路由。 | 验证固件启动、RIL/IMS、两张 SIM、通话/短信/数据和休眠恢复。现阶段没有基础模块整体缺席的证据，也没有实机通过记录。 |
+| Wi-Fi | **已补 Canoe 板级遗漏**：Peach CNSS、PCIe 电源域、WLAN 内存/IOMMU、复位/唤醒引脚、供电和 XO 校准单元。CNSS 与 Peach WLAN 模块已有构建/加载入口。 | 固件/板级校准文件、PCIe 枚举、扫描连接、热点与休眠恢复待实测。原厂 SG/Whale 小型入口也没有这组节点；本次以原厂 Canoe 整机入口为范围，不扩展其它板型。 |
+| 蓝牙 | **已补 Canoe 板级遗漏**：原厂电源节点、共享复位、PMIC pinctrl/NVMEM 及 SE18 UART；`btpower`、`btfmcodec`、`bt_fm_swr` 已列入构建/加载。 | HCI 固件、HAL/串口初始化、配对/重连及通话音频待实测；SoundWire 板级音频链路尚未接入。原厂 `bt_uwb_en` 是蓝牙也使用的共享复位状态，暂缓 UWB 不等于删除它。 |
+
+当前修补顺序为充电控制/保护、相机 CSI 与板级配置，然后按本机日志收敛触摸与通信问题。卫星、UWB、NFC、镜头环增强、游戏调度和厂商诊断的独立补全后排；若证明它们是基础功能的硬依赖，再提升优先级。
+
+### 本轮主机证据与边界
+
+- 从同一 4.0.7 OTA 恢复并核对 `dtbo` 和 `vendor_boot`，SHA-256 分别为 `1b78a4cc5fe5ee46fcf1ea3af0ee5a1287c0b4a2ef78a30f4b62f745d31505ac`、`68a80b12e8210e0683fb0f275e0df2134db591113c9d6d91acbd34f54f4409cf`。验证了所取分区及操作数据哈希，不声称本次重验整个 OTA 签名。
+- 12 个原生 base 与对应板级入口完成主机编译/合并；本次连接功能修补只接入六个已使用 Canoe 完整入口的 base：canoe、canoe-v2、canoe-tp、canoe-tp-v2、canoep、canoep-v2。
+- 六个 Canoe 合并结果分别核对 194 项原厂连接功能属性，含 phandle 指向；不是通过替换数字地址消除错误。Canoe 原厂完整合并树也确认两个蓝牙电源节点均存在且未禁用。
+- 新增设备树仓库 `tools/check-nezha-basics.py`，对最终 DTB 检查基础节点及所有祖先的启用状态，拒绝用未合并 DTBO 充当验收结果。它只检查节点存在性，不证明驱动绑定、供电值、固件、HAL 或硬件正常。当前仍应报告充电和相机缺口。
+
 ## 原厂模块取舍
 
 四份原厂加载清单共有 655 个不同模块名。ARM64 4 KiB、Clang 19 的 6.12.118 构建产出 374 个树内和 87 个外置模块，其中 419 个与原厂加载项同名。下列 236 项是名称差异。一个功能可能有通用替代实现，也可能要由多个模块共同提供。
@@ -11,9 +34,9 @@
 | 卫星通信 | 4 | 退出默认构建与首启验收。保留板级接线、双卡默认路由和通用 GNSS。 |
 | 原厂增强 | 28 | 暂缓独立移植，如 Millet 冻结、游戏调度和内存调优。有实际用户态或二进制依赖时再评估。 |
 | 诊断测试 | 54 | 按故障开启测试、追踪或日志，不作为日用功能验收项。保留基础日志与异常采集能力。 |
-| 按硬件选择 | 35 | 按本机 DT、总线 ID、probe 与 HAL 确认实际器件和配套驱动。 |
+| 按硬件选择 | 36 | 按本机 DT、总线 ID、probe 与 HAL 确认实际器件和配套驱动。 |
 | 日用功能 | 23 | 验证对应日用功能或保护链路。标准实现经验证可替代原厂同名模块。 |
-| 核对调用方 | 92 | 现有证据不足以排除。优先检查原厂硬依赖、vendor HAL/init 和实际 probe，再决定取舍。 |
+| 核对调用方 | 91 | 现有证据不足以排除。优先检查原厂硬依赖、vendor HAL/init 和实际 probe，再决定取舍。 |
 
 ## 已接入、待实机验收
 
@@ -269,7 +292,7 @@ SC96281 正向无线充电仍待适配。原厂常规异物检测表有 32 行�
 | `slc_perfmon.ko` | 恢复、Vendor | 诊断测试 |  | QCOM SLC PERFMON |
 | `snd-soc-cs40l26.ko` | 恢复、Vendor | 按硬件选择 |  | ASoC CS40L26 driver |
 | `snd-usb-audio-qmi.ko` | 恢复、Vendor | 核对调用方 |  | USB AUDIO QMI Service Driver |
-| `spi_cnss_proto.ko` | Vendor | 核对调用方 |  | spi cnss driver |
+| `spi_cnss_proto.ko` | Vendor | 按硬件选择 |  | 源码说明为 UWB SPI 协议；本轮后排，不当作基础蓝牙 HCI 缺失模块。共享电源/复位另行保留。 |
 | `spmi-pmic-arb-debug.ko` | 恢复、Vendor | 诊断测试 |  |  |
 | `spmi-pmic-err-debug.ko` | 恢复、Vendor | 诊断测试 |  | QCOM SPMI error debug driver |
 | `stm_p_ost.ko` | 恢复、Vendor | 诊断测试 |  | MIPI Open System Trace STM framing protocol driver |
