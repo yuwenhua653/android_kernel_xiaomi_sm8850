@@ -53,9 +53,19 @@ charge falls. No newer device result was available during this update.
   the native GKI/Canoe/Myron fragments, CFI, MODVERSIONS and GENDWARFKSYMS. Local
   qualification uses LTO_NONE and disables Rust/BTF, as before. Production config
   fragments are unchanged. Detailed hashes/results are in the companion JSON.
-- Driver patch checkpatch: zero errors and warnings. No new complete Image,
-  full module modpost, Android production build or final image check is claimed.
-  The preceding 427-module qualification applies to its recorded earlier source.
+- Full `Image modules` now passes for source commit
+  `148d08138863b558711a57d407285b00f766405c`: ARM64 Image, in-tree modpost and all
+  354 in-tree modules. The module checker validates 17,735 symbol-version records,
+  exported providers, declared dependencies and matching vermagic. Release:
+  `6.12.118-g148d08138863-yuzuli`. The new unregister symbols resolve to the
+  matching built providers. There are no compiler/modpost warnings in the final
+  build log. An earlier attempt needed the host cpio package; no source change
+  was needed to resume the build.
+- Driver patch checkpatch: zero errors and warnings. Android production-toolchain
+  builds, final partition images and phone results remain unverified. External
+  modules were not rebuilt in this batch; the preceding 427-module qualification
+  applies to its recorded earlier source. Rebuild paired modules with the new
+  kernel for a real ROM, rather than mixing old module binaries with this Image.
 
 ## Remaining checklist and boundaries
 
