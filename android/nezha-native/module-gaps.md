@@ -11,10 +11,10 @@
 | 有线充电 | **本轮接入 Nezha sub-PMIC 基础提供者**：USB 在线/电压/电流、BC1.2 类型、buck 限流/限压/启停回调；按 4.0.7 命令编号实现，并加入配置、DT 和加载清单。GLINK 订阅增加同步注销。 | **P0**：charge interface、JEITA/温控、策略与保护链路仍需接通。此提供者不在 probe 写入充电参数，不代表快充完成；后续接口必须复用已有 `usb` power_supply，避免重名注册。 |
 | 无线充电 | 已确认本机 SC96281 与原厂标定结构。 | **P0**：接收器、配件状态、薄厚壳 FOD 表和 MCA 控制链路尚未接通；这是 17 Ultra 的适配缺口，不引用 Myron 的掉电现象作为本机实测。 |
 | 触摸 | `xiaomi_touch.ko`、`synaptics_tcm2.ko` 有构建和加载入口，SPI SE19 节点与父总线启用。固件按 DDIC 选择。 | OS4 固件/THP 文件、上电下载、正常输入、息屏唤醒与恢复模式触摸需在本机验收。尚无证据可标记运行正常。 |
-| 相机 | Canoe 四路 sensor、供电/CCI/I²C/闪光灯节点及 `v2.4.0-1` 默认表已接入。**本轮移植官方 `qcom,zoom` / SEM1218S、组件注册、请求接口和 `zoom-src` 查询；按原厂证据补齐 Nezha 44 字节能力查询，保留通用 40 字节 ABI。** 固件错误路径和共享时钟错误码修复，整个 `camera.o` 编译链接及 200 个 I²C 故障注入通过。 | **P0**：CSI PHY AutoEQ/backup-EQ 与 CSID 联动、其余 HAL 私有 ABI/OIS/actuator 行为仍需核对；长焦运动、固件、开流、重开、多摄切换、闪光灯及前后摄均未实机验证。不能把驱动已接入标为相机已可用。 |
+| 相机 | Canoe 四路 sensor、供电/CCI/I²C/闪光灯节点及 `v2.4.0-1` 默认表已接入。**本轮移植官方 `qcom,zoom` / SEM1218S、组件注册、请求接口和 `zoom-src` 查询；按原厂证据补齐 Nezha 44 字节能力查询，保留通用 40 字节 ABI。** 固件错误路径和共享时钟错误码修复，整个 `camera.o` 编译链接及 200 个 I²C 故障注入通过。 | **已补 CSI AutoEQ/备用 EQ、CRC 阈值和按当前错误事件触发的恢复，实际编译表与 4.0.7 一致。P0**：0x1005 动态 CSID 错误掩码、其余 HAL 私有 ABI/OIS/actuator 行为仍需核对；长焦运动、固件、开流、重开、多摄切换、闪光灯及前后摄均未实机验证。不能把驱动已接入标为相机已可用。 |
 | 基带 | Modem PAS、SMP2P/GLINK、QRTR、IPA/RMNET 有源码/配置或加载入口，原生 modem 节点启用；保留双卡默认路由。 | 验证固件启动、RIL/IMS、两张 SIM、通话/短信/数据和休眠恢复。现阶段没有基础模块整体缺席的证据，也没有实机通过记录。 |
 | Wi-Fi | **已补 Canoe 板级遗漏**：Peach CNSS、PCIe 电源域、WLAN 内存/IOMMU、复位/唤醒引脚、供电和 XO 校准单元。CNSS 与 Peach WLAN 模块已有构建/加载入口。 | 固件/板级校准文件、PCIe 枚举、扫描连接、热点与休眠恢复待实测。原厂 SG/Whale 小型入口也没有这组节点；本次以原厂 Canoe 整机入口为范围，不扩展其它板型。 |
-| 蓝牙 | **已补 Canoe 板级遗漏**：原厂电源节点、共享复位、PMIC pinctrl/NVMEM 及 SE18 UART；`btpower`、`btfmcodec`、`bt_fm_swr` 已列入构建/加载。 | HCI 固件、HAL/串口初始化、配对/重连及通话音频待实测；SoundWire 板级音频链路尚未接入。原厂 `bt_uwb_en` 是蓝牙也使用的共享复位状态，暂缓 UWB 不等于删除它。 |
+| 蓝牙 | **已补 Canoe 板级遗漏**：原厂电源节点、共享复位、PMIC pinctrl/NVMEM 及 SE18 UART；`btpower`、`btfmcodec`、`bt_fm_swr` 已列入构建/加载。 | HCI 固件、HAL/串口初始化、配对/重连及通话音频待实测；SoundWire 板级音频链路本轮已接入，实际音频传输仍待验证。原厂 `bt_uwb_en` 是蓝牙也使用的共享复位状态，暂缓 UWB 不等于删除它。 |
 
 当前修补顺序为充电控制/保护、相机 CSI 与板级配置，然后按本机日志收敛触摸与通信问题。卫星、UWB、NFC、镜头环增强、游戏调度和厂商诊断的独立补全后排；若证明它们是基础功能的硬依赖，再提升优先级。
 
@@ -30,8 +30,19 @@
 - ARM64 / Clang 19：当前 Nezha 配置下 MCA 子树、修改的 CSI PHY 和相机资源管理对象编译通过；新 sub-PMIC 复合对象链接通过。当前主机验证使用 C Binder，未完成 Android Rust Binder 生产配置、完整 vmlinux/modpost、签名与可刷镜像验证。
 - 正常 Kbuild 入口 `vendor/qcom/nezha-canoe-board-overlay.dtbo` 编译通过；DTC 仍有原厂风格节点/overlay 上下文警告，不称为无警告。
 - 六个 Canoe 最终合并树各通过 648 项原厂相机属性/引用核对，以及共享 GPIO 的一项等价转换检查；Wi-Fi/蓝牙的 194 项属性回归检查通过。共享引脚不再依赖原厂固定基址 512。
-- `tools/verify-nezha-csiphy.py` 对实际 ARM64 编译对象和原厂 `camera.ko` 校验：29 档默认速率、全部 PHY/variant 指针、8 组寄存器表、lane offsets 一致。该工具不验证 OEM AutoEQ 重试、HAL 或实机出图。
+- `tools/verify-nezha-csiphy.py` 对实际 ARM64 编译对象和原厂 `camera.ko` 校验：29 档默认速率、全部 PHY/variant 指针、9 组寄存器表（含备用 EQ）、lane offsets 一致。该工具不验证 OEM AutoEQ 重试、HAL 或实机出图。
 - 本轮额外核对 `vendor_dlkm` SHA-256：`094b779c61c8b1736025230e545838001b0d4037ff2473dcbc413af128738cb4`；其中 `camera.ko` SHA-256：`9c5f719297511f0e54c03dbe225acd1d179c2b83deb5fff8997dd5b7e2d39774`。原厂二进制仅作比对材料，不随 Git 提交。
+
+## 本轮补全：CSI、音频和振动（2026-11-26）
+
+- 相机：实现 UMD 0x1000–0x1004，加入并发保护、参数范围检查、每次配置固定一次 EQ 选择及按当前 CRC 事件的完整恢复。保留 4.0.7 的 12 项备用寄存器设置，没有引入新版额外的 0x108c 写入。0x1005 明确报不支持，未伪装成功。
+- 音频 DT：新增标准板级 include `qcom/nezha-canoe-audio.dtsi`，补齐 WCD939x、LPASS、TAS25xx I²C 接线、蓝牙 SoundWire、SDAM、PMIH010x 振动和波形。无需构建时重新提取底包。
+- 振动驱动：读取 Nezha 自定义波形 8500 mV、校准 2100 mV、F0 160–180 Hz / 默认 170 Hz / 计数 570；普通波形维持 2000 mV，保留硬件限压与既有除零保护。其他产品沿用原有默认值。小米动态 sysfs、强制关闭自谐振和诊断寄存器转储不在本轮范围内。
+- 验证：整个 ARM64 `camera.o` 与 `qcom-hv-haptics.o` 编译通过；音频 machine、WCD939x codec/slave、BT SoundWire、SWR haptics、LPI pinctrl 六个复合对象编译链接通过。这不是完整 `.ko` modpost/CRC/签名验证。
+- 六个 Canoe 最终合并 DTB 各通过 1294 项原厂音频/振动属性及引用检查；相机 649 项（含 GPIO 等价转换）和连接功能 194 项回归通过。工具：设备树仓库 `tools/verify-nezha-audio.py`。
+- CSI 实际源码主机测试通过 ASan/UBSan：解析/范围、备选优先级、越界 PHY、重试回绕、八路并发各 10000 次与失败清理。振动实际解析/回退代码通过正常值、边界及缺失参数测试。LeakSanitizer 受主机 tracer 限制，采用显式分配计数，不声称通过 LSan。
+
+**仍有源码缺口，不能标记整个 OSS 完成：** 有线 MCA charge interface / JEITA / 温控保护；SC96281 无线与配件/FOD；TAS25xx 功放驱动；相机剩余私有协议。已查 songyuan 音频仓库 `922ff4070f803d8f7d1122b268fe0b2cd5d262c4`，该发布不含 TAS25xx 驱动，不能用接线或空壳驱动代替。生产 Rust Binder、完整 vmlinux/modpost/DLKM/镜像与实机回归仍待完成。触摸、基带、Wi-Fi、蓝牙的驱动入口不等于已经实测通过。
 
 ## 原厂模块取舍
 
@@ -326,14 +337,14 @@ SC96281 正向无线充电仍待适配。原厂常规异物检测表有 32 行�
 ## 官方 songyuan-w-oss 对照补全（2026-11-26）
 
 本轮相机模块实现与验证详见模块仓库 `qcom/opensource/camera-kernel/NEZHA-PORT.md`。
-内核 manifest 已固定本轮模块提交；设备树沿用上一轮已核对的 OS4.0.7 接线。
+内核 manifest 已固定本轮模块及设备树提交；设备树本轮补入 OS4.0.7 音频与振动接线。
 
 | 官方来源 | 已确认的用途 | 当前边界 |
 |---|---|---|
-| `MiCode/vendor_qcom_opensource_camera-kernel@798f548761f381b056f2e1fe615f9db930aa5c7e` | Nezha zoom 驱动、93 字节配置 ABI、44 字节传感器查询；已移植并做主机验证。 | AutoEQ/CSID 和其他私有相机接口仍需适配与实测。 |
+| `MiCode/vendor_qcom_opensource_camera-kernel@798f548761f381b056f2e1fe615f9db930aa5c7e` | Nezha zoom 驱动、93 字节配置 ABI、44 字节传感器查询；已移植并做主机验证。 | AutoEQ、CRC 阈值及恢复已接入；0x1005 动态错误掩码、其他私有相机接口与实测仍待完成。 |
 | `MiCode/vendor_qcom_proprietary_camera-devicetree@f82a3debe8ed8dc2529d90473d73ab9a49d8aa13` | Nezha 长焦 zoom 接线与已有原厂还原节点相符。 | 不用更新整份板级树来覆盖已核对的 4.0.7 配置。 |
 | `MiCode/kernel_devicetree@396596c6d1ec3c349402c50913f781efbf343d9c` | Nezha JEITA、SC96281、磁吸薄厚壳 FOD 等公开配置，可继续核对国内底包。 | 配置公开不等于 MCA 策略/无线接收器驱动已完成；保持有线/无线 P0。 |
-| `MiCode/Xiaomi_Kernel_OpenSource@da9af1b6d83e1f53e4b8e4f4421e3c4161d2133d` | 包含 Nezha 目标及模块清单。 | MCA 是外部 vendor 路径符号链接，且部分 Nezha build 配置不在这次发布内；不能把该链接当作完整驱动源码。 |
+| `MiCode/Xiaomi_Kernel_OpenSource@da9af1b6d83e1f53e4b8e4f4421e3c4161d2133d` | 包含 Nezha 目标、模块清单及振动参数处理；本轮择取自定义/校准电压和 F0 回退。 | MCA 是外部 vendor 路径符号链接，且部分 Nezha build 配置不在这次发布内；不能把该链接当作完整驱动源码。 |
 
 卫星、UWB、厂商诊断仍后排。触摸、基带、Wi-Fi、蓝牙本轮未据此新增完成标记。
 

@@ -268,7 +268,7 @@ pinctrl/NVMEM suppliers. It uses the existing overlay order documented above;
 there is no additional manual overlay or OTA extraction step for the build.
 This covers the six listed Canoe variants. The factory SG/Whale entry does not
 provide these connectivity nodes either; other boards are outside this change.
-Bluetooth SoundWire board audio wiring still needs integration. The shared
+Bluetooth SoundWire board audio wiring is now included. The shared
 `bt_uwb_en` reset state remains necessary for Bluetooth even with UWB deferred.
 
 After merging each selected base and its overlays, run the DT presence audit:
@@ -303,7 +303,9 @@ uses `shared-pinctrl-gpios` controller-relative GPIO specifiers paired with
 `gpios-shared-pinctrl` support and propagates GPIO-provider probe deferral.
 
 CSIPHY v2.4.0-1 has its own D-PHY and C-PHY baseline settings. It uses the
-factory default AutoEQ choice zero; the retry mechanism remains pending.
+factory default AutoEQ choice zero and an opt-in per-PHY CRC retry mechanism.
+UMD commands 0x1000–0x1004 are implemented; dynamic CSID masks (0x1005) remain
+unsupported. The backup table matches OS4.0.7 rather than the newer common write.
 The zoom driver is integrated as described below. Validate the compiled data with
 pyelftools installed:
 
@@ -323,5 +325,25 @@ The generic query remains 40 bytes. See the module repository's
 `qcom/opensource/camera-kernel/NEZHA-PORT.md` for source provenance, firmware
 failure-path fixes and the host fault-injection test. Complete ARM64 camera.o
 compilation/link passed; full kernel modpost and hardware camera qualification
-remain outstanding. The DT pin is unchanged because the zoom wiring is already
-present in the reviewed OS4.0.7 overlay.
+remain outstanding. The DT pin also includes the reviewed OS4.0.7 audio/haptic wiring.
+
+## Audio/haptic board integration (2026-11-26)
+
+The normal Canoe overlay includes `qcom/nezha-canoe-audio.dtsi`. WCD939x, LPASS,
+TAS25xx I2C, Bluetooth SoundWire, PMIH010x haptics and SDAM wiring come from
+OS4.0.7 entry 1. The DT repository's `tools/verify-nezha-audio.py` checks 1294
+properties/references on each of six final Canoe variants. TAS25xx driver source
+is still missing; board nodes do not prove functioning speakers.
+
+The kernel selectively ports Nezha custom-waveform/calibration voltages and F0
+fallback from MiCode kernel songyuan-w-oss commit
+`da9af1b6d83e1f53e4b8e4f4421e3c4161d2133d`. It preserves existing limit/division
+guards and generic product defaults. OEM diagnostic/dynamic sysfs and broader
+calibration sequencing are not ported. Actual haptic power, strength, sound,
+HAL requests and suspend behavior require phone testing.
+
+```sh
+ASAN_OPTIONS=detect_leaks=0 python3 tools/test-nezha-haptics.py
+```
+
+See module-gaps.md for the remaining source gaps and production-build limits.

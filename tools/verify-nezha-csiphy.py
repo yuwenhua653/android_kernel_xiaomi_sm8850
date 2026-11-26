@@ -4,8 +4,8 @@
 
 Requires pyelftools. Usage: verify-nezha-csiphy.py STOCK_CAMERA_KO CSIPHY_SOC_O
 Checks data and relocation targets, not streaming, HAL ABI or OEM AutoEQ retry.
-The stock struct has two AutoEQ bytes plus padding before bandwidth. The OSS
-baseline intentionally uses choice zero and does not import that OEM ABI.
+Both structures contain the two AutoEQ choice bytes before bandwidth.
+Default choices are checked independently of the upstream backup EQ table.
 """
 import argparse
 import struct
@@ -48,14 +48,13 @@ class Object:
         table = self.symbol('data_rate_delta_table_2_4_0_1')
         count, = struct.unpack('<Q', self.data(table, 8))
         array = self.pointer(table, 8)
-        stride, prefix = (416, 8) if stock else (408, 0)
+        stride, prefix = 416, 8
         result = []
         for i in range(count):
             entry = array[0], array[1] + i * stride
-            if stock:
-                choices, choice = self.data(entry, 2)
-                if choices and choice:
-                    continue
+            choices, choice = self.data(entry, 2)
+            if choices and choice:
+                continue
             bw, size, common = struct.unpack_from('<QQQ', self.data(entry, stride), prefix)
             if common:
                 raise ValueError('unexpected common-control table')
@@ -74,7 +73,7 @@ def check(stock, source):
     names = ['csiphy_2ph_v2_4_0_1_reg', 'csiphy_2ph_v2_4_0_clk_ln_reg',
              'csiphy_3ph_v2_4_0_reg', 'csiphy_common_reg_2_4_0',
              'csiphy_irq_reg_2_4_0', 'csiphy_reset_enter_reg_2_4_0',
-             'csiphy_reset_exit_reg_2_4_0', 'csiphy_lane_en_reg_2_4_0']
+             'csiphy_reset_exit_reg_2_4_0', 'csiphy_lane_en_reg_2_4_0', 'datarate_240_3p0Gsps_1_bp']
     for name in names:
         size = stock.symbols[name]['st_size']
         if source.symbols[name]['st_size'] != size or (
@@ -91,7 +90,7 @@ def check(stock, source):
     if stock.data(stock.symbol('ctrl_reg_2_4_0_1'), 112)[80:] != source.data(
             source.symbol('ctrl_reg_2_4_0_1'), 112)[80:]:
         raise ValueError('lane offsets differ')
-    print('PASS: 29 baseline rates, all PHY/variant pointers, 8 register tables and lane offsets')
+    print('PASS: 29 baseline rates, all PHY/variant pointers, 9 register tables (including backup EQ) and lane offsets')
     print('Not tested: OEM AutoEQ retry, HAL ABI, streaming or hardware')
 
 

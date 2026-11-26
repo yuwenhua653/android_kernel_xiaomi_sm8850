@@ -805,6 +805,9 @@ struct haptics_hw_config {
 	struct brake_cfg	brake;
 	struct brake_cfg	swr_brake;
 	u32			vmax_mv;
+	u32			custom_vmax_mv;
+	u32			f0_vmax_mv;
+	u32			f0_min_hz, f0_max_hz, f0_default_hz, f0_cal_count;
 	u32			t_lra_us;
 	u32			cl_t_lra_us;
 	u32			lra_min_mohms;
@@ -1313,6 +1316,20 @@ static int haptics_adjust_lra_period(struct haptics_chip *chip, u32 *t_lra_us)
 #define SLEEP_CLK_CAL_DIVIDER			\
 	((chip->wa_flags & SLEEP_CLK_32K_SCALE) ? 600 : 586)
 #define CL_TLRA_ERROR_RANGE_PCT			20
+/* Songyuan's Nezha calibration bounds, without weakening generic guards. */
+static void haptics_nezha_calibration_fallback(struct haptics_hw_config *config)
+{
+	u32 hz;
+
+	if (!config->f0_default_hz || !config->cl_t_lra_us)
+		return;
+	hz = USEC_PER_SEC / config->cl_t_lra_us;
+	if (hz < config->f0_min_hz || hz > config->f0_max_hz) {
+		config->cl_t_lra_us = USEC_PER_SEC / config->f0_default_hz;
+		config->rc_clk_cal_count = config->f0_cal_count;
+	}
+}
+
 static int haptics_get_closeloop_lra_period(
 		struct haptics_chip *chip, bool in_boot)
 {
@@ -1461,6 +1478,9 @@ static int haptics_get_closeloop_lra_period(
 				rc_clk_cal);
 		return -EINVAL;
 	}
+
+	if (in_boot)
+		haptics_nezha_calibration_fallback(config);
 
 	if ((abs(config->t_lra_us - config->cl_t_lra_us) * 100 / config->t_lra_us) >
 			CL_TLRA_ERROR_RANGE_PCT) {
@@ -3025,7 +3045,7 @@ static int haptics_init_custom_effect(struct haptics_chip *chip)
 	chip->custom_effect->pattern = NULL;
 	chip->custom_effect->brake = NULL;
 	chip->custom_effect->id = UINT_MAX;
-	chip->custom_effect->vmax_mv = chip->config.vmax_mv;
+	chip->custom_effect->vmax_mv = chip->config.custom_vmax_mv;
 	chip->custom_effect->t_lra_us = chip->config.t_lra_us;
 	chip->custom_effect->src = FIFO;
 	chip->custom_effect->auto_res_disable = true;
@@ -5379,6 +5399,31 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 		goto free_pbs;
 	}
 
+	/* Preserve generic behavior unless the Nezha profile is selected. */
+	config->custom_vmax_mv = config->vmax_mv;
+	config->f0_vmax_mv = config->vmax_mv;
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA)) {
+		of_property_read_u32(node, "qcom,custom_vmax_mv", &config->custom_vmax_mv);
+		of_property_read_u32(node, "qcom,f0-vmax-mv", &config->f0_vmax_mv);
+		if (!config->custom_vmax_mv || config->custom_vmax_mv >= MAX_VMAX_MV ||
+			!config->f0_vmax_mv || config->f0_vmax_mv >= MAX_VMAX_MV) {
+			rc = -EINVAL;
+			goto free_pbs;
+		}
+		if (of_find_property(node, "qcom,lra-f0-default", NULL)) {
+			if (of_property_read_u32(node, "qcom,lra-f0-min", &config->f0_min_hz) ||
+				of_property_read_u32(node, "qcom,lra-f0-max", &config->f0_max_hz) ||
+				of_property_read_u32(node, "qcom,lra-f0-default", &config->f0_default_hz) ||
+				of_property_read_u32(node, "qcom,lra-f0-cal-count", &config->f0_cal_count) ||
+				!config->f0_min_hz || config->f0_min_hz > config->f0_default_hz ||
+				config->f0_default_hz > config->f0_max_hz ||
+				config->f0_max_hz > USEC_PER_SEC || config->f0_cal_count > 1023) {
+				rc = -EINVAL;
+				goto free_pbs;
+			}
+		}
+	}
+
 	config->fifo_empty_thresh = chip->fifo_info->fifo_empty_threshold;
 	of_property_read_u32(node, "qcom,fifo-empty-threshold",
 			&config->fifo_empty_thresh);
@@ -6063,7 +6108,7 @@ static int haptics_detect_lra_frequency(struct haptics_chip *chip)
 {
 	int rc;
 	u8 autores_cfg, drv_duty_cfg, amplitude, val = 0;
-	u32 vmax_mv = chip->config.vmax_mv;
+	u32 vmax_mv = chip->config.f0_vmax_mv;
 
 	rc = haptics_read(chip, chip->cfg_addr_base,
 			HAP_CFG_AUTORES_CFG_REG, &autores_cfg, 1);
