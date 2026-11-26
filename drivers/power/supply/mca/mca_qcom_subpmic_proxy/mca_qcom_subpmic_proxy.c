@@ -109,6 +109,8 @@ enum mca_subpmic_notify {
 #define SUBPMIC_RAW_CODE_GLINK_DOWN 0x2e
 #define SUBPMIC_RAW_CODE_GLINK_UP 0x2f
 
+#define SUBPMIC_SYNC_RETRIES 60
+
 #define SUBPMIC_QC_VOLT_MIN 5000
 #define SUBPMIC_QC_VOLT_MAX 12000
 
@@ -125,6 +127,11 @@ struct qcom_subpmic {
 	struct delayed_work update_usb_type_work;
 	struct work_struct notify_change_work;
 	struct delayed_work sync_cfg_work;
+	/* Protect retry generations against link recovery and removal. */
+	spinlock_t sync_lock;
+	unsigned int sync_retries;
+	unsigned int sync_generation;
+	bool stopping;
 
 	struct notifier_block ship_mode_nb;
 	struct notifier_block shutdown_nb;
@@ -875,15 +882,22 @@ retry:
 			   msecs_to_jiffies(500));
 }
 
-static int qcom_subpmic_sync_cfg_work_count;
-
 static void qcom_subpmic_sync_cfg_work(struct work_struct *work)
 {
 	struct qcom_subpmic *sc = container_of(
 		to_delayed_work(work), struct qcom_subpmic, sync_cfg_work);
 	bool cp_present = false;
+	unsigned long flags;
+	unsigned int generation;
 	int rc;
 
+	spin_lock_irqsave(&sc->sync_lock, flags);
+	generation = sc->sync_generation;
+	if (sc->stopping) {
+		spin_unlock_irqrestore(&sc->sync_lock, flags);
+		return;
+	}
+	spin_unlock_irqrestore(&sc->sync_lock, flags);
 	rc = platform_class_cp_get_present(0, &cp_present);
 	if (rc != 0) {
 		mca_log_err("Failed to get cp state, rc=%d\n", rc);
@@ -907,7 +921,7 @@ static void qcom_subpmic_sync_cfg_work(struct work_struct *work)
 	mca_log_err("Success to send otg cfg, rc=%d\n", 0);
 
 	if (!sc->support_cid)
-		return;
+		goto success;
 
 	rc = mca_adsp_glink_write_prop(SUBPMIC_PROP_CID_CFG, &sc->cid_gpio_int,
 				       sizeof(sc->cid_gpio_int));
@@ -924,12 +938,22 @@ static void qcom_subpmic_sync_cfg_work(struct work_struct *work)
 		goto retry;
 	}
 	mca_log_err("Success to send eu model, rc=%d\n", 0);
+success:
+	spin_lock_irqsave(&sc->sync_lock, flags);
+	if (generation == sc->sync_generation)
+		sc->sync_retries = 0;
+	spin_unlock_irqrestore(&sc->sync_lock, flags);
 	return;
 
 retry:
-	if (qcom_subpmic_sync_cfg_work_count++ < 0x3c)
+	spin_lock_irqsave(&sc->sync_lock, flags);
+	if (!sc->stopping && generation == sc->sync_generation &&
+	    sc->sync_retries < SUBPMIC_SYNC_RETRIES) {
+		sc->sync_retries++;
 		queue_delayed_work(system_wq, &sc->sync_cfg_work,
 				   msecs_to_jiffies(250));
+	}
+	spin_unlock_irqrestore(&sc->sync_lock, flags);
 }
 
 static void qcom_subpmic_notify_change_work(struct work_struct *work)
@@ -998,12 +1022,21 @@ static void qcom_subpmic_glink_down_cb(void *priv)
 static void qcom_subpmic_sync_cb(void *priv)
 {
 	struct qcom_subpmic *sc = priv;
+	unsigned long flags;
 
+	spin_lock_irqsave(&sc->sync_lock, flags);
+	if (sc->stopping) {
+		spin_unlock_irqrestore(&sc->sync_lock, flags);
+		return;
+	}
+	sc->sync_generation++;
+	sc->sync_retries = 0;
+	mod_delayed_work(system_wq, &sc->sync_cfg_work, 0);
+	spin_unlock_irqrestore(&sc->sync_lock, flags);
 	mca_log_info("glink up\n");
 	mca_event_block_notify(MCA_EVENT_CHARGE_STATUS,
 			       SUBPMIC_RAW_CODE_GLINK_UP, NULL);
-	queue_delayed_work(system_wq, &sc->update_usb_type_work, 0);
-	queue_delayed_work(system_wq, &sc->sync_cfg_work, 0);
+	mod_delayed_work(system_wq, &sc->update_usb_type_work, 0);
 }
 
 static void qcom_subpmic_queue_notify(struct qcom_subpmic *sc, int type,
@@ -1219,13 +1252,14 @@ static int qcom_subpmic_probe(struct platform_device *pdev)
 
 	if (!mca_get_hwid_info()) {
 		mca_log_err("%s parse dt fail\n", __func__);
-		return -ENOMEM;
+		return -EPROBE_DEFER;
 	}
 
 	qcom_subpmic_parse_dt(sc, pdev->dev.of_node);
 
 	INIT_LIST_HEAD(&sc->notify_list);
 	spin_lock_init(&sc->notify_lock);
+	spin_lock_init(&sc->sync_lock);
 	INIT_DELAYED_WORK(&sc->update_usb_type_work,
 			  qcom_subpmic_update_usb_type_work);
 	INIT_DELAYED_WORK(&sc->sync_cfg_work, qcom_subpmic_sync_cfg_work);
@@ -1233,14 +1267,19 @@ static int qcom_subpmic_probe(struct platform_device *pdev)
 
 	sc->ship_mode_nb.notifier_call = qcom_subpmic_ship_mode;
 	sc->ship_mode_nb.priority = 255;
-	register_reboot_notifier(&sc->ship_mode_nb);
+	rc = register_reboot_notifier(&sc->ship_mode_nb);
+	if (rc)
+		return rc;
 
 	sc->shutdown_nb.notifier_call = qcom_subpmic_shutdown_cb;
 	sc->shutdown_nb.priority = 255;
-	register_reboot_notifier(&sc->shutdown_nb);
+	rc = register_reboot_notifier(&sc->shutdown_nb);
+	if (rc)
+		goto unregister_ship;
 
-	device_set_wakeup_capable(sc->dev, true);
-	device_wakeup_enable(sc->dev);
+	rc = device_init_wakeup(sc->dev, true);
+	if (rc)
+		goto unregister_shutdown;
 	platform_set_drvdata(pdev, sc);
 
 	rc = platform_bc12_class_ops_register(0, &g_qcom_pmic_bc12_ops, sc);
@@ -1252,20 +1291,20 @@ static int qcom_subpmic_probe(struct platform_device *pdev)
 	rc = protocol_class_qc_register_ops(0, &g_adsp_qc_ops, sc);
 	if (rc) {
 		mca_log_err("%s register qc ops fail\n", __func__);
-		goto err;
+		goto unregister_bc12;
 	}
 
 	rc = platform_class_buckchg_ops_register_v2(0, sc, &g_qcom_buckchg_ops,
 					    sizeof(g_qcom_buckchg_ops));
 	if (rc) {
 		mca_log_err("%s register buckchg ops fail\n", __func__);
-		goto err;
+		goto unregister_qc;
 	}
 
 	rc = mca_adsp_glink_resister_ops(&g_qcom_subpmic_glink_cb, sc);
 	if (rc) {
 		mca_log_err("%s register glink ops fail\n", __func__);
-		goto err;
+		goto unregister_buck;
 	}
 
 	queue_delayed_work(system_wq, &sc->update_usb_type_work, 0);
@@ -1273,15 +1312,45 @@ static int qcom_subpmic_probe(struct platform_device *pdev)
 	mca_log_err("probe ok\n");
 	return 0;
 
+unregister_buck:
+	platform_class_buckchg_ops_unregister(0, sc, &g_qcom_buckchg_ops);
+unregister_qc:
+	protocol_class_qc_unregister_ops(0, &g_adsp_qc_ops, sc);
+unregister_bc12:
+	platform_bc12_class_ops_unregister(0, &g_qcom_pmic_bc12_ops, sc);
 err:
-	unregister_reboot_notifier(&sc->ship_mode_nb);
+	device_init_wakeup(sc->dev, false);
+unregister_shutdown:
 	unregister_reboot_notifier(&sc->shutdown_nb);
+unregister_ship:
+	unregister_reboot_notifier(&sc->ship_mode_nb);
 	return rc;
 }
 
 static void qcom_subpmic_remove(struct platform_device *pdev)
 {
-	return;
+	struct qcom_subpmic *sc = platform_get_drvdata(pdev);
+	struct qcom_subpmic_notify_entry *entry, *tmp;
+	unsigned long flags;
+
+	spin_lock_irqsave(&sc->sync_lock, flags);
+	sc->stopping = true;
+	spin_unlock_irqrestore(&sc->sync_lock, flags);
+	/* Detach and drain every producer before cancelling their work. */
+	mca_adsp_glink_unregister_ops(&g_qcom_subpmic_glink_cb, sc);
+	platform_class_buckchg_ops_unregister(0, sc, &g_qcom_buckchg_ops);
+	protocol_class_qc_unregister_ops(0, &g_adsp_qc_ops, sc);
+	platform_bc12_class_ops_unregister(0, &g_qcom_pmic_bc12_ops, sc);
+	unregister_reboot_notifier(&sc->ship_mode_nb);
+	unregister_reboot_notifier(&sc->shutdown_nb);
+	cancel_delayed_work_sync(&sc->update_usb_type_work);
+	cancel_delayed_work_sync(&sc->sync_cfg_work);
+	cancel_work_sync(&sc->notify_change_work);
+	list_for_each_entry_safe(entry, tmp, &sc->notify_list, node) {
+		list_del(&entry->node);
+		kfree(entry);
+	}
+	device_init_wakeup(sc->dev, false);
 }
 
 static void qcom_subpmic_shutdown(struct platform_device *pdev)

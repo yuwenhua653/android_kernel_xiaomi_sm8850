@@ -19,6 +19,11 @@ struct protocol_class_qc_ops {
 	int (*protocol_qc3_check_class_type)(int *type, void *data);
 };
 
+/* Register/unregister outside a dispatched callback; keep ops/data alive
+ * until unregister returns. Both operations drain prior callbacks.
+ */
+int protocol_class_qc_unregister_ops(unsigned int port_num,
+				     struct protocol_class_qc_ops *ops, void *data);
 int protocol_class_qc_register_ops(unsigned int port_num, struct protocol_class_qc_ops *ops, void *data);
 int protocol_class_qc3_check_class_type(unsigned int port_num, int *type);
 int protocol_class_qc_get_qc_type(unsigned int port_num, int *type);

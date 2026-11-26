@@ -1,5 +1,10 @@
 # Myron runtime-gap follow-up — 2026-11-25
 
+Latest source update: [charging transport/recovery follow-up](charging-recovery-followup-20261126.md)
+adds draining GLINK/QC/sub-PMIC lifetimes, resettable configuration retries and
+failed wireless-ramp handling. Its 23 host suites and four ARM64 objects pass;
+new full images and phone charging/thermal results remain unverified.
+
 Latest build/integration update: [complete native external qualification](external-native-qualification.md)
 completes all 25 configured external groups (73 modules). Together with 354
 in-tree modules, all 427 pass CRC/provider/dependency checks; the device's 314

@@ -625,33 +625,31 @@ strategy_wireless_67w_icl_setting(struct strategy_wireless_dev *info, bool en,
 		mca_vote(info->input_limit_voter, "xm_wls_67w", false, 0);
 }
 
-static void
+static int
 strategy_wireless_stepper_pmic_icl(struct strategy_wireless_dev *info,
 				   int start_icl, int end_icl, int step_ma,
 				   int ms)
 {
 	int temp_icl = start_icl;
+	int ret;
 
-	strategy_wireless_icl_setting(info, true, temp_icl);
-
-	if (start_icl < end_icl) {
-		while (temp_icl < end_icl) {
-			strategy_wireless_icl_setting(info, true, temp_icl);
-			temp_icl += step_ma;
-			msleep(ms);
-		}
-	} else {
-		while (temp_icl > end_icl) {
-			strategy_wireless_icl_setting(info, true, temp_icl);
-			if (temp_icl > step_ma)
-				temp_icl -= step_ma;
-			else
-				temp_icl = 0;
-			msleep(ms);
-		}
+	if (start_icl < 0 || end_icl < 0 || step_ma <= 0 || ms < 0)
+		return -EINVAL;
+	for (;;) {
+		if (!READ_ONCE(info->online))
+			return -ENODEV;
+		ret = strategy_wireless_icl_setting(info, true, temp_icl);
+		if (ret)
+			return ret;
+		if (temp_icl == end_icl)
+			return 0;
+		/* Clamp before arithmetic: never overshoot or wrap the target. */
+		if (temp_icl < end_icl)
+			temp_icl += min(step_ma, end_icl - temp_icl);
+		else
+			temp_icl -= min(step_ma, temp_icl - end_icl);
+		msleep(ms);
 	}
-
-	strategy_wireless_icl_setting(info, true, end_icl);
 }
 
 static void
@@ -1088,6 +1086,8 @@ static int strategy_wireless_get_max_power(struct strategy_wireless_dev *info)
 
 static int strategy_wireless_adapter_handle(struct strategy_wireless_dev *info)
 {
+	int ret;
+
 	mca_log_info("xm wls adapter handle:type[0x%02x],epp[%d]\n",
 		     info->proc_data.adapter_type, info->proc_data.epp);
 
@@ -1158,8 +1158,10 @@ static int strategy_wireless_adapter_handle(struct strategy_wireless_dev *info)
 		case ADAPTER_PD:
 		case ADAPTER_QC3:
 			msleep(2000);
-			strategy_wireless_stepper_pmic_icl(info, 800, 1100, 100,
-							   20);
+			ret = strategy_wireless_stepper_pmic_icl(info, 800, 1100,
+								 100, 20);
+			if (ret)
+				return ret;
 			info->proc_data.pre_iwls = 1100;
 			info->proc_data.pre_vout = BPP_PLUS_VOUT;
 			strategy_wireless_icl_setting(info, true, 1100);
@@ -1946,10 +1948,13 @@ static void strategy_wireless_epp_plus_work(struct strategy_wireless_dev *info)
 	if (info->proc_data.chgr_stage == WLS_RECHG_MODE) {
 		info->proc_data.target_vout = EPP_DEFAULT_VOUT;
 		info->proc_data.target_iwls = 550;
-		if (info->proc_data.target_iwls != info->proc_data.pre_iwls)
-			strategy_wireless_stepper_pmic_icl(
+		if (info->proc_data.target_iwls != info->proc_data.pre_iwls) {
+			ret = strategy_wireless_stepper_pmic_icl(
 				info, info->proc_data.pre_iwls,
 				info->proc_data.target_iwls, 100, 50);
+			if (ret)
+				return;
+		}
 	}
 
 	ret = strategy_wireless_apply_profile_vout(info, false);
@@ -3501,48 +3506,56 @@ static void strategy_wireless_sw_cv_stop(struct strategy_wireless_dev *info)
 	info->sw_cv_running = false;
 }
 
-static void strategy_wireless_bridge_icl_setting(
+static int strategy_wireless_bridge_icl_setting(
 	struct strategy_wireless_dev *info, bool en, unsigned int ma)
 {
 	mca_log_info("bridge_sw en: %d, ma: %u\n", en, ma);
-	mca_vote(info->input_limit_voter, "sw_bridge", en, ma);
+	return mca_vote(info->input_limit_voter, "sw_bridge", en, ma);
 }
 
 static void
 strategy_wireless_switch_to_half_bridge(struct strategy_wireless_dev *info)
 {
-	int brg_status = 0;
-	int rx_vout = 0, rx_iout = 0;
-	int retry = 15;
+	int brg_status, rx_vout, rx_iout;
+	int ret, retry = 15;
 
-	platform_class_wireless_get_rx_brg_status(WIRELESS_ROLE_MASTER,
-						  &brg_status);
-	if (brg_status != 0) {
-		mca_log_err("bridge_sw no need switch, bridge is HALF\n");
+	ret = platform_class_wireless_get_rx_brg_status(WIRELESS_ROLE_MASTER,
+							&brg_status);
+	if (ret || brg_status != 0 || !READ_ONCE(info->online))
 		return;
-	}
 
 	info->switching_bridge = true;
-	platform_class_wireless_set_vout(WIRELESS_ROLE_MASTER, BPP_DEFAULT_VOUT);
-	strategy_wireless_bridge_icl_setting(info, true, 300);
+	ret = platform_class_wireless_set_vout(WIRELESS_ROLE_MASTER,
+					       BPP_DEFAULT_VOUT);
+	if (ret)
+		goto done;
+	ret = strategy_wireless_bridge_icl_setting(info, true, 300);
+	if (ret)
+		goto release_vote;
 	while (retry--) {
 		msleep(300);
-		platform_class_wireless_get_vout(WIRELESS_ROLE_MASTER, &rx_vout);
-		platform_class_wireless_get_iout(WIRELESS_ROLE_MASTER, &rx_iout);
+		if (!READ_ONCE(info->online))
+			break;
+		ret = platform_class_wireless_get_vout(WIRELESS_ROLE_MASTER,
+						       &rx_vout);
+		if (ret || rx_vout <= 0)
+			continue;
+		ret = platform_class_wireless_get_iout(WIRELESS_ROLE_MASTER,
+						       &rx_iout);
+		if (ret || rx_iout < 0)
+			continue;
 		if (rx_vout < 6501 && rx_iout < 401) {
-			platform_class_wireless_switch_bridge(
+			ret = platform_class_wireless_switch_bridge(
 				WIRELESS_ROLE_MASTER, 0);
+			if (ret)
+				mca_log_err("bridge_sw switch failed: %d\n", ret);
 			break;
 		}
-		mca_log_err("bridge_sw wait, rx_vout %d, rx_iout %d\n", rx_vout,
-			    rx_iout);
 	}
-	info->switching_bridge = false;
-	msleep(20);
-	platform_class_wireless_get_rx_brg_status(WIRELESS_ROLE_MASTER,
-						  &brg_status);
+release_vote:
 	strategy_wireless_bridge_icl_setting(info, false, 0);
-	mca_log_err("bridge_sw switch_to_half over, brg_status %d\n", brg_status);
+done:
+	info->switching_bridge = false;
 }
 
 static void strategy_wireless_monitor_work(struct work_struct *work)
@@ -3941,12 +3954,9 @@ static void strategy_wireless_drawload_work(struct work_struct *work)
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, wls_drawload_work.work);
 
-	int chgr_stat;
+	int chgr_stat = 0, ret;
 	int cnt = 0;
 	int rx_vout = 0, rx_iout = 0, iwls = 0;
-
-	(void)platform_class_buckchg_ops_get_chg_status(MAIN_BUCK_CHARGER,
-							&chgr_stat);
 
 	while (cnt++ <= 50) {
 		(void)platform_class_buckchg_ops_get_wls_curr(MAIN_BUCK_CHARGER,
@@ -3955,13 +3965,13 @@ static void strategy_wireless_drawload_work(struct work_struct *work)
 						       &rx_vout);
 		(void)platform_class_wireless_get_iout(WIRELESS_ROLE_MASTER,
 						       &rx_iout);
-		(void)platform_class_buckchg_ops_get_chg_status(
+		ret = platform_class_buckchg_ops_get_chg_status(
 			MAIN_BUCK_CHARGER, &chgr_stat);
 		mca_log_info(
 			"BPP drawload, iwls:%d, chgr_sts:%d, iout:%d, vout:%d\n",
 			iwls, chgr_stat, rx_iout, rx_vout);
-		if (chgr_stat == CHARGER_STATUS_FULLON ||
-		    chgr_stat == CHARGER_STATUS_TAPER)
+		if (!ret && (chgr_stat == CHARGER_STATUS_FULLON ||
+			     chgr_stat == CHARGER_STATUS_TAPER))
 			break;
 		if (strategy_wireless_msleep(50, info))
 			return;

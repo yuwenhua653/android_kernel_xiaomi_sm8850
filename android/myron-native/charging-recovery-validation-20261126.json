@@ -1,0 +1,190 @@
+{
+  "date": "2026-11-26",
+  "kernel_parent": "172ee2713a6580d86c1430c878e376524352ec4e",
+  "modules_revision": "5638362f5eeb3cc0c8bbcd7d9cbf456e0fd9cc74",
+  "device_common_review_revision": "b1db55732f95e8e52467bf5c371242bd0f3e641e",
+  "scope": "23 host suites and 4 ARM64 driver objects; no new complete Image/modpost/ROM/device result",
+  "compiler": "Debian Clang 19.1.7 (3+b1)",
+  "host_test_compiler": "14.2.0",
+  "config_fragments": [
+    "gki_defconfig",
+    "vendor/canoe_GKI.config",
+    "vendor/myron_GKI.config"
+  ],
+  "qualification_only_config_overrides": {
+    "LTO_NONE": true,
+    "RUST": false,
+    "DEBUG_INFO_BTF": false,
+    "DEBUG_INFO_BTF_MODULES": false
+  },
+  "config_sha256": "09c9352e833e0e9601e0aada4768e707cc0d7517bffc12de9a73d8b4e3fd9b39",
+  "source_sha256": {
+    "android/myron-native/capture-runtime-gaps.sh": "b4614dd71cdfb8afe46e15f6c5ea20bfcc5fc1e5e5942d6e80bd3dd4144d1f1e",
+    "android/myron-native/charging-recovery-followup-20261126.md": "349a45fd7951a1d98fe2886ec61c3f2de0d99d075f869dd006094b35ec993c87",
+    "android/myron-native/runtime-gap-followup-20261125.md": "24037331cdb0c4359fc862fe91b9c5cb6d7d21235361360a09ce57257bf7f826",
+    "android/myron-native/tests/mca_lifetime_host.h": "0fdeeb45298b556a58e23d5edc754e2d05451e2d3f2684b2ff2c2abe25a24725",
+    "android/myron-native/tests/test_mca_glink_lifetime.py": "e321ac347e9de0068f5139fe65b650a1442897bf5414217d98fb1970ad1cb669",
+    "android/myron-native/tests/test_qc_lifetime.py": "5c16110cc9f991934eaa281acd769012c56628503509848dbcf91ef3903cd24f",
+    "android/myron-native/tests/test_subpmic_recovery.py": "f55ee0a1f70a679f0261cd9a33430a9faa715c87f8a2914d16e6a4af5077edde",
+    "android/myron-native/tests/test_wireless_profile_apply.py": "3091eedb50812264ef2d019359f77c2be8b23501c45c014f7d30c38e3f56bb49",
+    "android/myron-native/tests/test_wireless_ramp.py": "93815b9f9682e07f505678b10258c36e78cbb018b3ee217476b057a32d5908e5",
+    "drivers/power/supply/mca/include/mca/common/mca_adsp_glink.h": "dcf5e89729522ab979de369e7b83895e962a01de0b3e38da52be152c86a6f6e1",
+    "drivers/power/supply/mca/include/mca/protocol/protocol_qc_class.h": "d81b47b2d00caf511ebfda4f3f9904122a69b82881d22189b24462600f139891",
+    "drivers/power/supply/mca/mca_common/mca_adsp_glink.c": "57e0888e5dccbd2b29e1ee189228fc03d6a0c2313010f9bc03808313fcca4d6e",
+    "drivers/power/supply/mca/mca_protocol/protocol_qc/mca_protocol_qc_class.c": "e4aca5d233149fc9f340154fabf7a4e5d2399182585625e057c4c213014989a7",
+    "drivers/power/supply/mca/mca_qcom_subpmic_proxy/mca_qcom_subpmic_proxy.c": "5e0b4813f918825b6a370577195cd643272106e41d7a0662be8fc7353bde4600",
+    "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.c": "6cafd1e3c7d8d796a1c899d3d0bb93a103b3bc23cb29782f3e9a5ffd5196c129"
+  },
+  "arm64_object_sha256": {
+    "drivers/power/supply/mca/mca_common/mca_adsp_glink.o": "370cfbbb47e2acf9b5b7c3b85ce3987cf98c8245dd523a8e37f98a090781b5f8",
+    "drivers/power/supply/mca/mca_protocol/protocol_qc/mca_protocol_qc_class.o": "2dedaa26679f1f71a5e847835250fe404f5e01423927f7bdd39ffd0e5c26fcbd",
+    "drivers/power/supply/mca/mca_qcom_subpmic_proxy/mca_qcom_subpmic_proxy.o": "67aee8803551c76dd89c4b68dda3ffbf59a57ed306b59528f45efeaa75ea4123",
+    "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.o": "f5518d62098926b9be3ddda3f2381fe758775bcea47ca26ea220598575896e46"
+  },
+  "tests": [
+    {
+      "suite": "test_antiburn_probe.py",
+      "exit_code": 0,
+      "output": "PASS: 10 antiburn sensor-before-GPIO, deferral and ownership cases"
+    },
+    {
+      "suite": "test_battery_providers.py",
+      "exit_code": 0,
+      "output": "PASS: 64 battery provider/vote/status/error cases"
+    },
+    {
+      "suite": "test_board_thermal_bridge.py",
+      "exit_code": 0,
+      "output": "PASS: 29 board-temperature ABI/init/unwind cases and 2000 concurrent writes"
+    },
+    {
+      "suite": "test_charger_thermal_levels.py",
+      "exit_code": 0,
+      "output": "PASS: 1385 MCA thermal range/rejected-write/cooling/table-vote cases"
+    },
+    {
+      "suite": "test_mca_glink_lifetime.py",
+      "exit_code": 0,
+      "output": "PASS: 67 GLINK request/registry/rebind lifecycle cases"
+    },
+    {
+      "suite": "test_mca_vote_retry.py",
+      "exit_code": 0,
+      "output": "PASS: 271 production MCA vote/retry cases"
+    },
+    {
+      "suite": "test_qc_lifetime.py",
+      "exit_code": 0,
+      "output": "PASS: 131 QC registry/lifetime cases"
+    },
+    {
+      "suite": "test_release_label.py",
+      "exit_code": 0,
+      "output": "PASS: 12 release-label cases; true Git ids, dirty worktree retained, tags, --no-local and non-Myron behavior"
+    },
+    {
+      "suite": "test_sc96281_auth.py",
+      "exit_code": 0,
+      "output": "PASS: 13 production auth cases; read failures; cache; event errors; repeated UUID"
+    },
+    {
+      "suite": "test_sc96281_commands.py",
+      "exit_code": 0,
+      "output": "PASS: 32 production command cases; payload errors; trigger errors; CEP; cached voltage"
+    },
+    {
+      "suite": "test_sc96281_irq.py",
+      "exit_code": 0,
+      "output": "PASS: 4363 IRQ cases; actual RX FIFO/decoder; TX indices; read/clear failures; ready guard"
+    },
+    {
+      "suite": "test_sc96281_state.py",
+      "exit_code": 0,
+      "output": "PASS: 65547 production state cases; signed temperature; retry/cache; failed samples"
+    },
+    {
+      "suite": "test_subpmic_recovery.py",
+      "exit_code": 0,
+      "output": "PASS: 27 sub-PMIC recovery/unwind cases (60 retries per failure cycle)"
+    },
+    {
+      "suite": "test_thermal_qos.py",
+      "exit_code": 0,
+      "output": "PASS: production CPU/GPU thermal state bounds, failed QoS votes and release"
+    },
+    {
+      "suite": "test_thermal_registration.py",
+      "exit_code": 0,
+      "output": "PASS: 102 CPU cooling registration cases; retries and duplicate work retain one owner"
+    },
+    {
+      "suite": "test_ufs_phy_balance.py",
+      "exit_code": 0,
+      "output": "PASS: 1536 power cycles; active-link retention, inactive-link balance, repeated requests, hardware/PM/regulator failures and pre-init calls"
+    },
+    {
+      "suite": "test_wireless_cv_samples.py",
+      "exit_code": 0,
+      "output": "PASS: 50 wireless monitor/CV provider, recovery and bounds cases"
+    },
+    {
+      "suite": "test_wireless_profile_apply.py",
+      "exit_code": 0,
+      "output": "PASS: 36 wireless profile apply/retry cases"
+    },
+    {
+      "suite": "test_wireless_psy.py",
+      "exit_code": 0,
+      "output": "PASS: production RX getter; units; provider errors; no stale output; unsupported properties"
+    },
+    {
+      "suite": "test_wireless_ramp.py",
+      "exit_code": 0,
+      "output": "PASS: 104 wireless ramp/bridge/status cases"
+    },
+    {
+      "suite": "test_wireless_safety_samples.py",
+      "exit_code": 0,
+      "output": "PASS: 874 wireless alarm/FFC/profile failure, hysteresis and recovery cases"
+    },
+    {
+      "suite": "test_wireless_samples.py",
+      "exit_code": 0,
+      "output": "PASS: 539 wireless sample/error/recovery/reference cases"
+    },
+    {
+      "suite": "test_wireless_session.py",
+      "exit_code": 0,
+      "output": "PASS: RX/TX queue isolation, early/late RX, initialization, duplicate CONNECT, FIFO, disconnect, reconnect, stop"
+    }
+  ],
+  "negative_controls": [
+    {
+      "name": "ramp",
+      "runtime_assertion": true,
+      "rejected": true
+    },
+    {
+      "name": "stale_up",
+      "runtime_assertion": true,
+      "rejected": true
+    },
+    {
+      "name": "budget",
+      "runtime_assertion": true,
+      "rejected": true
+    },
+    {
+      "name": "qc_drain",
+      "runtime_assertion": true,
+      "rejected": true
+    }
+  ],
+  "driver_checkpatch": "total: 0 errors, 0 warnings, 1028 lines checked\n\n/tmp/myron-driver-1126.patch has no obvious style problems and is ready for submission.",
+  "capture_script_validation": "sh -n only; not run on Android",
+  "new_complete_image": false,
+  "new_full_modpost": false,
+  "production_toolchain": false,
+  "final_images": false,
+  "device_net_wireless_charging": false
+}

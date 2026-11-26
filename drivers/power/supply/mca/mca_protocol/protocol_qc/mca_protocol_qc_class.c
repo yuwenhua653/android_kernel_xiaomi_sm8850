@@ -26,6 +26,7 @@
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/mutex.h>
+#include <linux/srcu.h>
 #include <linux/notifier.h>
 #include <mca/common/mca_event.h>
 #include <mca/common/mca_log.h>
@@ -35,65 +36,77 @@
 #define MCA_LOG_TAG "protocol_qc_class"
 #endif
 
-#define protocol_class_qc_invalid_ops(temp, name) (!temp || !temp->ops || !temp->ops->name)
-
 struct protocol_class_qc_ops_data {
 	void *data;
 	struct protocol_class_qc_ops *ops;
 };
 
 static unsigned int g_cur_port;
-static struct protocol_class_qc_ops_data g_protocol_qc_data[TYPEC_PORT_MAX];
-
-static struct protocol_class_qc_ops_data *protocol_class_qc_get_ops_data(unsigned int port_num)
-{
-	if (port_num >= TYPEC_PORT_MAX || !g_protocol_qc_data[port_num].ops)
-		return NULL;
-
-	return &g_protocol_qc_data[port_num];
-}
+static struct protocol_class_qc_ops_data __rcu *g_protocol_qc_data[TYPEC_PORT_MAX];
+static DEFINE_MUTEX(g_protocol_qc_lock);
+DEFINE_STATIC_SRCU(g_protocol_qc_srcu);
 
 int protocol_class_qc3_check_class_type(unsigned int port_num, int *type)
 {
-	struct protocol_class_qc_ops_data *temp_data = protocol_class_qc_get_ops_data(port_num);
+	struct protocol_class_qc_ops_data *entry;
+	int idx, ret = -ENODEV;
 
-	if (protocol_class_qc_invalid_ops(temp_data, protocol_qc3_check_class_type))
-		return -1;
-
-	return temp_data->ops->protocol_qc3_check_class_type(type, temp_data->data);
+	if (port_num >= TYPEC_PORT_MAX || !type)
+		return -EINVAL;
+	idx = srcu_read_lock(&g_protocol_qc_srcu);
+	entry = srcu_dereference(g_protocol_qc_data[port_num], &g_protocol_qc_srcu);
+	if (entry && entry->ops->protocol_qc3_check_class_type)
+		ret = entry->ops->protocol_qc3_check_class_type(type, entry->data);
+	srcu_read_unlock(&g_protocol_qc_srcu, idx);
+	return ret;
 }
 EXPORT_SYMBOL(protocol_class_qc3_check_class_type);
 
 int protocol_class_qc_get_qc_type(unsigned int port_num, int *type)
 {
-	struct protocol_class_qc_ops_data *temp_data = protocol_class_qc_get_ops_data(port_num);
+	struct protocol_class_qc_ops_data *entry;
+	int idx, ret = -ENODEV;
 
-	if (protocol_class_qc_invalid_ops(temp_data, protocol_qc_get_qc_type))
-		return -1;
-
-	return temp_data->ops->protocol_qc_get_qc_type(type, temp_data->data);
+	if (port_num >= TYPEC_PORT_MAX || !type)
+		return -EINVAL;
+	idx = srcu_read_lock(&g_protocol_qc_srcu);
+	entry = srcu_dereference(g_protocol_qc_data[port_num], &g_protocol_qc_srcu);
+	if (entry && entry->ops->protocol_qc_get_qc_type)
+		ret = entry->ops->protocol_qc_get_qc_type(type, entry->data);
+	srcu_read_unlock(&g_protocol_qc_srcu, idx);
+	return ret;
 }
 EXPORT_SYMBOL(protocol_class_qc_get_qc_type);
 
 int protocol_class_qc_set_volt(unsigned int port_num, int volt)
 {
-	struct protocol_class_qc_ops_data *temp_data = protocol_class_qc_get_ops_data(port_num);
+	struct protocol_class_qc_ops_data *entry;
+	int idx, ret = -ENODEV;
 
-	if (protocol_class_qc_invalid_ops(temp_data, protocol_qc_set_volt))
-		return -1;
-
-	return temp_data->ops->protocol_qc_set_volt(temp_data->data, volt);
+	if (port_num >= TYPEC_PORT_MAX)
+		return -EINVAL;
+	idx = srcu_read_lock(&g_protocol_qc_srcu);
+	entry = srcu_dereference(g_protocol_qc_data[port_num], &g_protocol_qc_srcu);
+	if (entry && entry->ops->protocol_qc_set_volt)
+		ret = entry->ops->protocol_qc_set_volt(entry->data, volt);
+	srcu_read_unlock(&g_protocol_qc_srcu, idx);
+	return ret;
 }
 EXPORT_SYMBOL(protocol_class_qc_set_volt);
 
 int protocol_class_qc_set_volt_cmd(unsigned int port_num, int hvdcp_cmd)
 {
-	struct protocol_class_qc_ops_data *temp_data = protocol_class_qc_get_ops_data(port_num);
+	struct protocol_class_qc_ops_data *entry;
+	int idx, ret = -ENODEV;
 
-	if (protocol_class_qc_invalid_ops(temp_data, protocol_qc_set_volt_cmd))
-		return -1;
-
-	return temp_data->ops->protocol_qc_set_volt_cmd(temp_data->data, hvdcp_cmd);
+	if (port_num >= TYPEC_PORT_MAX)
+		return -EINVAL;
+	idx = srcu_read_lock(&g_protocol_qc_srcu);
+	entry = srcu_dereference(g_protocol_qc_data[port_num], &g_protocol_qc_srcu);
+	if (entry && entry->ops->protocol_qc_set_volt_cmd)
+		ret = entry->ops->protocol_qc_set_volt_cmd(entry->data, hvdcp_cmd);
+	srcu_read_unlock(&g_protocol_qc_srcu, idx);
+	return ret;
 }
 EXPORT_SYMBOL(protocol_class_qc_set_volt_cmd);
 
@@ -107,17 +120,50 @@ static int protocol_class_qc_set_volt_and_curr(void *data, int volt, int curr)
 	return protocol_class_qc_set_volt(g_cur_port, volt);
 }
 
-int protocol_class_qc_register_ops(unsigned int port_num, struct protocol_class_qc_ops *ops, void *data)
+int protocol_class_qc_register_ops(unsigned int port_num,
+				   struct protocol_class_qc_ops *ops, void *data)
 {
+	struct protocol_class_qc_ops_data *entry, *old;
+
 	if (port_num >= TYPEC_PORT_MAX || !ops)
-		return -1;
-
-	g_protocol_qc_data[port_num].ops = ops;
-	g_protocol_qc_data[port_num].data = data;
-
+		return -EINVAL;
+	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
+	if (!entry)
+		return -ENOMEM;
+	entry->ops = ops;
+	entry->data = data;
+	mutex_lock(&g_protocol_qc_lock);
+	old = rcu_replace_pointer(g_protocol_qc_data[port_num], entry,
+				  lockdep_is_held(&g_protocol_qc_lock));
+	mutex_unlock(&g_protocol_qc_lock);
+	synchronize_srcu(&g_protocol_qc_srcu);
+	kfree(old);
 	return 0;
 }
 EXPORT_SYMBOL(protocol_class_qc_register_ops);
+
+int protocol_class_qc_unregister_ops(unsigned int port_num,
+				     struct protocol_class_qc_ops *ops, void *data)
+{
+	struct protocol_class_qc_ops_data *old;
+
+	if (port_num >= TYPEC_PORT_MAX || !ops)
+		return -EINVAL;
+	mutex_lock(&g_protocol_qc_lock);
+	old = rcu_dereference_protected(g_protocol_qc_data[port_num],
+					lockdep_is_held(&g_protocol_qc_lock));
+	if (!old || old->ops != ops || old->data != data) {
+		mutex_unlock(&g_protocol_qc_lock);
+		synchronize_srcu(&g_protocol_qc_srcu);
+		return -ENOENT;
+	}
+	RCU_INIT_POINTER(g_protocol_qc_data[port_num], NULL);
+	mutex_unlock(&g_protocol_qc_lock);
+	synchronize_srcu(&g_protocol_qc_srcu);
+	kfree(old);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(protocol_class_qc_unregister_ops);
 
 struct adapter_protocol_class_ops g_protocol_qc_ops = {
 	.get_adapter_type = protocol_class_qc_get_adapter_type,

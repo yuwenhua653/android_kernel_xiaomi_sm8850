@@ -43,7 +43,8 @@ static int mca_vote(int voter,const char *name,bool en,int v) {
  assert(voter>=1 && voter<=3 && !strcmp(name,"xm_wls"));
  vote_calls[voter]++;vote_value[voter]=v;return vote_ret[voter];
 }
-static void strategy_wireless_stepper_pmic_icl(struct strategy_wireless_dev *s,int start,int end,int step,int ms) { }
+static int ramp_ret;
+static int strategy_wireless_stepper_pmic_icl(struct strategy_wireless_dev *s,int start,int end,int step,int ms) { return ramp_ret; }
 '''
 for name in ['BPP_DEFAULT_VOUT','EPP_DEFAULT_VOUT','EPP_PLUS_VOUT']:
     code += re.search(r'^#define '+name+r' .*$', h, re.M)[0]+'\n'
@@ -62,7 +63,7 @@ static void init(struct strategy_wireless_dev *s) {
  s->proc_data.target_vout=s->proc_data.pre_vout=EPP_DEFAULT_VOUT;
  s->proc_data.target_iwls=900;s->proc_data.pre_iwls=700;
  s->proc_data.chgr_stage=WLS_NORMAL_MODE;s->proc_data.batt_soc=50;
- vget_ret=vset_fail=vset_calls=sleeps=0;vget_value=13500;temp=250;
+ ramp_ret=vget_ret=vset_fail=vset_calls=sleeps=0;vget_value=13500;temp=250;
  memset(vote_ret,0,sizeof(vote_ret));memset(vote_calls,0,sizeof(vote_calls));
 }
 int main(void) {
@@ -118,6 +119,11 @@ int main(void) {
  }
  init(&s);assert(!strategy_wireless_fcc_setting(&s,false,999));
  assert(vote_calls[2]==1 && vote_calls[3]==1 && !vote_value[2] && !vote_value[3]);cases++;
+ init(&s);s.proc_data.chgr_stage=WLS_RECHG_MODE;ramp_ret=-EIO;
+ strategy_wireless_epp_plus_work(&s);
+ assert(!vote_calls[1] && s.proc_data.pre_iwls==700 && !vset_calls);cases++;
+ ramp_ret=0;strategy_wireless_epp_plus_work(&s);
+ assert(vote_calls[1]==1 && s.proc_data.pre_iwls==550);cases++;
  printf("PASS: %d wireless profile apply/retry cases\n",cases);
 }
 '''
