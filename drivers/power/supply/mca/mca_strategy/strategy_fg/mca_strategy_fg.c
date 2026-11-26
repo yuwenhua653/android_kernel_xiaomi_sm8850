@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/limits.h>
 #include <linux/string.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
@@ -1780,24 +1781,32 @@ static void mca_strategy_single_force_fw_report_full(struct strategy_fg *fg)
 	static int force_full_count;
 	int quick_charge_jeita_iterm = 0;
 	int quick_charge_status = MCA_QUICK_CHG_STS_NO_CHARGING;
-	int online;
+	int online, ret;
 
-	mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
+	ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
 				     STRATEGY_STATUS_TYPE_ONLINE, &online);
+	if (ret)
+		goto invalid_sample;
 	if (online) {
-		mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
+		ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
 					     STRATEGY_STATUS_TYPE_QC_CHARGE_STS,
 					     &quick_charge_status);
 	} else {
-		mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_CHARGE,
+		ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_CHARGE,
 					     STRATEGY_STATUS_TYPE_QC_CHARGE_STS,
 					     &quick_charge_status);
 	}
+
+	if (ret)
+		goto invalid_sample;
 
 	if (fg->voter_ok) {
 		iterm = mca_get_effective_result(fg->iterm_voter);
 		vterm = mca_get_effective_result(fg->vterm_voter);
 	}
+
+	if (iterm <= 0 || iterm > INT_MAX / 119 || vterm <= 15)
+		goto invalid_sample;
 
 	if (!fg->cfg.terminated_by_cp) {
 		if (quick_charge_status == MCA_QUICK_CHG_STS_CHARGING)
@@ -1810,16 +1819,19 @@ static void mca_strategy_single_force_fw_report_full(struct strategy_fg *fg)
 		    fg->batt_voltage < force_vterm)
 			return;
 		if (online) {
-			mca_strategy_func_get_status(
+			ret = mca_strategy_func_get_status(
 				STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
 				STRATEGY_STATUS_TYPE_JEITA_FFC_ITERM,
 				&quick_charge_jeita_iterm);
 		} else {
-			mca_strategy_func_get_status(
+			ret = mca_strategy_func_get_status(
 				STRATEGY_FUNC_TYPE_QUICK_CHARGE,
 				STRATEGY_STATUS_TYPE_JEITA_FFC_ITERM,
 				&quick_charge_jeita_iterm);
 		}
+		if (ret || quick_charge_jeita_iterm <= 0 ||
+		    quick_charge_jeita_iterm > INT_MAX / 130)
+			goto invalid_sample;
 		force_iterm = quick_charge_jeita_iterm * 130 / 100;
 	}
 
@@ -1850,6 +1862,11 @@ static void mca_strategy_single_force_fw_report_full(struct strategy_fg *fg)
 		force_full_count = 0;
 		fg->start_force_full = false;
 	}
+	return;
+
+invalid_sample:
+	/* A failed status/limit read cannot count toward forced full. */
+	force_full_count = 0;
 }
 
 static void mca_strategy_parallel_force_fw_report_full(struct strategy_fg *fg,

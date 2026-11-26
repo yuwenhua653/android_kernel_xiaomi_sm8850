@@ -7,6 +7,7 @@
 
 #include <linux/ipc_logging.h>
 #include <linux/kernel.h>
+#include <linux/limits.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
@@ -134,6 +135,36 @@ static struct thermal_zone_params tzone_params = {
 	.no_hwmon = true,
 };
 
+static int qcom_dynamic_hw_init_trip(struct dyn_hw_trip *dyn_th,
+				     struct thermal_trip *trip)
+{
+	struct device_node *np = dyn_th->dev->of_node;
+	u32 temperature;
+	int ret;
+
+	/* Canoe supplies the initial threshold in DT, including on firmware
+	 * which does not implement the threshold read command. Do not publish
+	 * a writable zone until the firmware has accepted that threshold.
+	 */
+	if (!of_find_property(np, "qcom,trip-temperature", NULL))
+		return qcom_scmi_vp_get_trip_temp(dyn_th, &trip->temperature);
+
+	ret = of_property_read_u32(np, "qcom,trip-temperature", &temperature);
+	if (ret)
+		return ret;
+	if (temperature > INT_MAX)
+		return -EINVAL;
+
+	ret = qcom_scmi_vp_set_trip_temp(dyn_th, temperature);
+	if (ret)
+		return ret;
+
+	trip->temperature = temperature;
+	dyn_th->last_thresh_req = temperature;
+	dyn_th->last_req_ts = sched_clock();
+	return 0;
+}
+
 static int qcom_dynamic_hw_thermal_trip_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -179,7 +210,7 @@ static int qcom_dynamic_hw_thermal_trip_probe(struct platform_device *pdev)
 		dev_err(dyn_th->dev, "%s: unable to create IPC Logging for %s\n",
 					__func__, dyn_th->name);
 
-	ret = qcom_scmi_vp_get_trip_temp(dyn_th, &dyn_vendor_trip.temperature);
+	ret = qcom_dynamic_hw_init_trip(dyn_th, &dyn_vendor_trip);
 	if (ret < 0)
 		goto destroy_log;
 	dyn_th->tz = thermal_zone_device_register_with_trips(dyn_th->name,

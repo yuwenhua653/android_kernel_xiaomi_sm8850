@@ -1,0 +1,169 @@
+{
+  "kernel_parent": "6cece84fc4cc489a7c29bcaa0282e994755457e9",
+  "official_kernel": "da9af1b6d83e1f53e4b8e4f4421e3c4161d2133d",
+  "official_dt": "396596c6d1ec3c349402c50913f781efbf343d9c",
+  "tests": [
+    {
+      "suite": "test_antiburn_probe.py",
+      "exit_code": 0,
+      "output": "PASS: 10 antiburn sensor-before-GPIO, deferral and ownership cases\n"
+    },
+    {
+      "suite": "test_battery_providers.py",
+      "exit_code": 0,
+      "output": "PASS: 64 battery provider/vote/status/error cases\n"
+    },
+    {
+      "suite": "test_board_thermal_bridge.py",
+      "exit_code": 0,
+      "output": "PASS: 29 board-temperature ABI/init/unwind cases and 2000 concurrent writes\n"
+    },
+    {
+      "suite": "test_charger_thermal_levels.py",
+      "exit_code": 0,
+      "output": "PASS: 1385 MCA thermal range/rejected-write/cooling/table-vote cases\n"
+    },
+    {
+      "suite": "test_dynamic_hw_trip.py",
+      "exit_code": 0,
+      "output": "PASS: 9 dynamic-trip DT/SCMI initialization cases\n"
+    },
+    {
+      "suite": "test_mca_glink_lifetime.py",
+      "exit_code": 0,
+      "output": "PASS: 67 GLINK request/registry/rebind lifecycle cases\n"
+    },
+    {
+      "suite": "test_mca_vote_retry.py",
+      "exit_code": 0,
+      "output": "PASS: 271 production MCA vote/retry cases\n"
+    },
+    {
+      "suite": "test_qc_lifetime.py",
+      "exit_code": 0,
+      "output": "PASS: 131 QC registry/lifetime cases\n"
+    },
+    {
+      "suite": "test_release_label.py",
+      "exit_code": 0,
+      "output": "PASS: 12 release-label cases; true Git ids, dirty worktree retained, tags, --no-local and non-Myron behavior\n"
+    },
+    {
+      "suite": "test_sc96281_auth.py",
+      "exit_code": 0,
+      "output": "PASS: 13 production auth cases; read failures; cache; event errors; repeated UUID\n"
+    },
+    {
+      "suite": "test_sc96281_commands.py",
+      "exit_code": 0,
+      "output": "PASS: 32 production command cases; payload errors; trigger errors; CEP; cached voltage\n"
+    },
+    {
+      "suite": "test_sc96281_irq.py",
+      "exit_code": 0,
+      "output": "PASS: 4363 IRQ cases; actual RX FIFO/decoder; TX indices; read/clear failures; ready guard\n"
+    },
+    {
+      "suite": "test_sc96281_state.py",
+      "exit_code": 0,
+      "output": "PASS: 65547 production state cases; signed temperature; retry/cache; failed samples\n"
+    },
+    {
+      "suite": "test_subpmic_recovery.py",
+      "exit_code": 0,
+      "output": "PASS: 27 sub-PMIC recovery/unwind cases (60 retries per failure cycle)\n"
+    },
+    {
+      "suite": "test_thermal_qos.py",
+      "exit_code": 0,
+      "output": "PASS: production CPU/GPU thermal state bounds, failed QoS votes and release\n"
+    },
+    {
+      "suite": "test_thermal_registration.py",
+      "exit_code": 0,
+      "output": "PASS: 102 CPU cooling registration cases; retries and duplicate work retain one owner\n"
+    },
+    {
+      "suite": "test_ufs_phy_balance.py",
+      "exit_code": 0,
+      "output": "PASS: 1536 power cycles; active-link retention, inactive-link balance, repeated requests, hardware/PM/regulator failures and pre-init calls\n"
+    },
+    {
+      "suite": "test_wireless_cv_samples.py",
+      "exit_code": 0,
+      "output": "PASS: 50 wireless monitor/CV provider, recovery and bounds cases\n"
+    },
+    {
+      "suite": "test_wireless_full_status.py",
+      "exit_code": 0,
+      "output": "PASS: 21 wireless profile/status and forced-full error cases\n"
+    },
+    {
+      "suite": "test_wireless_profile_apply.py",
+      "exit_code": 0,
+      "output": "PASS: 36 wireless profile apply/retry cases\n"
+    },
+    {
+      "suite": "test_wireless_psy.py",
+      "exit_code": 0,
+      "output": "PASS: production RX getter; units; provider errors; no stale output; unsupported properties\n"
+    },
+    {
+      "suite": "test_wireless_ramp.py",
+      "exit_code": 0,
+      "output": "PASS: 104 wireless ramp/bridge/status cases\n"
+    },
+    {
+      "suite": "test_wireless_safety_samples.py",
+      "exit_code": 0,
+      "output": "PASS: 874 wireless alarm/FFC/profile failure, hysteresis and recovery cases\n"
+    },
+    {
+      "suite": "test_wireless_samples.py",
+      "exit_code": 0,
+      "output": "PASS: 539 wireless sample/error/recovery/reference cases\n"
+    },
+    {
+      "suite": "test_wireless_session.py",
+      "exit_code": 0,
+      "output": "PASS: RX/TX queue isolation, early/late RX, initialization, duplicate CONNECT, FIFO, disconnect, reconnect, stop\n"
+    },
+    {
+      "suite": "test_wireless_table_parse.py",
+      "exit_code": 0,
+      "output": "PASS: 534 wireless table parsing/ownership cases with three committed Myron profiles\n"
+    }
+  ],
+  "negative_controls": [
+    {
+      "mutation": "stage-allocation",
+      "exit_code": 1,
+      "assertion_failed": true
+    },
+    {
+      "mutation": "thermal-write",
+      "exit_code": 1,
+      "assertion_failed": true
+    },
+    {
+      "mutation": "full-status",
+      "exit_code": 1,
+      "assertion_failed": true
+    }
+  ],
+  "source_sha256": {
+    "drivers/power/supply/mca/mca_strategy/strategy_fg/mca_strategy_fg.c": "5c226d740c49e1eaf30a517cbcb8661cdefcd6d98f724a53c588a05e5f4277a8",
+    "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_quick_wireless.c": "68d9ffe0c1fc8f944321bd95ea1b753edc9b0eb48ade04111ae85ec1c5bb4f13",
+    "drivers/thermal/qcom/qti_dynamic_hw_trip.c": "2d4a3f4614b7dba9b4a788a615b765dd6afb3313dee4c49ddd5461f8e75c6015",
+    "android/myron-native/tests/test_dynamic_hw_trip.py": "1e96db8f0e2f190c8c274e1c34549c40086f8c23c62bf0a119fc1b825643eb32",
+    "android/myron-native/tests/test_wireless_table_parse.py": "219a07f8470d55e27f3ffdaeb7eba0411c60cf1c46781927c52f7e54b9371a6a",
+    "android/myron-native/tests/test_wireless_full_status.py": "48e5e70347536c38d84e85f476fd11f8b2ac229e3343aa9a128093d64f0c577b",
+    "android/myron-native/tests/fixtures/myron-wireless-tables.json": "3d27d3ca8c086962824e6c1e2bcdd043612f08434b4db5c74f079cb4c5217b31"
+  },
+  "arm64_object_sha256": {
+    "drivers/thermal/qcom/qti_dynamic_hw_trip.o": "753fc50f8e9803f98e19132616fa3d914950ceb919e00bbde564e42124b79b66",
+    "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_quick_wireless.o": "3c5a98d3ac1c38c3b072761ad95389af61933b1881a361dfebed540dffd852fc",
+    "drivers/power/supply/mca/mca_strategy/strategy_fg/mca_strategy_fg.o": "1c1ca913086e624db372f0d316d1c32a2ef1414dfe6460abcdbe2986118f88b9"
+  },
+  "qualification": "ARM64 changed objects; full build pending; no device result"
+}

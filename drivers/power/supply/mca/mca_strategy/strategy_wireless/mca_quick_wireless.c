@@ -2268,13 +2268,13 @@ static int mca_wireless_quick_charge_get_status(int status, void *value,
 		*cur_val = info->proc_data.ibus;
 		break;
 	case STRATEGY_STATUS_TYPE_JEITA_FFC_ITERM:
+		if (!info->proc_data.cur_volt_para[FG_IC_MASTER] ||
+		    !info->proc_data.cur_volt_para[FG_IC_MASTER]->volt_para ||
+		    info->proc_data.cur_volt_para[FG_IC_MASTER]->volt_para_size <= 0)
+			return -ENODATA;
 		last_volt_stage = info->proc_data.cur_volt_para[FG_IC_MASTER]
 					  ->volt_para_size -
 				  1;
-		if (last_volt_stage == -1) {
-			*cur_val = 1000;
-			break;
-		}
 		*cur_val = info->proc_data.cur_volt_para[FG_IC_MASTER]
 				   ->volt_para[last_volt_stage]
 				   .current_min;
@@ -2286,30 +2286,36 @@ static int mca_wireless_quick_charge_get_status(int status, void *value,
 	return 0;
 }
 
-static void mca_wireless_quick_charge_parse_stage_para(
+static int mca_wireless_quick_charge_parse_stage_para(
 	struct device_node *node, const char *name,
 	struct mca_wireless_quick_charge_volt_para_info *volt_info)
 {
-	int i;
+	int *stage_para;
+	int count, ret;
 
-	if (strcmp(name, "null") == 0) {
-		mca_log_info("no need parse stage para\n");
-		return;
+	if (!strcmp(name, "null"))
+		return 0;
+	if (!volt_info->volt_para || volt_info->volt_para_size <= 0 ||
+	    volt_info->volt_para_size > VOLT_PARA_MAX_GROUP)
+		return -EINVAL;
+
+	count = volt_info->volt_para_size * 2;
+	ret = of_property_count_u32_elems(node, name);
+	if (ret < 0)
+		return ret;
+	if (ret != count)
+		return -EINVAL;
+
+	stage_para = kcalloc(count, sizeof(*stage_para), GFP_KERNEL);
+	if (!stage_para)
+		return -ENOMEM;
+	ret = mca_parse_dts_u32_array(node, name, stage_para, count);
+	if (ret) {
+		kfree(stage_para);
+		return ret;
 	}
-
-	volt_info->stage_para =
-		kcalloc(volt_info->volt_para_size * 2, sizeof(int), GFP_KERNEL);
-	if (!volt_info->volt_para) {
-		mca_log_err("volt para no mem\n");
-		return;
-	}
-
-	mca_parse_dts_u32_array(node, name, volt_info->stage_para,
-				volt_info->volt_para_size * 2);
-
-	for (i = 0; i < volt_info->volt_para_size * 2; i++)
-		mca_log_debug("[%d]stage_para %d\n", i,
-			      volt_info->stage_para[i]);
+	volt_info->stage_para = stage_para;
+	return 0;
 }
 
 static int mca_wireless_quick_charge_parse_volt_para(
@@ -2317,100 +2323,107 @@ static int mca_wireless_quick_charge_parse_volt_para(
 	struct mca_wireless_quick_charge_volt_para_info *volt_info)
 {
 	struct mca_wireless_quick_charge_volt_para *volt_para;
-	int array_len, row, col, i;
+	int array_len, row, col, i, ret;
 	const char *tmp_string = NULL;
 
-	if (strcmp(name, "null") == 0) {
-		mca_log_info("no need parse volt para\n");
+	if (!strcmp(name, "null"))
 		return 0;
-	}
-	array_len =
-		mca_parse_dts_count_strings(node, name, VOLT_PARA_MAX_GROUP,
-					    MCA_WLS_QUICK_CHG_VOLT_PARA_MAX);
-	if (array_len < 0) {
-		mca_log_err("parse %s failed\n", name);
-		return -1;
-	}
+	array_len = mca_parse_dts_count_strings(node, name,
+			VOLT_PARA_MAX_GROUP, MCA_WLS_QUICK_CHG_VOLT_PARA_MAX);
+	if (array_len < 0)
+		return array_len;
 
-	volt_info->volt_para_size = array_len / MCA_WLS_QUICK_CHG_VOLT_PARA_MAX;
-	volt_info->volt_para = kcalloc(volt_info->volt_para_size,
-				       sizeof(*volt_para), GFP_KERNEL);
-	if (!volt_info->volt_para) {
-		mca_log_err("volt para no mem\n");
+	volt_para = kcalloc(array_len / MCA_WLS_QUICK_CHG_VOLT_PARA_MAX,
+			    sizeof(*volt_para), GFP_KERNEL);
+	if (!volt_para)
 		return -ENOMEM;
-	}
-	volt_para = volt_info->volt_para;
-	for (i = 0; i < array_len; i++) {
-		if (mca_parse_dts_string_index(node, name, i, &tmp_string))
-			return -1;
 
-		mca_log_debug("[%d]volt_para %s\n", i, tmp_string);
+	for (i = 0; i < array_len; i++) {
+		ret = mca_parse_dts_string_index(node, name, i, &tmp_string);
+		if (ret)
+			goto error;
 		row = i / MCA_WLS_QUICK_CHG_VOLT_PARA_MAX;
 		col = i % MCA_WLS_QUICK_CHG_VOLT_PARA_MAX;
-
 		switch (col) {
 		case MCA_WLS_QUICK_CHG_VOLTAGE:
-			if (kstrtoint(tmp_string, 10, &volt_para[row].voltage))
-				goto error;
+			ret = kstrtoint(tmp_string, 10, &volt_para[row].voltage);
 			break;
 		case MCA_WLS_QUICK_CHG_CURRENT_MAX:
-			if (kstrtoint(tmp_string, 10,
-				      &volt_para[row].current_max))
-				goto error;
+			ret = kstrtoint(tmp_string, 10, &volt_para[row].current_max);
 			break;
 		case MCA_WLS_QUICK_CHG_CURRENT_MIN:
-			if (kstrtoint(tmp_string, 10,
-				      &volt_para[row].current_min))
-				goto error;
-			break;
-		default:
+			ret = kstrtoint(tmp_string, 10, &volt_para[row].current_min);
 			break;
 		}
+		if (ret)
+			goto error;
 	}
-	for (i = 0; i < volt_info->volt_para_size; i++)
-		mca_log_debug("volt_para %d %d %d\n", volt_para[i].voltage,
-			    volt_para[i].current_max, volt_para[i].current_min);
+
+	/* Publish only a complete table; failures leave the caller untouched. */
+	volt_info->volt_para = volt_para;
+	volt_info->volt_para_size = array_len / MCA_WLS_QUICK_CHG_VOLT_PARA_MAX;
 	return 0;
 error:
 	kfree(volt_para);
-	volt_para = NULL;
-	return -1;
+	return ret;
+}
+
+static void mca_wireless_quick_charge_free_temp_para(
+	struct mca_wireless_quick_charge_batt_para_info *para)
+{
+	int i;
+
+	for (i = 0; i < para->temp_para_size; i++) {
+		kfree(para->temp_info[i].volt_info.stage_para);
+		kfree(para->temp_info[i].volt_info.volt_para);
+		kfree(para->temp_info[i].volt_ffc_info.stage_para);
+		kfree(para->temp_info[i].volt_ffc_info.volt_para);
+	}
+	kfree(para->temp_info);
+	para->temp_info = NULL;
+	para->temp_para_size = 0;
 }
 
 static int mca_wireless_quick_charge_parse_temp_para(
 	struct device_node *node, int batt_role, const char *name,
 	struct mca_wireless_quick_charge_info *info, int mode)
 {
-	struct mca_wireless_quick_charge_batt_para_info *batt_para_info =
-		&(info->batt_para[batt_role]);
-	int array_len, row, col, i;
+	struct mca_wireless_quick_charge_batt_para_info parsed = { 0 };
+	struct mca_wireless_quick_charge_batt_para_info *batt_para_info;
+	int array_len, row, col, i, ret = -EINVAL;
 	const char *tmp_string = NULL;
 	struct mca_wireless_quick_charge_temp_para_info *temp_info = NULL;
+
+	if (batt_role < FG_IC_MASTER || batt_role > FG_IC_SLAVE ||
+	    mode < 0 || mode > MCA_BATTERY_TYPE_MAX)
+		return -EINVAL;
 
 	array_len =
 		mca_parse_dts_count_strings(node, name, TEMP_PARA_MAX_GROUP,
 					    MCA_WLS_QUICK_CHG_TEMP_PARA_MAX);
 	if (array_len < 0) {
 		mca_log_err("parse %s failed\n", name);
-		return -1;
+		return array_len;
 	}
 	if (mode == 0)
 		batt_para_info = &(info->batt_para[batt_role]);
 	else
 		batt_para_info = &(info->base_flip_para[batt_role]);
 
-	batt_para_info->temp_para_size =
+	parsed.temp_para_size =
 		array_len / MCA_WLS_QUICK_CHG_TEMP_PARA_MAX;
-	batt_para_info->temp_info = kcalloc(batt_para_info->temp_para_size,
+	parsed.temp_info = kcalloc(parsed.temp_para_size,
 					    sizeof(*temp_info), GFP_KERNEL);
-	if (!batt_para_info->temp_info) {
+	if (!parsed.temp_info) {
 		mca_log_err("temp para no mem\n");
 		return -ENOMEM;
 	}
-	temp_info = batt_para_info->temp_info;
+	temp_info = parsed.temp_info;
 	for (i = 0; i < array_len; i++) {
-		if (mca_parse_dts_string_index(node, name, i, &tmp_string))
-			return -1;
+		ret = mca_parse_dts_string_index(node, name, i, &tmp_string);
+		if (ret)
+			goto error;
+		ret = -EINVAL;
 
 		row = i / MCA_WLS_QUICK_CHG_TEMP_PARA_MAX;
 		col = i % MCA_WLS_QUICK_CHG_TEMP_PARA_MAX;
@@ -2454,15 +2467,15 @@ static int mca_wireless_quick_charge_parse_temp_para(
 				goto error;
 			break;
 		case MCA_WLS_QUICK_CHG_VOLT_PARA_NAME:
-			if (mca_wireless_quick_charge_parse_volt_para(
-				    node, tmp_string,
-				    &temp_info[row].volt_info))
+			ret = mca_wireless_quick_charge_parse_volt_para(
+				node, tmp_string, &temp_info[row].volt_info);
+			if (ret)
 				goto error;
 			break;
 		case MCA_WLS_QUICK_CHG_VOLT_FFC_PARA_NAME: {
 			const char *ffc_name = tmp_string;
 			struct device_node *ffc_node = node;
-			struct device_node *cc_node;
+			struct device_node *cc_node = NULL;
 			char cc_name[BATT_PARA_CC_NAME_LEN] = { 0 };
 			if (info->support_base_flip &&
 			    (temp_info[row].temp_para.temp_low ==
@@ -2485,26 +2498,31 @@ static int mca_wireless_quick_charge_parse_temp_para(
 					ffc_node = cc_node;
 				}
 			}
-			if (mca_wireless_quick_charge_parse_volt_para(
-				    ffc_node, ffc_name,
-				    &temp_info[row].volt_ffc_info))
+			ret = mca_wireless_quick_charge_parse_volt_para(
+				ffc_node, ffc_name, &temp_info[row].volt_ffc_info);
+			of_node_put(cc_node);
+			if (ret)
 				goto error;
 			break;
 		}
 		case MCA_WLS_QUICK_CHG_STAGE_PARA_NAME:
-			mca_wireless_quick_charge_parse_stage_para(
+			ret = mca_wireless_quick_charge_parse_stage_para(
 				node, tmp_string, &temp_info[row].volt_info);
+			if (ret)
+				goto error;
 			break;
 		case MCA_WLS_QUICK_CHG_FFC_STAGE_PARA_NAME:
-			mca_wireless_quick_charge_parse_stage_para(
+			ret = mca_wireless_quick_charge_parse_stage_para(
 				node, tmp_string,
 				&temp_info[row].volt_ffc_info);
+			if (ret)
+				goto error;
 			break;
 		default:
 			break;
 		}
 	}
-	for (i = 0; i < batt_para_info->temp_para_size; i++)
+	for (i = 0; i < parsed.temp_para_size; i++)
 		mca_log_debug("temp_para %d %d %d %d %d %d %d %d %d\n",
 			    temp_info[i].temp_para.temp_low,
 			    temp_info[i].temp_para.temp_high,
@@ -2515,11 +2533,11 @@ static int mca_wireless_quick_charge_parse_temp_para(
 			    temp_info[i].temp_para.ffc_max_fv,
 			    temp_info[i].volt_info.volt_para_size,
 			    temp_info[i].volt_ffc_info.volt_para_size);
+	*batt_para_info = parsed;
 	return 0;
 error:
-	kfree(temp_info);
-	temp_info = NULL;
-	return -1;
+	mca_wireless_quick_charge_free_temp_para(&parsed);
+	return ret;
 }
 
 static void mca_wireless_quick_charge_check_model_name(const char **name)
@@ -2547,7 +2565,10 @@ static int mca_wireless_quick_charge_parse_batt_info(
 	const char *main_cell_name = NULL;
 	const char *slave_cell_name = NULL;
 	const struct mca_hwid *hwid = mca_get_hwid_info();
-	char *battpara[] = { "batt_para", "base_flip_para" };
+	const char *battpara = mode ? "base_flip_para" : "batt_para";
+
+	if (mode < 0 || mode > MCA_BATTERY_TYPE_MAX)
+		return -EINVAL;
 
 	if (hwid && info->has_gbl_batt_para &&
 	    hwid->country_version != CountryCN)
@@ -2560,7 +2581,7 @@ static int mca_wireless_quick_charge_parse_batt_info(
 	}
 
 	array_len = mca_parse_dts_count_strings(
-		node, battpara[mode], BATT_PARA_MAX_GROUP,
+		node, battpara, BATT_PARA_MAX_GROUP,
 		MCA_WLS_QUICK_CHG_BATT_PARA_MAX);
 	if (array_len < 0) {
 		mca_log_err("parse batt_para failed\n");
@@ -2584,7 +2605,7 @@ static int mca_wireless_quick_charge_parse_batt_info(
 		mca_log_info("slave_cell_name %s\n", slave_cell_name);
 	}
 	for (i = 0; i < array_len; i++) {
-		if (mca_parse_dts_string_index(node, battpara[mode], i,
+		if (mca_parse_dts_string_index(node, battpara, i,
 					       &tmp_string))
 			return -1;
 
@@ -2595,6 +2616,8 @@ static int mca_wireless_quick_charge_parse_batt_info(
 		case MCA_WLS_QUICK_CHG_BATT_ROLE:
 			if (kstrtoint(tmp_string, 10, &batt_role))
 				return -1;
+			if (batt_role < FG_IC_MASTER)
+				return -EINVAL;
 			if (batt_role > FG_IC_SLAVE)
 				i += 2;
 			break;
@@ -2618,7 +2641,8 @@ static int mca_wireless_quick_charge_parse_batt_info(
 		}
 	}
 
-	if (!info->batt_para[FG_IC_MASTER].temp_info) {
+	if (!(mode ? info->base_flip_para[FG_IC_MASTER].temp_info :
+		     info->batt_para[FG_IC_MASTER].temp_info)) {
 		mca_log_err("parse master batt para failed\n");
 		return -1;
 	}
@@ -2811,6 +2835,8 @@ mca_wireless_quick_charge_parse_dt(struct mca_wireless_quick_charge_info *info)
 	/* charge para */
 	mca_wireless_quick_charge_parse_vstep_para(info);
 	ret = mca_wireless_quick_charge_parse_batt_info(info, 0);
+	if (ret)
+		return ret;
 	if (info->support_base_flip) {
 		mca_log_err("parse mode for paraller batt\n");
 		ret = mca_wireless_quick_charge_parse_batt_info(
