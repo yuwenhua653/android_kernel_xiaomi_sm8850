@@ -1066,6 +1066,16 @@ config XIAOMI_MCA_STRATEGY_CLASS
 	  Build strategy dispatch and fuel-gauge strategy registries. This does
 	  not enable charging policy or board-specific protection monitors.
 
+config XIAOMI_MCA_NEZHA_FG_PSY
+	tristate "Nezha read-only MCA fuel gauge bridge"
+	depends on TARGET_PRODUCT_NEZHA && OF && XIAOMI_MCA_STRATEGY_CLASS
+	depends on BATTERY_BQ27XXX_I2C
+	depends on MYRON_MCA_COMPLETE_SERVICES = n
+	help
+	  Expose the existing BQ27Z561 power supply to MCA strategy consumers.
+	  This supplies telemetry only; it does not enable charging policy,
+	  authentication, fast-charge writes or firmware updates.
+
 config XIAOMI_MCA_NEZHA_SUBPMIC
 	tristate "Nezha OS4 sub-PMIC basic charging provider"
 	depends on TARGET_PRODUCT_NEZHA && XIAOMI_MCA_ADSP_PD

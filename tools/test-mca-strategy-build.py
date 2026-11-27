@@ -12,12 +12,13 @@ config=(root/'arch/arm64/configs/vendor/nezha_GKI.config').read_text()
 assert 'CONFIG_XIAOMI_MCA_WIRED_STRATEGY=m' not in config
 with tempfile.TemporaryDirectory() as tmp:
  p=Path(tmp)/'Makefile';p.write_text(''.join('include '+str(mca/f)+'\n' for f in files)+'\nall:\n\t@echo $(obj-m)\n')
- def modules(services,complete,shared):
-  args=['make','-s','-f',str(p),'all','CONFIG_MYRON_MCA_SERVICES='+services,'CONFIG_MYRON_MCA_COMPLETE_SERVICES='+complete,'CONFIG_XIAOMI_MCA_STRATEGY_CLASS='+shared]
+ def modules(services,complete,shared,bridge='n'):
+  args=['make','-s','-f',str(p),'all','CONFIG_MYRON_MCA_SERVICES='+services,'CONFIG_MYRON_MCA_COMPLETE_SERVICES='+complete,'CONFIG_XIAOMI_MCA_STRATEGY_CLASS='+shared,'CONFIG_XIAOMI_MCA_NEZHA_FG_PSY='+bridge]
   return set(subprocess.check_output(args,text=True).split())
  regs={'mca_strategy_class.o','mca_strategy_fg_class.o'}
  guards={'mca_ibat_ocp_monitor.o','mca_vbat_ovp_monitor.o'}
  assert modules('n','n','m')==regs
+ assert modules('n','n','m','m')==regs|{'mca_nezha_fg_psy.o'}
  partial=modules('m','n','m');assert regs|guards<=partial and 'mca_buckchg_jeita.o' not in partial
  full=modules('m','m','m');assert regs|guards|{'mca_buckchg_jeita.o','mca_strategy_buckchg.o','mca_strategy_fg_comp.o'}<=full
  assert not modules('n','n','n')

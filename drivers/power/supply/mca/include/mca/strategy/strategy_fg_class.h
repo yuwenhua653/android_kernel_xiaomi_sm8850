@@ -39,6 +39,8 @@ struct strategy_fg_class_info {
 
 int strategy_class_fg_ops_register(void *data,
 				   struct strategy_fg_class_ops *ops);
+/* Call outside callbacks, before freeing provider data or unloading code. */
+int strategy_class_fg_ops_unregister(void *data);
 int strategy_class_fg_ops_is_init_ok(void);
 int strategy_class_fg_ops_get_rsoc(int *rsoc);
 int strategy_class_fg_ops_get_soc(void);
