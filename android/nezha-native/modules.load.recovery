@@ -181,6 +181,7 @@ mca_log.ko
 mca_voter.ko
 mca_parse_dts.ko
 mca_workqueue.ko
+mca_charge_interface.ko
 mca_platform_fg_ic_ops.ko
 mca_platform_buckchg_class.ko
 mca_platform_bc12_class.ko

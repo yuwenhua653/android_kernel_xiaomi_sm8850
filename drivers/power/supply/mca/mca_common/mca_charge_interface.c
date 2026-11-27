@@ -42,8 +42,7 @@
  * mca_event_code table is still being audited.
  */
 #define MCA_MYRON_CHARGE_IF_BATTERY_STS_CHANGE 0x10
-/* Nezha OS4.0.7: stock .text+0xb70..0xb7c sends type 2, event 0x13. */
-#define MCA_NEZHA_CHARGE_IF_BATTERY_STS_CHANGE 0x13
+/* Nezha uses OSS consumers: notify the shared enum, not OEM 0x13 (health). */
 
 enum mca_charge_if_sysfs_type {
 	MCA_CHRAGE_IF_SYSFS_BEGIN = 0,
@@ -227,7 +226,7 @@ static int mca_charge_if_common_sysfs_set(char *user, unsigned int type,
 	if (!ret && applied && sysfs_type == MCA_CHRAGE_IF_SYSFS_INPUT_SUSPEND)
 		mca_event_block_notify(MCA_EVENT_TYPE_BATTERY_INFO,
 				       IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA) ?
-				       MCA_NEZHA_CHARGE_IF_BATTERY_STS_CHANGE :
+				       MCA_EVENT_BATTERY_STS_CHANGE :
 				       MCA_MYRON_CHARGE_IF_BATTERY_STS_CHANGE, NULL);
 
 	return ret ? ret : applied ? 0 : -EOPNOTSUPP;

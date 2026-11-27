@@ -72,3 +72,49 @@ Run `python3 tools/test-nezha-fg-psy.py` in addition to the six commands above.
 This tests actual dispatch and bridge functions, including supplier absence,
 devres unwind, units/sign, unsupported operations and concurrent unregister.
 The SRCU/devres/I2C APIs are host models, not a replacement for a kernel build.
+
+## Reviewed 17U.zip follow-up (2026-11-27)
+
+Selected from the five kernel/two DT patches, with the following corrections:
+
+1. Adopt charge-interface activation (kernel 0004 / DT 0001), after fixing the
+   event direction in kernel 0001's proposal. The OSS notification bus and its
+   business_battery consumer require `MCA_EVENT_BATTERY_STS_CHANGE` (0x11).
+   Sending raw OEM 0x13 there reaches no status-change handler. No unused
+   bidirectional OEM mapping table or unverified raw IDs are imported.
+2. Adopt kernel 0005's extra thermal column, but require an explicit DT property
+   `xiaomi,wireless-thermal-columns` (one u32, either 10 or 11). Missing property
+   means 10 for compatibility. Never infer layout from count divisibility.
+   Validate format and the full input before updating outputs. The 11th column
+   is stored only; no car-mode voter is fabricated. Keep thermal policy disabled.
+3. Adopt the log registration/dump serialization portion of kernel 0002,
+   correcting callback NULL checks and byte-count bounds as well. Registering
+   NULL ops synchronously removes a slot. Callers must remove their slot before
+   releasing callback data; registration from inside a dump callback is forbidden.
+
+The supplied wired/wireless numeric tables match the pinned public Nezha source:
+https://github.com/MiCode/kernel_devicetree/blob/396596c6d1ec3c349402c50913f781efbf343d9c/qcom/nezha-charger-common.dtsi
+All 150 wired and 165 wireless cells were compared, excluding comments.
+They are stored in the existing charger-common DT under a disabled thermal node.
+Other DT 0002 parameters are not treated as verified merely because its patch
+message says so. Its checker can accept missing groups with zero comparisons;
+it is not imported as a passing qualification gate.
+
+Not adopted wholesale: smart-charge stubs, complete wired teardown and the
+full DT wiring. They still leave voter callbacks/data, global readers, open
+character devices and some failure paths without complete lifetime protection.
+The unchanged charging policy gate is intentional until those paths are fixed.
+
+Validation (from the kernel root; substitute the sibling DT path as needed):
+
+```sh
+python3 tools/test-mca-charge-interface.py
+python3 tools/test-nezha-thermal-format.py ../sm8850-devicetrees/qcom/nezha-charger-common.dtsi
+python3 tools/test-mca-log-lifetime.py
+```
+
+The interface test uses the actual business_battery event handler, so emitting
+0x13 now fails the test. Thermal tests include the previously missed 110-cell
+ambiguity, explicit formats, malformed properties, errors and unchanged outputs.
+Log tests cover NULL/context-only callbacks, negative/oversized returns and
+concurrent unregister. All are host models; no new ARM64/DTB/hardware pass.

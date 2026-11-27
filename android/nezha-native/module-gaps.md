@@ -2,6 +2,19 @@
 
 适用于国行 nezha 的 nazha 分支，底包 OS4.0.7.0.XPACNXM。以能开机、通信、拍摄、充电及正常待机为验收目标。
 
+## 2026-11-27：选择性吸收外部补丁并修正反例
+
+本轮基于 `ef7a1dc`，审查附件 `17U.zip` 的 5 个内核补丁和 2 个 DT 补丁后，选择性吸收以下部分：
+
+- **charge_interface 接入**：配置和 vendor_dlkm/recovery 清单启用 `mca_charge_interface.ko`，DT 新增 `mca,charge_interface`。Nezha 输入挂起成功后发送共享 OSS `MCA_EVENT_BATTERY_STS_CHANGE=0x11`，不再发送被 OSS 解释为健康变化的原厂 `0x13`。真实 business_battery 消费者函数已串联主机测试；Myron 原有局部事件映射保持。
+- **温控表格式**：增加显式 `xiaomi,wireless-thermal-columns=<10|11>`；未提供时保留旧 10 列。拒绝畸形字段、非法列数、表长和读取失败。110 项数据按默认/显式 10 列解析为 11 行，显式 11 列才解析为 10 行，不再猜格式。
+- **温控参数落地**：附件中的 150 个有线值、165 个无线值逐项等于 MiCode `kernel_devicetree@396596c6d1ec3c349402c50913f781efbf343d9c` 的 Nezha 表。写入现有 `qcom/nezha-charger-common.dtsi`，明确 11 列，温控节点保持 disabled。未复制未独立核验的 JEITA、电压、GPIO/PMIC 或保护整套节点；此比较不是本轮重新解包 OTA 的证明。
+- **日志回调清理**：采用注册/读取互斥；NULL 注销等待当前回调结束。修复 NULL 函数判断、负 slot 越界、负长度/超大 snprintf 返回值和换行长度处理。该修复不代表其他策略/voter 生命周期已完成。
+
+验证：`test-mca-charge-interface.py`（通用/Nezha，真实消费者函数）、`test-nezha-thermal-format.py`、`test-mca-log-lifetime.py` 均通过 ASan/UBSan 主机测试。注册器和 OF/API 使用桩，不是内核运行验证。加载项/Makefile 选择另做核对；没有本轮 ARM64 全量编译、最终 DTB 合并或实机充电通过记录。
+
+**剩余 P0**：voter 所有权/同步退出、smart-charge 全局指针和文件生命周期、完整 JEITA/温控/保护执行端、无线接收器及快充。`charge_interface` 在没有策略提供者时仍返回错误，不会因本轮启用就提供快充。第 11 列 `xiaomi_car` 只保留/解析，尚无对应保护 voter，现有 10 路 voter 循环不访问新增空槽；不启用无线温控来掩盖该缺口。相机本轮未修改。
+
 ## 2026-11-27：电池读数接入与相机命令修复
 
 - 新增标准目录下 `mca_nezha_fg_psy`，通过 DT `power-supplies` phandle 连接现有 BQ27Z561；供应者未注册时延迟 probe。配置和 vendor_dlkm 清单已接入，三个新增加载项仅为两层注册器和只读桥接。

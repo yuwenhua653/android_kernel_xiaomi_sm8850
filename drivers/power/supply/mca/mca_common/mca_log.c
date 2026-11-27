@@ -94,6 +94,7 @@ enum mca_log_sysfs_type {
 
 static struct mca_log_buf_info g_mca_log_info;
 static DEFINE_SPINLOCK(g_mca_log_lock);
+static DEFINE_MUTEX(g_mca_charge_log_lock);
 
 static struct mca_charge_log_ops_data
 	g_mca_charge_log_data[MCA_CHARGE_LOG_ID_MAX];
@@ -280,11 +281,13 @@ EXPORT_SYMBOL(__mca_log_debug);
 void mca_log_charge_log_register(enum mca_charge_log_id_ele type,
 				 struct mca_log_charge_log_ops *ops, void *data)
 {
-	if (type >= MCA_CHARGE_LOG_ID_MAX)
+	if ((unsigned int)type >= MCA_CHARGE_LOG_ID_MAX)
 		return;
 
+	mutex_lock(&g_mca_charge_log_lock);
 	g_mca_charge_log_data[type].ops = ops;
 	g_mca_charge_log_data[type].data = data;
+	mutex_unlock(&g_mca_charge_log_lock);
 }
 EXPORT_SYMBOL(mca_log_charge_log_register);
 
@@ -326,56 +329,48 @@ static const struct attribute_group mca_log_sysfs_attr_group = {
 	.attrs = mca_log_sysfs_attrs,
 };
 
-static inline struct mca_charge_log_ops_data *
-mca_log_get_charge_log_ops(unsigned int type)
+/* Registration/removal waits for active dumps. Do not register from a callback. */
+static int mca_log_charge_log_dump(char *buf, bool head)
 {
-	return &g_mca_charge_log_data[type];
+	struct mca_charge_log_ops_data *entry;
+	int (*dump)(void *data, char *buf, int size);
+	int i, ret, available, len = 0;
+
+	mutex_lock(&g_mca_charge_log_lock);
+	for (i = 0; i < MCA_CHARGE_LOG_ID_MAX; i++) {
+		entry = &g_mca_charge_log_data[i];
+		if (!entry->ops)
+			continue;
+		dump = head ? entry->ops->dump_log_head : entry->ops->dump_log_context;
+		if (!dump)
+			continue;
+		available = PAGE_SIZE - len - 1; /* reserve the final newline */
+		if (available <= 1)
+			break;
+		ret = dump(entry->data, buf + len, available);
+		if (ret < 0) {
+			mutex_unlock(&g_mca_charge_log_lock);
+			return ret;
+		}
+		/* Some providers use snprintf's would-have-written return value. */
+		len += min(ret, available - 1);
+		if (ret >= available)
+			break;
+	}
+	mutex_unlock(&g_mca_charge_log_lock);
+	buf[len++] = '\n';
+	buf[len] = '\0';
+	return len;
 }
 
 static int mca_log_charge_log_dump_log_head(char *buf)
 {
-	int i;
-	int len = 0;
-	struct mca_charge_log_ops_data *ops_data;
-
-	for (i = 0; i < MCA_CHARGE_LOG_ID_MAX; i++) {
-		ops_data = mca_log_get_charge_log_ops(i);
-		if (!ops_data->ops || !ops_data->ops->dump_log_head)
-			continue;
-
-		len += ops_data->ops->dump_log_head(ops_data->data, buf + len,
-						    PAGE_SIZE - len);
-	}
-
-	if (len < PAGE_SIZE - 1)
-		buf[len] = '\n';
-	else
-		buf[PAGE_SIZE - 1] = '\n';
-
-	return len;
+	return mca_log_charge_log_dump(buf, true);
 }
 
 static int mca_log_charge_log_dump_log_context(char *buf)
 {
-	int i;
-	int len = 0;
-	struct mca_charge_log_ops_data *ops_data;
-
-	for (i = 0; i < MCA_CHARGE_LOG_ID_MAX; i++) {
-		ops_data = mca_log_get_charge_log_ops(i);
-		if (!ops_data->ops || !ops_data->ops->dump_log_head)
-			continue;
-
-		len += ops_data->ops->dump_log_context(
-			ops_data->data, buf + len, PAGE_SIZE - len);
-	}
-
-	if (len < PAGE_SIZE - 1)
-		buf[len] = '\n';
-	else
-		buf[PAGE_SIZE - 1] = '\n';
-
-	return len;
+	return mca_log_charge_log_dump(buf, false);
 }
 
 static ssize_t mca_log_sysfs_store(struct device *dev,

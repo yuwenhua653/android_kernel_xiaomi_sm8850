@@ -103,7 +103,7 @@ static void mca_wireless_charger_thermal_handle_limit(
 			ctrl->chg_curr;
 	} else {
 		th_data = &data[thermal_level - 1].wireless_bpp_in;
-		for (i = 0; i < THERMAL_MODE_WIRELESS_MAX; i++) {
+		for (i = 0; i < THERMAL_MODE_WIRELESS_LEGACY_MAX; i++) {
 			if (!th_data[i]) {
 				if (i > THERMAL_MODE_WIRELESS_INLIMIT)
 					chg_curr[i] = ctrl->chg_curr;
@@ -117,7 +117,7 @@ static void mca_wireless_charger_thermal_handle_limit(
 
 	if (ctrl->wls_thermal_remove) {
 		if (!count) {
-			for (i = 0; i < THERMAL_MODE_WIRELESS_MAX; i++)
+			for (i = 0; i < THERMAL_MODE_WIRELESS_LEGACY_MAX; i++)
 				mca_vote(voter[i], "mca_wireless_thermal",
 					 false, chg_curr[i]);
 			count = 1;
@@ -126,7 +126,7 @@ static void mca_wireless_charger_thermal_handle_limit(
 	} else {
 		count = 0;
 		mca_log_err("set disable vote %d\n", count);
-		for (i = 0; i < THERMAL_MODE_WIRELESS_MAX; i++) {
+		for (i = 0; i < THERMAL_MODE_WIRELESS_LEGACY_MAX; i++) {
 			if (chg_curr[i])
 				mca_vote(voter[i], "mca_wireless_thermal", true,
 					 chg_curr[i]);
@@ -645,24 +645,35 @@ static int mca_wireless_charger_thermal_parse_data(
 	const char *name, struct device_node *node,
 	struct mca_wireless_thermal_data *data, int *max_level)
 {
-	int len;
-	int i, j;
+	u32 cols = THERMAL_MODE_WIRELESS_LEGACY_MAX;
+	int len, ret, i, j;
 	int idata[MAX_THERMAL_LEVEL * THERMAL_MODE_WIRELESS_MAX] = { 0 };
+	const char *format = "xiaomi,wireless-thermal-columns";
 
-	len = mca_parse_dts_u32_count(node, name, MAX_THERMAL_LEVEL,
-				      THERMAL_MODE_WIRELESS_MAX);
-	if (len < 0) {
-		mca_log_err("parse %s failed", name);
-		return -1;
+	if (!node || !data || !max_level)
+		return -EINVAL;
+	/* Never infer stride from divisibility: 110 cells fit BOTH layouts. */
+	if (of_find_property(node, format, NULL)) {
+		if (of_property_count_u32_elems(node, format) != 1 ||
+		    of_property_read_u32(node, format, &cols))
+			return -EINVAL;
 	}
+	if (cols != THERMAL_MODE_WIRELESS_LEGACY_MAX &&
+	    cols != THERMAL_MODE_WIRELESS_MAX)
+		return -EINVAL;
+	len = mca_parse_dts_u32_count(node, name, MAX_THERMAL_LEVEL, cols);
+	if (len <= 0 || len > ARRAY_SIZE(idata) || len % cols)
+		return -EINVAL;
+	ret = mca_parse_dts_u32_array(node, name, idata, len);
+	if (ret)
+		return ret;
+	/* Limits are non-negative mA; reject u32 values outside signed range. */
+	for (i = 0; i < len; i++)
+		if (idata[i] < 0)
+			return -EINVAL;
 
-	if (mca_parse_dts_u32_array(node, name, idata, len)) {
-		mca_log_err("parse %s data failed", name);
-		return -1;
-	}
-
-	for (i = 0; i < len / THERMAL_MODE_WIRELESS_MAX; i++) {
-		j = THERMAL_MODE_WIRELESS_MAX * i;
+	for (i = 0; i < len / cols; i++) {
+		j = cols * i;
 		data[i].wireless_bpp_in =
 			idata[j + THERMAL_MODE_WIRELESS_BPP_IN];
 		data[i].wireless_bppqc2_in =
@@ -683,7 +694,10 @@ static int mca_wireless_charger_thermal_parse_data(
 			idata[j + THERMAL_MODE_WIRELESS_AUTHEN_VOICE_BOX];
 		data[i].wireless_authen_magnet_30w =
 			idata[j + THERMAL_MODE_WIRELESS_AUTHEN_MAGNET_30W];
-		mca_log_debug("[%s]level-%d %d %d %d %d %d %d %d %d %d %d\n",
+		data[i].wireless_xiaomi_car =
+			cols > THERMAL_MODE_WIRELESS_XIAOMI_CAR ?
+			idata[j + THERMAL_MODE_WIRELESS_XIAOMI_CAR] : 0;
+		mca_log_debug("[%s]level-%d %d %d %d %d %d %d %d %d %d %d %d\n",
 			      name, i, data[i].wireless_bpp_in,
 			      data[i].wireless_bppqc2_in,
 			      data[i].wireless_bppqc3_in,
@@ -693,10 +707,11 @@ static int mca_wireless_charger_thermal_parse_data(
 			      data[i].wireless_authen_50w,
 			      data[i].wireless_authen_80w,
 			      data[i].wireless_authen_voice_box,
-			      data[i].wireless_authen_magnet_30w);
+			      data[i].wireless_authen_magnet_30w,
+			      data[i].wireless_xiaomi_car);
 	}
 
-	*max_level = len / THERMAL_MODE_WIRELESS_MAX;
+	*max_level = len / cols;
 	return 0;
 }
 
@@ -1155,7 +1170,7 @@ mca_wireless_charger_thermal_poweroff_clear_voter(struct mca_thermal_info *info)
 	if (info->wls_online)
 		return;
 
-	for (i = 0; i < THERMAL_MODE_WIRELESS_MAX; i++)
+	for (i = 0; i < THERMAL_MODE_WIRELESS_LEGACY_MAX; i++)
 		mca_vote(info->wireless_voter[i], "mca_wireless_thermal", false,
 			 0);
 }

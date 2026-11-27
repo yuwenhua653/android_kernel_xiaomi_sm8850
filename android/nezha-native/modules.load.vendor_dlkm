@@ -54,6 +54,7 @@ mca_log.ko
 mca_voter.ko
 mca_parse_dts.ko
 mca_workqueue.ko
+mca_charge_interface.ko
 mca_strategy_class.ko
 mca_strategy_fg_class.ko
 mca_nezha_fg_psy.ko

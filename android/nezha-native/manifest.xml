@@ -6,5 +6,5 @@
   <project name="yuwenhua653/android_kernel_xiaomi_sm8850-modules" path="kernel/xiaomi/sm8850-modules"
            remote="nezha-kernel" revision="e1864d663b34f9d683895e7ebd0a3a388f404c31" upstream="refs/heads/nazha" />
   <project name="yuwenhua653/android_kernel_xiaomi_sm8850-devicetrees" path="kernel/xiaomi/sm8850-devicetrees"
-           remote="nezha-kernel" revision="3ea956427dc76619ec2c3a8f302bf68de899216b" upstream="refs/heads/nazha" />
+           remote="nezha-kernel" revision="91998b30926ec6750803c45fbf25402268aa692e" upstream="refs/heads/nazha" />
 </manifest>

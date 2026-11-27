@@ -39,6 +39,7 @@ __printf(1, 2) void __mca_log_err(const char *format, ...);
 __printf(1, 2) void __mca_log_info(const char *format, ...);
 __printf(1, 2) void __mca_log_debug(const char *format, ...);
 
+/* NULL ops removes a slot and waits for active dumps. Never call from a dump. */
 void mca_log_charge_log_register(enum mca_charge_log_id_ele type,
 				 struct mca_log_charge_log_ops *ops,
 				 void *data);
