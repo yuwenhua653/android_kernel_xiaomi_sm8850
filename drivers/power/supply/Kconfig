@@ -1058,6 +1058,14 @@ config XIAOMI_MCA_CHARGE_INTERFACE
 	  Expose registered charger policy callbacks through the MCA interface.
 	  Does not provide a policy, and reports absent operations as unsupported.
 
+config XIAOMI_MCA_STRATEGY_CLASS
+	tristate "Xiaomi MCA charging strategy registries"
+	depends on XIAOMI_MCA_CORE && TREE_SRCU
+	default MYRON_MCA_SERVICES
+	help
+	  Build strategy dispatch and fuel-gauge strategy registries. This does
+	  not enable charging policy or board-specific protection monitors.
+
 config XIAOMI_MCA_NEZHA_SUBPMIC
 	tristate "Nezha OS4 sub-PMIC basic charging provider"
 	depends on TARGET_PRODUCT_NEZHA && XIAOMI_MCA_ADSP_PD

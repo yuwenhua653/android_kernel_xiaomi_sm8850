@@ -2734,6 +2734,10 @@ static void strategy_fg_dtpt_monitor_work(struct work_struct *work)
 							   &slave_soa_alert);
 	}
 
+	/* A failed gauge sample cannot revoke an active protection event. */
+	if (ret)
+		goto reschedule;
+
 	master_isc_alert = max(master_isc_alert, slave_isc_alert);
 	master_soa_alert = max(master_soa_alert, slave_soa_alert);
 
@@ -2751,6 +2755,7 @@ static void strategy_fg_dtpt_monitor_work(struct work_struct *work)
 				       MCA_EVENT_BATTERY_DTPT, &dtpt_status);
 	}
 
+reschedule:
 	schedule_delayed_work(&fg->dtpt_monitor_work,
 			      msecs_to_jiffies(interval));
 }

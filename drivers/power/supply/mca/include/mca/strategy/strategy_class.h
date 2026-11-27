@@ -101,4 +101,7 @@ int mca_strategy_ops_register(unsigned int type, mca_strategy_func func,
 			      mca_strategy_get_status get_func,
 			      mca_strategy_set_config set_config, void *data);
 
+/* Call outside callbacks; waits for existing dispatches before returning. */
+int mca_strategy_ops_unregister(unsigned int type, void *data);
+
 #endif /* _MCA_STRATEGY_STRATEGY_CLASS_H_ */

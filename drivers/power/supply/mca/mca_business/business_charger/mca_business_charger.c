@@ -1980,9 +1980,10 @@ static int business_charger_probe(struct platform_device *pdev)
 	}
 
 	charger->usb_psy_info = business_charger_usb_psy_init(charger->dev);
-	if (!charger->usb_psy_info) {
-		mca_log_err("Couldn't init usb psy rc=%d\n", rc);
-		return -EINVAL;
+	if (IS_ERR(charger->usb_psy_info)) {
+		rc = PTR_ERR(charger->usb_psy_info);
+		charger->usb_psy_info = NULL;
+		return dev_err_probe(charger->dev, rc, "Couldn't init usb supply\n");
 	}
 
 	charger->wls_psy_info =

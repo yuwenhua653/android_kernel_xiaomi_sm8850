@@ -12,4 +12,4 @@ obj-y += strategy_wireless/
 # Platform drivers reference private in-tree headers by source-root paths.
 ccflags-y += -I$(srctree)
 ccflags-y += -I$(srctree)/drivers/misc/hwid -I$(srctree)/drivers/power/supply/mca/include -I$(srctree)/drivers/power/supply/mca/mca_strategy -I$(srctree)/include
-obj-$(CONFIG_MYRON_MCA_SERVICES) += mca_strategy_class.o
+obj-$(CONFIG_XIAOMI_MCA_STRATEGY_CLASS) += mca_strategy_class.o

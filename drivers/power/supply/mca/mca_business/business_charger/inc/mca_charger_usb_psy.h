@@ -27,11 +27,13 @@ struct usb_psy_info {
 	struct power_supply_desc *usb_psy_desc;
 	struct power_supply *usb_psy;
 	struct power_supply *batt_psy;
+	bool borrowed_usb_psy;
 	int present;
 	int online;
 	int charge_enable;
 };
 
+/* Returns ERR_PTR on failure, including -EPROBE_DEFER for a missing owner. */
 struct usb_psy_info *business_charger_usb_psy_init(struct device *dev);
 void business_charger_usb_psy_deinit(struct usb_psy_info *info);
 void business_charger_update_usb_psy(int real_type, struct usb_psy_info *info);

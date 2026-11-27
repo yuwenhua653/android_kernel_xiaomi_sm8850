@@ -167,6 +167,10 @@ static struct power_supply_desc _usb_psy_desc = {
 
 void business_charger_update_usb_psy(int real_type, struct usb_psy_info *info)
 {
+	/* A borrowed supply retains its owner's descriptor and callbacks. */
+	if (info->borrowed_usb_psy)
+		goto notify;
+
 	switch (real_type) {
 	case XM_CHARGER_TYPE_SDP:
 		info->usb_psy_desc->type = POWER_SUPPLY_TYPE_USB;
@@ -197,6 +201,7 @@ void business_charger_update_usb_psy(int real_type, struct usb_psy_info *info)
 		break;
 	}
 
+notify:
 	power_supply_changed(info->usb_psy);
 	if (!info->batt_psy)
 		info->batt_psy = power_supply_get_by_name("battery");
@@ -213,22 +218,43 @@ void business_usb_psy_event_process(struct usb_psy_info *info)
 	power_supply_changed(info->usb_psy);
 }
 
+/* Own registrations and borrowed references have distinct release operations. */
+static void charger_usb_psy_put_refs(void *data)
+{
+	struct usb_psy_info *info = data;
+
+	if (info->usb_psy) {
+		if (info->borrowed_usb_psy)
+			power_supply_put(info->usb_psy);
+		else
+			power_supply_unregister(info->usb_psy);
+	}
+	info->usb_psy = NULL;
+	if (info->batt_psy)
+		power_supply_put(info->batt_psy);
+	info->batt_psy = NULL;
+}
+
 static int charger_usb_psy_init(struct usb_psy_info *info)
 {
 	struct power_supply_config usb_cfg = {};
-	int rc = 0;
 
-	usb_cfg.drv_data = info;
-	usb_cfg.of_node = info->dev->of_node;
-	info->usb_psy =
-		devm_power_supply_register(info->dev, &_usb_psy_desc, &usb_cfg);
-	if (IS_ERR(info->usb_psy)) {
-		mca_log_err("Couldn't register usb power supply\n");
-		return PTR_ERR(info->usb_psy);
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA)) {
+		info->usb_psy = power_supply_get_by_name("usb");
+		if (!info->usb_psy)
+			return -EPROBE_DEFER;
+		info->borrowed_usb_psy = true;
+	} else {
+		usb_cfg.drv_data = info;
+		usb_cfg.of_node = info->dev->of_node;
+		info->usb_psy = power_supply_register(info->dev,
+			&_usb_psy_desc, &usb_cfg);
+		if (IS_ERR(info->usb_psy))
+			return PTR_ERR(info->usb_psy);
+		info->usb_psy_desc = &_usb_psy_desc;
 	}
-	info->usb_psy_desc = &_usb_psy_desc;
 
-	return rc;
+	return devm_add_action_or_reset(info->dev, charger_usb_psy_put_refs, info);
 }
 
 struct usb_psy_info *business_charger_usb_psy_init(struct device *dev)
@@ -238,13 +264,13 @@ struct usb_psy_info *business_charger_usb_psy_init(struct device *dev)
 
 	info = devm_kzalloc(dev, sizeof(*info), GFP_KERNEL);
 	if (!info)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	info->dev = dev;
 	rc = charger_usb_psy_init(info);
 	if (rc < 0) {
 		pr_err("Couldn't init usb psy rc=%d\n", rc);
-		return NULL;
+		return ERR_PTR(rc);
 	}
 
 	info->batt_psy = power_supply_get_by_name("battery");
@@ -257,8 +283,8 @@ struct usb_psy_info *business_charger_usb_psy_init(struct device *dev)
 
 void business_charger_usb_psy_deinit(struct usb_psy_info *info)
 {
-	if (!info || !info->usb_psy)
+	if (IS_ERR_OR_NULL(info) || !info->usb_psy)
 		return;
 
-	power_supply_unregister(info->usb_psy);
+	devm_release_action(info->dev, charger_usb_psy_put_refs, info);
 }

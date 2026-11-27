@@ -1022,8 +1022,9 @@ static int mca_nezha_jeita_process_event(struct mca_buckchg_jeita_dev *info,
 	bool online;
 
 	mutex_lock(&info->event_lock);
-	/* OS4.0.7 mca_buckchg_jeita.ko process_event .text+0x187c. */
-	if (event == 0x37) {
+	/* This dispatcher receives the shared OSS event enum, not raw OEM IDs.
+	 * Stock 0x37 is a different ABI and collides with PLATE_SHOCK here. */
+	if (event == MCA_EVENT_BATTERY_DTPT) {
 		info->dtpt_status = value;
 		goto out;
 	}

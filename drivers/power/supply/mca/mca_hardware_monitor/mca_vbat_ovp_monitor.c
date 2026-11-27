@@ -51,33 +51,40 @@ static int mca_vbat_mon_get_vbat_ovp_status(struct mca_vbat_ovp_mon_dev *info)
 	int vbat_now_mv, temp;
 	int usb_online = 0, wireless_online = 0, vbat_ovp_threshold_mv;
 	int ffc_sts;
-	static int vbat_ovp_triggered = 0;
 
 	if (!info)
 		return 0;
 
 	/* parallel fg to do, now only support single 1S/2S(also have single fg) battery */
-	if (info->fg_type > MCA_FG_TYPE_SINGLE_NUM_MAX)
-		return 0;
+	if (info->fg_type != MCA_FG_TYPE_SINGLE &&
+	    info->fg_type != MCA_FG_TYPE_SINGLE_SERIES)
+		return -EOPNOTSUPP;
 
-	(void)strategy_class_fg_ops_get_temperature(&temp);
+	ret = strategy_class_fg_ops_get_temperature(&temp);
+	if (ret)
+		return ret;
 	/* no need to monitor vbat ovp when batt temp >= 48 degree*/
 	if (temp >= 480)
 		return 0;
-	(void)strategy_class_fg_ops_get_voltage(&vbat_now_mv);
+	ret = strategy_class_fg_ops_get_voltage(&vbat_now_mv);
+	if (ret)
+		return ret;
 	ret = platform_class_buckchg_ops_get_online(MAIN_BUCK_CHARGER,
 						    &usb_online);
-	ret |= platform_class_wireless_is_present(WIRELESS_ROLE_MASTER,
-						  &wireless_online);
+	if (!ret && !usb_online)
+		ret = platform_class_wireless_is_present(WIRELESS_ROLE_MASTER,
+						&wireless_online);
 
 	if (ret) {
-		return 0;
+		return ret;
 	} else {
 		/* no need to monitor when power absent */
 		if (!usb_online && !wireless_online) {
 			return 0;
 		} else {
 			ffc_sts = strategy_class_fg_get_fastcharge();
+			if (ffc_sts < 0)
+				return ffc_sts;
 			if (ffc_sts)
 				vbat_ovp_threshold_mv =
 					info->vbat_ovp_thr_ffr_mv;
@@ -87,26 +94,26 @@ static int mca_vbat_mon_get_vbat_ovp_status(struct mca_vbat_ovp_mon_dev *info)
 			if (info->fake_vbat_override_mv > 0)
 				vbat_now_mv = info->fake_vbat_override_mv;
 			mca_log_info(
-				"vbat_now_mv = %d, vbat_ovp_triggered: %d\n",
-				vbat_now_mv, vbat_ovp_triggered);
-			if (!vbat_ovp_triggered &&
+				"vbat_now_mv = %d, triggered: %d\n",
+				vbat_now_mv, info->triggered);
+			if (!info->triggered &&
 			    vbat_now_mv > vbat_ovp_threshold_mv +
 						  info->vbat_ovp_thr_hys_mv) {
-				vbat_ovp_triggered = 1;
+				info->triggered = 1;
 				mca_log_err(
-					"vbat ovp triggered: vbat_ovp_triggered = %d\n",
-					vbat_ovp_triggered);
+					"vbat ovp triggered: triggered = %d\n",
+					info->triggered);
 				return 1;
-			} else if (vbat_ovp_triggered &&
+			} else if (info->triggered &&
 				   vbat_now_mv <=
 					   vbat_ovp_threshold_mv -
 						   info->vbat_ovp_recharge_delta_mv) {
-				vbat_ovp_triggered = 0;
+				info->triggered = 0;
 				mca_log_info(
-					"vbat ovp cleared: vbat_ovp_triggered = %d\n",
-					vbat_ovp_triggered);
+					"vbat ovp cleared: triggered = %d\n",
+					info->triggered);
 				return 0;
-			} else if (vbat_ovp_triggered) {
+			} else if (info->triggered) {
 				return 1;
 			}
 		}
@@ -146,6 +153,13 @@ static void mca_vbat_ovp_monitor_workfunc(struct work_struct *work)
 	}
 
 	vbat_ovp_confirmed = mca_vbat_mon_get_vbat_ovp_status(info);
+	if (vbat_ovp_confirmed < 0) {
+		/* Unknown telemetry must not clear a previously reported fault. */
+		mca_log_err("vbat protection sample unavailable: %d\n",
+			vbat_ovp_confirmed);
+		interval = FAST_HEARTBEAT_TIMER_MS;
+		goto next;
+	}
 
 	if (info->batt_ovp_status != vbat_ovp_confirmed) {
 		info->batt_ovp_status = vbat_ovp_confirmed;
@@ -318,6 +332,18 @@ static int vbat_ovp_mon_sysfs_create_group(struct device *dev)
 					   &vbat_ovp_sysfs_attr_group);
 }
 
+static void mca_vbat_ovp_mon_stop(void *data)
+{
+	struct mca_vbat_ovp_mon_dev *info = data;
+
+	if (info->sysfs_created) {
+		mca_sysfs_remove_link_group(SYSFS_DEV_5, "vbat_ovp", info->dev,
+			&vbat_ovp_sysfs_attr_group);
+		info->sysfs_created = false;
+	}
+	cancel_delayed_work_sync(&info->monitor_vbat_ovp_work);
+}
+
 static int mca_vbat_ovp_mon_probe(struct platform_device *pdev)
 {
 	struct mca_vbat_ovp_mon_dev *info;
@@ -341,20 +367,27 @@ static int mca_vbat_ovp_mon_probe(struct platform_device *pdev)
 	info->fake_vbat_override_mv = -22;
 	INIT_DELAYED_WORK(&info->monitor_vbat_ovp_work,
 			  mca_vbat_ovp_monitor_workfunc);
+	ret = devm_add_action_or_reset(info->dev, mca_vbat_ovp_mon_stop, info);
+	if (ret)
+		return ret;
+	ret = vbat_ovp_mon_sysfs_create_group(info->dev);
+	if (ret)
+		return ret;
+	info->sysfs_created = true;
 	schedule_delayed_work(&info->monitor_vbat_ovp_work,
 			      msecs_to_jiffies(NORMAL_HEARTBEAT_TIMER_MS));
-	vbat_ovp_mon_sysfs_create_group(info->dev);
 	mca_log_err("%s success\n", __func__);
 	return 0;
 }
 
 static void mca_vbat_ovp_mon_remove(struct platform_device *pdev)
 {
-	return;
+	mca_vbat_ovp_mon_stop(platform_get_drvdata(pdev));
 }
 
 static void mca_vbat_ovp_mon_shutdown(struct platform_device *pdev)
 {
+	mca_vbat_ovp_mon_stop(platform_get_drvdata(pdev));
 }
 
 static const struct of_device_id match_table[] = {

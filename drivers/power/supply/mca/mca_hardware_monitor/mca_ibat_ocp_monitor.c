@@ -51,20 +51,24 @@ static int mca_ibat_mon_get_ibat_ocp_flag(struct mca_ibat_ocp_mon_dev *info)
 	int master_ocp = 0;
 	int slave_ocp = 0;
 	int flag;
-	int master_curr, slave_curr;
+	int master_curr, slave_curr, ret;
 
-	(void)platform_fg_ops_get_curr(FG_IC_MASTER, &master_curr);
-	(void)platform_fg_ops_get_curr(FG_IC_SLAVE, &slave_curr);
+	ret = platform_fg_ops_get_curr(FG_IC_MASTER, &master_curr);
+	if (ret)
+		return ret;
+	ret = platform_fg_ops_get_curr(FG_IC_SLAVE, &slave_curr);
+	if (ret)
+		return ret;
 
 	if (info->fake_master_ibat_override_ma > 0)
 		master_curr = info->fake_master_ibat_override_ma;
 	if (info->fake_slave_ibat_override_ma > 0)
 		slave_curr = info->fake_slave_ibat_override_ma;
 
-	if (abs(master_curr) > info->ocp_threshold[FG_IC_MASTER]) {
+	if (abs((s64)master_curr) > info->ocp_threshold[FG_IC_MASTER]) {
 		master_ocp = 1;
 	}
-	if (abs(slave_curr) > info->ocp_threshold[FG_IC_SLAVE]) {
+	if (abs((s64)slave_curr) > info->ocp_threshold[FG_IC_SLAVE]) {
 		slave_ocp = 1;
 	}
 
@@ -78,22 +82,22 @@ static int mca_ibat_mon_get_ibat_ocp_status(struct mca_ibat_ocp_mon_dev *info)
 {
 	int ret, ffc_sts, ocp_flag;
 	int usb_online = 0, wireless_online = 0;
-	static int ibat_ocp_triggered = 0;
 
 	if (!info)
 		return 0;
 
 	/* to do, now only support parallel battery */
 	if (info->fg_type != MCA_FG_TYPE_PARALLEL)
-		return 0;
+		return -EOPNOTSUPP;
 
 	ret = platform_class_buckchg_ops_get_online(MAIN_BUCK_CHARGER,
 						    &usb_online);
-	ret |= platform_class_wireless_is_present(WIRELESS_ROLE_MASTER,
-						  &wireless_online);
+	if (!ret && !usb_online)
+		ret = platform_class_wireless_is_present(WIRELESS_ROLE_MASTER,
+						&wireless_online);
 
 	if (ret) {
-		return 0;
+		return ret;
 	} else {
 		/* no need to monitor when power absent */
 		if (!usb_online && !wireless_online) {
@@ -105,25 +109,29 @@ static int mca_ibat_mon_get_ibat_ocp_status(struct mca_ibat_ocp_mon_dev *info)
 				mca_charge_mievent_report(CHARGE_DFX_LOAD_SWITCH_I2C_ERR, NULL, 0);
 
 			ffc_sts = strategy_class_fg_get_fastcharge();
+			if (ffc_sts < 0)
+				return ffc_sts;
 			if (!ffc_sts)
 				return 0;
 
 			ocp_flag = mca_ibat_mon_get_ibat_ocp_flag(info);
-			mca_log_info("ocp_flag = %d, ibat_ocp_triggered: %d\n",
-				     ocp_flag, ibat_ocp_triggered);
-			if (!ibat_ocp_triggered && ocp_flag) {
-				ibat_ocp_triggered = 1;
-				mca_log_err(
-					"ibat ocp triggered: ibat_ocp_triggered = %d\n",
-					ibat_ocp_triggered);
+			if (ocp_flag < 0)
 				return ocp_flag;
-			} else if (ibat_ocp_triggered && !ocp_flag) {
-				ibat_ocp_triggered = 0;
+			mca_log_info("ocp_flag = %d, triggered: %d\n",
+				     ocp_flag, info->triggered);
+			if (!info->triggered && ocp_flag) {
+				info->triggered = 1;
+				mca_log_err(
+					"ibat ocp triggered: triggered = %d\n",
+					info->triggered);
+				return ocp_flag;
+			} else if (info->triggered && !ocp_flag) {
+				info->triggered = 0;
 				mca_log_info(
-					"ibat ocp cleared: ibat_ocp_triggered = %d\n",
-					ibat_ocp_triggered);
+					"ibat ocp cleared: triggered = %d\n",
+					info->triggered);
 				return 0;
-			} else if (ibat_ocp_triggered) {
+			} else if (info->triggered) {
 				return ocp_flag;
 			}
 		}
@@ -156,6 +164,13 @@ static void mca_ibat_ocp_monitor_workfunc(struct work_struct *work)
 	}
 
 	ibat_ocp_confirmed = mca_ibat_mon_get_ibat_ocp_status(info);
+	if (ibat_ocp_confirmed < 0) {
+		/* Unknown telemetry must not clear a previously reported fault. */
+		mca_log_err("ibat protection sample unavailable: %d\n",
+			ibat_ocp_confirmed);
+		interval = FAST_HEARTBEAT_TIMER_MS;
+		goto next;
+	}
 
 	if (info->batt_ocp_status != ibat_ocp_confirmed) {
 		info->batt_ocp_status = ibat_ocp_confirmed;
@@ -327,6 +342,18 @@ static int ibat_ocp_mon_sysfs_create_group(struct device *dev)
 					   &ibat_ocp_sysfs_attr_group);
 }
 
+static void mca_ibat_ocp_mon_stop(void *data)
+{
+	struct mca_ibat_ocp_mon_dev *info = data;
+
+	if (info->sysfs_created) {
+		mca_sysfs_remove_link_group(SYSFS_DEV_5, "ibat_ocp", info->dev,
+			&ibat_ocp_sysfs_attr_group);
+		info->sysfs_created = false;
+	}
+	cancel_delayed_work_sync(&info->monitor_ibat_ocp_work);
+}
+
 static int mca_ibat_ocp_mon_probe(struct platform_device *pdev)
 {
 	struct mca_ibat_ocp_mon_dev *info;
@@ -351,20 +378,27 @@ static int mca_ibat_ocp_mon_probe(struct platform_device *pdev)
 	info->fake_slave_ibat_override_ma = -22;
 	INIT_DELAYED_WORK(&info->monitor_ibat_ocp_work,
 			  mca_ibat_ocp_monitor_workfunc);
+	ret = devm_add_action_or_reset(info->dev, mca_ibat_ocp_mon_stop, info);
+	if (ret)
+		return ret;
+	ret = ibat_ocp_mon_sysfs_create_group(info->dev);
+	if (ret)
+		return ret;
+	info->sysfs_created = true;
 	schedule_delayed_work(&info->monitor_ibat_ocp_work,
 			      msecs_to_jiffies(NORMAL_HEARTBEAT_TIMER_MS));
-	ibat_ocp_mon_sysfs_create_group(info->dev);
 	mca_log_err("%s success\n", __func__);
 	return 0;
 }
 
 static void mca_ibat_ocp_mon_remove(struct platform_device *pdev)
 {
-	return;
+	mca_ibat_ocp_mon_stop(platform_get_drvdata(pdev));
 }
 
 static void mca_ibat_ocp_mon_shutdown(struct platform_device *pdev)
 {
+	mca_ibat_ocp_mon_stop(platform_get_drvdata(pdev));
 }
 
 static const struct of_device_id match_table[] = {

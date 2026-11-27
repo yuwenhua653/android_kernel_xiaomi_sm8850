@@ -58,6 +58,8 @@ struct mca_vbat_ovp_mon_dev {
 	int fg_type;
 	int fake_vbat_ovp_status;
 	int batt_ovp_status;
+	bool triggered;
+	bool sysfs_created;
 	bool support_global_fv;
 };
 
