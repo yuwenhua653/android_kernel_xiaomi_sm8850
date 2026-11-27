@@ -18,6 +18,8 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/mutex.h>
+#include <linux/srcu.h>
 #include <linux/string.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -78,32 +80,81 @@ enum mca_smart_charge_ioctrl_cmd {
 	     MCA_SMARTCHG_CMD_DATA, PAGE_SIZE)
 
 static struct smart_charge_info *global_smartchg_info;
-static struct mca_smartchg_if_ops
+static struct mca_smartchg_if_ops __rcu
 	*g_mca_smartchg_if_ops[MCA_SMARTCHG_IF_CHG_TYPE_END];
+static DEFINE_MUTEX(smartchg_if_lock);
+DEFINE_STATIC_SRCU(smartchg_if_srcu);
 static void smart_charge_report_scene(struct smart_charge_info *info,
 				      int scene);
 
+/* The caller must hold smartchg_if_srcu across the whole callback. */
 static struct mca_smartchg_if_ops *mca_smartchg_if_get_ops(unsigned int type)
 {
-	return g_mca_smartchg_if_ops[type];
+	if (type >= MCA_SMARTCHG_IF_CHG_TYPE_END)
+		return NULL;
+	return srcu_dereference(g_mca_smartchg_if_ops[type], &smartchg_if_srcu);
 }
 
 int mca_smartchg_if_ops_register(struct mca_smartchg_if_ops *ops)
 {
-	if (!ops) {
-		mca_log_err("ops invalid\n");
-		return -1;
-	}
+	struct mca_smartchg_if_ops *entry;
+	int ret = 0;
 
-	if (ops->type < 0 || ops->type >= MCA_SMARTCHG_IF_CHG_TYPE_END) {
-		mca_log_err("ops->type invalid %d\n", ops->type);
-		return -1;
-	}
+	if (!ops || (unsigned int)ops->type >= MCA_SMARTCHG_IF_CHG_TYPE_END)
+		return -EINVAL;
+	entry = kmemdup(ops, sizeof(*entry), GFP_KERNEL);
+	if (!entry)
+		return -ENOMEM;
 
-	g_mca_smartchg_if_ops[ops->type] = ops;
-	return 0;
+	mutex_lock(&smartchg_if_lock);
+	if (rcu_access_pointer(g_mca_smartchg_if_ops[entry->type]))
+		ret = -EBUSY;
+	else
+		rcu_assign_pointer(g_mca_smartchg_if_ops[entry->type], entry);
+	mutex_unlock(&smartchg_if_lock);
+	if (ret)
+		kfree(entry);
+	return ret;
 }
 EXPORT_SYMBOL(mca_smartchg_if_ops_register);
+
+int mca_smartchg_if_ops_unregister(unsigned int type, void *data)
+{
+	struct mca_smartchg_if_ops *entry;
+
+	if (type >= MCA_SMARTCHG_IF_CHG_TYPE_END)
+		return -EINVAL;
+
+	/* Serialize replacement with the grace period for the old provider. */
+	mutex_lock(&smartchg_if_lock);
+	entry = rcu_access_pointer(g_mca_smartchg_if_ops[type]);
+	if (!entry || entry->data != data) {
+		mutex_unlock(&smartchg_if_lock);
+		return -ENOENT;
+	}
+	RCU_INIT_POINTER(g_mca_smartchg_if_ops[type], NULL);
+	synchronize_srcu(&smartchg_if_srcu);
+	mutex_unlock(&smartchg_if_lock);
+	kfree(entry);
+	return 0;
+}
+EXPORT_SYMBOL(mca_smartchg_if_ops_unregister);
+
+static void mca_smartchg_if_cleanup(void)
+{
+	struct mca_smartchg_if_ops *entries[MCA_SMARTCHG_IF_CHG_TYPE_END];
+	int i;
+
+	mutex_lock(&smartchg_if_lock);
+	for (i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
+		entries[i] = rcu_access_pointer(g_mca_smartchg_if_ops[i]);
+		RCU_INIT_POINTER(g_mca_smartchg_if_ops[i], NULL);
+	}
+	synchronize_srcu(&smartchg_if_srcu);
+	mutex_unlock(&smartchg_if_lock);
+	for (i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++)
+		kfree(entries[i]);
+}
 
 static ssize_t smart_charge_sysfs_show(struct device *dev,
 				       struct device_attribute *attr,
@@ -392,14 +443,17 @@ static void smart_charge_handle_sense_chg(struct smart_charge_info *info)
 
 static void smart_charge_set_soc_limit(bool enable)
 {
-	static struct mca_smartchg_if_ops *if_ops;
+	struct mca_smartchg_if_ops *if_ops;
+	int idx;
 
+	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_soc_limit_sts)
 			continue;
 		if_ops->set_soc_limit_sts(if_ops->data, enable);
 	}
+	srcu_read_unlock(&smartchg_if_srcu, idx);
 }
 
 #define SMART_CHG_SOC_HYS 2
@@ -512,8 +566,10 @@ smartcharging_handle_algorithm_conflict(struct smart_charge_info *info)
 
 static void smartcharging_handle_wls_super(struct smart_charge_info *info)
 {
-	static struct mca_smartchg_if_ops *if_ops;
+	struct mca_smartchg_if_ops *if_ops;
+	int idx;
 
+	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_wls_super_sts)
@@ -523,13 +579,16 @@ static void smartcharging_handle_wls_super(struct smart_charge_info *info)
 			info->smart_chg_data.smart_chgcfg[SMART_CHG_WLS_SUPER]
 				.enable);
 	}
+	srcu_read_unlock(&smartchg_if_srcu, idx);
 }
 
 static void smartcharging_handle_power_boost(struct smart_charge_info *info,
 					     int type)
 {
-	static struct mca_smartchg_if_ops *if_ops;
+	struct mca_smartchg_if_ops *if_ops;
+	int idx;
 
+	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_pwr_boost_sts)
@@ -547,12 +606,15 @@ static void smartcharging_handle_power_boost(struct smart_charge_info *info,
 					.smart_chgcfg[SMART_CHG_TRAVELWAIT]
 					.enable);
 	}
+	srcu_read_unlock(&smartchg_if_srcu, idx);
 }
 
 static void smartcharging_handle_wls_quiet(struct smart_charge_info *info)
 {
-	static struct mca_smartchg_if_ops *if_ops;
+	struct mca_smartchg_if_ops *if_ops;
+	int idx;
 
+	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_wls_quiet_sts)
@@ -562,6 +624,7 @@ static void smartcharging_handle_wls_quiet(struct smart_charge_info *info)
 			info->smart_chg_data.smart_chgcfg[SMART_CHG_WLS_QUIET]
 				.enable);
 	}
+	srcu_read_unlock(&smartchg_if_srcu, idx);
 }
 
 static void smartcharging_handle_controlmessage(void)
@@ -1116,11 +1179,13 @@ static int smart_charge_fv_control(struct mca_votable *votable, void *data,
 				   const char *effective_client)
 {
 	struct smart_charge_info *info = data;
-	static struct mca_smartchg_if_ops *if_ops;
+	struct mca_smartchg_if_ops *if_ops;
+	int idx;
 
 	if (!data)
 		return -1;
 
+	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_delta_fv) {
@@ -1129,6 +1194,7 @@ static int smart_charge_fv_control(struct mca_votable *votable, void *data,
 		}
 		if_ops->set_delta_fv(if_ops->data, effective_result);
 	}
+	srcu_read_unlock(&smartchg_if_srcu, idx);
 	info->delta_fv = effective_result;
 	mca_log_err("smartchg_delta_fv %d\n", effective_result);
 
@@ -1140,7 +1206,8 @@ static int smart_charge_ichg_control(struct mca_votable *votable, void *data,
 				     const char *effective_client)
 {
 	struct smart_charge_info *info = data;
-	static struct mca_smartchg_if_ops *if_ops;
+	struct mca_smartchg_if_ops *if_ops;
+	int idx;
 
 	if (!data)
 		return -1;
@@ -1151,12 +1218,14 @@ static int smart_charge_ichg_control(struct mca_votable *votable, void *data,
 		info->delta_ichg = 0;
 
 	mca_log_err("smartchg_delta_ichg %d\n", effective_result);
+	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_delta_ichg)
 			continue;
 		if_ops->set_delta_ichg(if_ops->data, effective_result);
 	}
+	srcu_read_unlock(&smartchg_if_srcu, idx);
 
 	return 0;
 }
@@ -1165,19 +1234,22 @@ static int smart_charge_set_fcc_control(struct mca_votable *votable, void *data,
 					int effective_result,
 					const char *effective_client)
 {
-	static struct mca_smartchg_if_ops *if_ops;
+	struct mca_smartchg_if_ops *if_ops;
+	int idx;
 
 	if (!data)
 		return -1;
 
 	mca_log_err("smartchg_set_fcc %d\n", effective_result);
 
+	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_fcc)
 			continue;
 		if_ops->set_fcc(if_ops->data, effective_result);
 	}
+	srcu_read_unlock(&smartchg_if_srcu, idx);
 
 	return 0;
 }
@@ -1358,7 +1430,8 @@ static int smart_charge_handle_baa_data(struct smart_charge_info *info)
 	struct smart_basp_header *basp_header =
 		(struct smart_basp_header *)info->mmap_addr;
 	struct smart_batt_spec *pbatt_spec = NULL;
-	static struct mca_smartchg_if_ops *if_ops;
+	struct mca_smartchg_if_ops *if_ops;
+	int idx;
 	int offset = 0;
 
 	if (!basp_header) {
@@ -1374,6 +1447,8 @@ static int smart_charge_handle_baa_data(struct smart_charge_info *info)
 			raw[i + 5], raw[i + 6], raw[i + 7], raw[i + 8], raw[i + 9]);
 	}
 #endif
+
+	idx = srcu_read_lock(&smartchg_if_srcu);
 
 	// update buck para
 	offset = sizeof(struct smart_basp_header);
@@ -1437,6 +1512,7 @@ static int smart_charge_handle_baa_data(struct smart_charge_info *info)
 					basp_header->wls_ffc_size,
 					basp_header->wls_normal_size);
 	}
+	srcu_read_unlock(&smartchg_if_srcu, idx);
 
 	return 0;
 }
@@ -1900,6 +1976,7 @@ module_init(smart_charge_init);
 static void __exit smart_charge_exit(void)
 {
 	platform_driver_unregister(&smart_charge_driver);
+	mca_smartchg_if_cleanup();
 }
 module_exit(smart_charge_exit);
 

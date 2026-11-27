@@ -2,6 +2,18 @@
 
 适用于国行 nezha 的 nazha 分支，底包 OS4.0.7.0.XPACNXM。以能开机、通信、拍摄、充电及正常待机为验收目标。
 
+## 2026-11-27：BMD 退出路径、smartchg 注册层与 voter 错误重试
+
+基于 `c7aaf6d` 继续修复充电框架，配置及 DT 启用范围不变：
+
+- **BMD 资源与退出**：ADC 获取错误和 GPIO 供应者的 `-EPROBE_DEFER` 原样返回；GPIO 改用 devres 输入申请，遵循原有单 `btb_gpio` 绑定，两个通道引用同一 GPIO 时只申请一次。删除有限次数的后台 GPIO 重试及全局计数。全部任务先初始化，才公开策略回调；检查注册/sysfs 错误，失败时先同步注销再取消工作。remove/shutdown 共用幂等清理。未取得有效采样前不报告电池连接正常，GPIO/ADC 读取错误不伪装正常；初始延迟上报同步更新查询状态。没有状态处理器的 INT 方案明确拒绝。
+- **smartchg 接口注册层**：选择性利用附件的 SRCU 思路，但注册时复制 ops，避免调用方改写共享 static 表改变已注册 data；拒绝重复注册，按 `type + data` 身份同步注销。覆盖 8 个现有分发函数，移除函数内共享 static 临时 ops 指针；模块退出释放注册表副本。接口声明写明必须先注销、再释放回调上下文，且不能在回调内注册/注销。**这不是完整 smartchg 卸载修复**：既有 provider 仍需接入注销；全局 info、cdev/mmap、voter、通知链及工作退出还有缺口。
+- **voter 错误恢复**：硬件回调失败后，同值投票仍会重试；rerun 失败也保留重试条件。恢复普通限制失败时保留 override；强制状态切换失败回滚其标志。无回调的纯聚合 voter 可使用 override；从未投票时恢复默认限制，不传 `-EINVAL` 作为硬件值；补强制期间 override 客户端记录及非法类型分支解锁。get_effective_result 仍是软件选举目标，不是硬件读回值。**未解决全局 voter 的持有者引用/所有权和同步销毁。**
+
+新增验证：`tools/test-mca-bmd-lifetime.py`、`tools/test-mca-smartchg-registry.py`、`tools/test-mca-voter-errors.py`，提取真实 C 函数运行 ASan/UBSan。覆盖供应者延迟/错误、重复注册、发布后失败清理、停止后的任务、所有 8 处分发、调用方 ops 改写、注销等待、内存申请失败、同值重试和 override/强制失败。SRCU 使用 pthread rwlock 模型，BMD 使用工作队列/devres 桩，不能替代内核并发和实机验证。新分配的注册表副本有显式分配计数断言，不宣称完成 LeakSanitizer。
+
+**尚未完成**：完整 ARM64 内核/modpost、最终 DTB/DLKM/镜像及实机验收；voter/provider 所有权；smartchg 设备全生命周期；JEITA/温控/保护执行链；无线接收器和快充；OIS/actuator 私有 ABI、固件、停驻与多摄实测。BMD 也未在 Nezha 启用：官方板级配置为 IIC + GPIO（`btb_bmd_scheme=<3 1>`），其 FG chip-ok 语义/执行端仍需核对，不能把当前只读电池桥接当作完整 BMD 支持。完整版服务配置继续关闭。
+
 ## 2026-11-27：选择性吸收外部补丁并修正反例
 
 本轮基于 `ef7a1dc`，审查附件 `17U.zip` 的 5 个内核补丁和 2 个 DT 补丁后，选择性吸收以下部分：

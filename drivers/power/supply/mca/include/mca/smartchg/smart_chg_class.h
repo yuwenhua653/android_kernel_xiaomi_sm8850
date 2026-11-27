@@ -77,7 +77,12 @@ struct mca_smartchg_if_ops {
 			       int normal_size);
 };
 
+/* Registration copies the table; callbacks/data must remain valid until
+ * unregister(type, data) completes. A slot cannot be silently replaced.
+ * Neither operation may be called from a smartchg interface callback.
+ */
 int mca_smartchg_if_ops_register(struct mca_smartchg_if_ops *ops);
+int mca_smartchg_if_ops_unregister(unsigned int type, void *data);
 void mca_smartchg_set_scene(int scene);
 int mca_smartchg_get_scene(void);
 void mca_smartchg_set_board_temp(int board_temp);

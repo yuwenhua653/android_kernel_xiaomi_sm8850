@@ -118,3 +118,54 @@ The interface test uses the actual business_battery event handler, so emitting
 ambiguity, explicit formats, malformed properties, errors and unchanged outputs.
 Log tests cover NULL/context-only callbacks, negative/oversized returns and
 concurrent unregister. All are host models; no new ARM64/DTB/hardware pass.
+
+
+## Follow-up: BMD lifecycle and charging callback error paths (2026-11-27)
+
+Base: kernel `c7aaf6db0744905300876fc83ed33b1152648f77`. This follow-up
+continues the selective review of `17U.zip`; it does not apply patch 2/3 wholesale.
+
+BMD now acquires ADC/GPIO resources synchronously, propagates supplier deferral,
+and uses managed GPIO ownership instead of a process-global retry counter.
+The original single-GPIO binding and physical active-low interpretation remain.
+It initializes both delayed works before registering the strategy, propagates
+registration/sysfs failures, unregisters dispatchers before cancelling their
+work, and shares stop handling across remove/shutdown. Unknown initial presence
+is conservative, and unsupported interrupt detection is rejected. The official
+Nezha `<3 1>` scheme (IIC + GPIO) still needs a valid FG chip-ok provider before
+activation; no BMD or complete-policy enablement is included.
+
+Smartchg registration now stores a copy, not the caller's mutable ops table.
+Unregister is `mca_smartchg_if_ops_unregister(unsigned int type, void *data)`;
+it removes only the matching owner and waits for SRCU readers before freeing
+the entry. All eight existing dispatch functions hold the read-side guard,
+including BAA dispatch, and use automatic local ops pointers. Module exit
+clears and drains remaining copied entries. Providers must adopt this API
+before their data is freed; neither register nor unregister is legal inside
+an interface callback or while holding locks needed by such callbacks.
+This does not validate the inferred BASP ABI or fix global info/cdev/mmap
+lifetime, smartchg voter ownership, or legacy provider teardown.
+
+Voter changes preserve a retry after callback errors. Identical votes no longer
+silently skip failed hardware programming. Failed override removal retains the
+override; failed force-state transitions restore the flag. Callback-less
+aggregators no longer dereference NULL, and unvoted restoration uses the default
+limit. These are software state/error handling guarantees, not hardware readback
+or a complete voter lifetime redesign. No votable is freed opportunistically:
+existing consumers keep raw pointers returned by `mca_find_votable`.
+
+Run from the kernel root:
+
+```sh
+python3 tools/test-mca-bmd-lifetime.py
+python3 tools/test-mca-smartchg-registry.py
+python3 tools/test-mca-voter-errors.py
+```
+
+Each compiles extracted production C with host `cc`, ASan and UBSan. SRCU,
+workqueue, GPIO/IIO and allocation APIs are modeled/stubbed as documented in the
+tests. The smartchg test exercises a blocked callback during unregister/cleanup
+and counts all allocations; BAA coverage uses only a zero-size table. These
+passes do not establish ARM64 module linking, kernel lockdep/KCSAN correctness,
+OEM blob compatibility, or device charging behavior. Configuration and manifest
+pins for the companion module/DT repositories remain unchanged.

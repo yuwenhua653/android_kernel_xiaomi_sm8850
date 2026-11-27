@@ -545,7 +545,8 @@ int mca_vote(struct mca_votable *votable, const char *client_str, bool enabled,
 			     &effective_id);
 		break;
 	default:
-		return -EINVAL;
+		rc = -EINVAL;
+		goto out;
 	}
 
 	/*
@@ -597,7 +598,8 @@ int mca_vote(struct mca_votable *votable, const char *client_str, bool enabled,
 	}
 #endif
 
-	votable->voted_on = true;
+	/* A failed hardware update must be retried even for an identical vote. */
+	votable->voted_on = !rc;
 out:
 	mca_unlock_votable(votable);
 	return rc;
@@ -635,13 +637,17 @@ int mca_vote_override(struct mca_votable *votable, const char *override_client,
 
 	mca_lock_votable(votable);
 	if (votable->force_active) {
+		if (enabled)
+			strscpy(votable->override_client, override_client,
+				CLIENT_MAX_LEN);
 		votable->override_result = enabled ? val : -EINVAL;
 		goto out;
 	}
 
 	if (enabled) {
-		rc = votable->callback(votable, votable->data, val,
-				       override_client);
+		if (votable->callback)
+			rc = votable->callback(votable, votable->data, val,
+					       override_client);
 		if (!rc) {
 			strscpy(votable->override_client, override_client,
 				CLIENT_MAX_LEN);
@@ -650,11 +656,16 @@ int mca_vote_override(struct mca_votable *votable, const char *override_client,
 				    votable->override_result);
 		}
 	} else {
-		rc = votable->callback(
-			votable, votable->data, votable->effective_result,
-			mca_get_client_str(votable,
-					   votable->effective_client_id));
-		votable->override_result = -EINVAL;
+		if (votable->callback)
+			rc = votable->callback(
+				votable, votable->data,
+				votable->effective_result == -EINVAL ?
+					votable->default_value : votable->effective_result,
+				mca_get_client_str(votable,
+						   votable->effective_client_id));
+		/* Keep the previous override if restoring the normal limit failed. */
+		if (!rc)
+			votable->override_result = -EINVAL;
 		mca_log_err("%s cleared ovrried vote %d", override_client,
 			    votable->override_result);
 	}
@@ -680,6 +691,8 @@ int mca_rerun_election(struct mca_votable *votable)
 			votable, votable->data, effective_result,
 			mca_get_client_str(votable,
 					   votable->effective_client_id));
+	if (rc)
+		votable->voted_on = false;
 	mca_unlock_votable(votable);
 	return rc;
 }
@@ -729,8 +742,10 @@ static int mca_force_active_set(void *data, u64 val)
 	int rc = 0;
 	int effective_result;
 	const char *client;
+	bool previous_force_active;
 
 	mca_lock_votable(votable);
+	previous_force_active = votable->force_active;
 	votable->force_active = !!val;
 
 	if (!votable->callback)
@@ -744,7 +759,7 @@ static int mca_force_active_set(void *data, u64 val)
 			effective_result = votable->override_result;
 			client = votable->override_client;
 		} else {
-			effective_result = votable->effective_result;
+			effective_result = mca_get_effective_result_locked(votable);
 			client = mca_get_client_str(
 				votable, votable->effective_client_id);
 		}
@@ -752,6 +767,8 @@ static int mca_force_active_set(void *data, u64 val)
 				       client);
 	}
 out:
+	if (rc)
+		votable->force_active = previous_force_active;
 	mca_unlock_votable(votable);
 	return rc;
 }
