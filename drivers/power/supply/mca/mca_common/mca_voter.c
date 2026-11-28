@@ -31,6 +31,7 @@
 
 static DEFINE_SPINLOCK(votable_list_slock);
 static LIST_HEAD(votable_list);
+static DEFINE_MUTEX(votable_create_lock);
 
 static struct dentry *debug_root;
 
@@ -61,7 +62,14 @@ struct mca_votable {
 	bool force_active;
 	struct dentry *force_active_ent;
 	int default_value;
+	/* Owned slots stay allocated while consumers may cache their address. */
+	bool owned;
 };
+
+static bool mca_votable_unavailable(struct mca_votable *votable)
+{
+	return votable->owned && !votable->callback;
+}
 
 /**
  * mca_vote_and()
@@ -389,6 +397,9 @@ int mca_get_effective_result_locked(struct mca_votable *votable)
 	if (!votable)
 		return -EINVAL;
 
+	if (mca_votable_unavailable(votable))
+		return -ENODEV;
+
 	if (votable->force_active)
 		return votable->force_val;
 
@@ -436,7 +447,7 @@ EXPORT_SYMBOL(mca_get_effective_result);
  */
 const char *mca_get_effective_client_locked(struct mca_votable *votable)
 {
-	if (!votable)
+	if (!votable || mca_votable_unavailable(votable))
 		return NULL;
 
 	if (votable->force_active)
@@ -499,6 +510,10 @@ int mca_vote(struct mca_votable *votable, const char *client_str, bool enabled,
 		return -EINVAL;
 
 	mca_lock_votable(votable);
+	if (mca_votable_unavailable(votable)) {
+		rc = -ENODEV;
+		goto out;
+	}
 
 	client_id = mca_get_client_id(votable, client_str);
 	if (client_id < 0) {
@@ -636,6 +651,10 @@ int mca_vote_override(struct mca_votable *votable, const char *override_client,
 		return -EINVAL;
 
 	mca_lock_votable(votable);
+	if (mca_votable_unavailable(votable)) {
+		rc = -ENODEV;
+		goto out;
+	}
 	if (votable->force_active) {
 		if (enabled)
 			strscpy(votable->override_client, override_client,
@@ -685,6 +704,10 @@ int mca_rerun_election(struct mca_votable *votable)
 		return -EINVAL;
 
 	mca_lock_votable(votable);
+	if (mca_votable_unavailable(votable)) {
+		rc = -ENODEV;
+		goto out;
+	}
 	effective_result = mca_get_effective_result_locked(votable);
 	if (votable->callback)
 		rc = votable->callback(
@@ -693,6 +716,7 @@ int mca_rerun_election(struct mca_votable *votable)
 					   votable->effective_client_id));
 	if (rc)
 		votable->voted_on = false;
+out:
 	mca_unlock_votable(votable);
 	return rc;
 }
@@ -731,9 +755,15 @@ static int mca_force_active_get(void *data, u64 *val)
 {
 	struct mca_votable *votable = data;
 
-	*val = votable->force_active;
+	int ret = 0;
 
-	return 0;
+	mca_lock_votable(votable);
+	if (mca_votable_unavailable(votable))
+		ret = -ENODEV;
+	else
+		*val = votable->force_active;
+	mca_unlock_votable(votable);
+	return ret;
 }
 
 static int mca_force_active_set(void *data, u64 val)
@@ -745,6 +775,10 @@ static int mca_force_active_set(void *data, u64 val)
 	bool previous_force_active;
 
 	mca_lock_votable(votable);
+	if (mca_votable_unavailable(votable)) {
+		mca_unlock_votable(votable);
+		return -ENODEV;
+	}
 	previous_force_active = votable->force_active;
 	votable->force_active = !!val;
 
@@ -831,21 +865,14 @@ static const struct file_operations mca_votable_status_ops = {
 	.release = single_release,
 };
 
-struct mca_votable *mca_create_votable(
+static struct mca_votable *mca_alloc_votable(
 	const char *name, int votable_type,
 	int (*callback)(struct mca_votable *votable, void *data,
 			int effective_result, const char *effective_client),
-	int default_value, void *data)
+	int default_value, void *data, bool owned)
 {
 	struct mca_votable *votable;
 	unsigned long flags;
-
-	if (!name)
-		return ERR_PTR(-EINVAL);
-
-	votable = mca_find_votable(name);
-	if (votable)
-		return votable;
 
 	if (debug_root == NULL) {
 		debug_root = debugfs_create_dir("business-votable", NULL);
@@ -855,7 +882,7 @@ struct mca_votable *mca_create_votable(
 		}
 	}
 
-	if (votable_type >= NUM_VOTABLE_TYPES) {
+	if ((unsigned int)votable_type >= NUM_VOTABLE_TYPES) {
 		mca_log_err("Invalid votable_type specified for voter\n");
 		return ERR_PTR(-EINVAL);
 	}
@@ -870,6 +897,8 @@ struct mca_votable *mca_create_votable(
 		return ERR_PTR(-ENOMEM);
 	}
 
+	votable->default_value = default_value;
+	votable->owned = owned;
 	votable->num_clients = NUM_MAX_CLIENTS;
 	votable->callback = callback;
 	votable->type = votable_type;
@@ -921,8 +950,6 @@ struct mca_votable *mca_create_votable(
 		return ERR_PTR(-EEXIST);
 	}
 
-	votable->default_value = default_value;
-
 	/* Publish only a fully initialized voter; failures above free it. */
 	spin_lock_irqsave(&votable_list_slock, flags);
 	list_add(&votable->list, &votable_list);
@@ -930,9 +957,97 @@ struct mca_votable *mca_create_votable(
 
 	return votable;
 }
+
+/* Legacy creators retain their existing reuse semantics, but cannot steal
+ * an owned slot from an active or detached provider.
+ */
+struct mca_votable *mca_create_votable(
+	const char *name, int votable_type,
+	int (*callback)(struct mca_votable *, void *, int, const char *),
+	int default_value, void *data)
+{
+	struct mca_votable *votable;
+
+	if (!name || (unsigned int)votable_type >= NUM_VOTABLE_TYPES)
+		return ERR_PTR(-EINVAL);
+	mutex_lock(&votable_create_lock);
+	votable = mca_find_votable(name);
+	if (votable && votable->owned)
+		votable = ERR_PTR(-EBUSY);
+	else if (!votable)
+		votable = mca_alloc_votable(name, votable_type, callback,
+					  default_value, data, false);
+	mutex_unlock(&votable_create_lock);
+	return votable;
+}
 EXPORT_SYMBOL(mca_create_votable);
 
-void mca_destroy_votable(struct mca_votable *votable)
+struct mca_votable *mca_create_owned_votable(
+	const char *name, int votable_type,
+	int (*callback)(struct mca_votable *, void *, int, const char *),
+	int default_value, void *data)
+{
+	struct mca_votable *votable;
+	int ret = 0;
+
+	if (!name || !callback || !data ||
+	    (unsigned int)votable_type >= NUM_VOTABLE_TYPES)
+		return ERR_PTR(-EINVAL);
+
+	mutex_lock(&votable_create_lock);
+	votable = mca_find_votable(name);
+	if (!votable)
+		votable = mca_alloc_votable(name, votable_type, NULL,
+					  default_value, NULL, true);
+	/* Legacy slots may be freed by their creators; never adopt them. */
+	if (!IS_ERR(votable) && !votable->owned)
+		votable = ERR_PTR(-EBUSY);
+	mutex_unlock(&votable_create_lock);
+	if (IS_ERR(votable))
+		return votable;
+
+	/* Do not hold the list creation lock while waiting for a callback. */
+	mca_lock_votable(votable);
+	if (votable->callback)
+		ret = -EBUSY;
+	else if (votable->type != votable_type ||
+		 votable->default_value != default_value)
+		ret = -EINVAL;
+	else {
+		votable->data = data;
+		votable->callback = callback;
+		votable->voted_on = false;
+	}
+	mca_unlock_votable(votable);
+	return ret ? ERR_PTR(ret) : votable;
+}
+EXPORT_SYMBOL(mca_create_owned_votable);
+
+int mca_detach_owned_votable(struct mca_votable *votable, void *data)
+{
+	int ret = 0;
+
+	if (IS_ERR_OR_NULL(votable) || !data)
+		return -EINVAL;
+	/* Every dispatch holds vote_lock through its callback. Taking this
+	 * lock drains the old provider before its data can be freed.
+	 */
+	mca_lock_votable(votable);
+	if (!votable->owned)
+		ret = -EINVAL;
+	else if (!votable->callback || votable->data != data)
+		ret = -ENOENT;
+	else {
+		votable->callback = NULL;
+		votable->data = NULL;
+		votable->voted_on = false;
+	}
+	mca_unlock_votable(votable);
+	return ret;
+}
+EXPORT_SYMBOL(mca_detach_owned_votable);
+
+static void mca_free_votable(struct mca_votable *votable)
 {
 	unsigned long flags;
 	int i;
@@ -952,7 +1067,35 @@ void mca_destroy_votable(struct mca_votable *votable)
 	kfree(votable->name);
 	kfree(votable);
 }
+
+void mca_destroy_votable(struct mca_votable *votable)
+{
+	if (IS_ERR_OR_NULL(votable))
+		return;
+	/* Raw find_votable users may still hold an owned slot after detach. */
+	if (votable->owned) {
+		mca_log_err("owned voter %s must be detached, not destroyed\n",
+			    votable->name);
+		return;
+	}
+	mutex_lock(&votable_create_lock);
+	mca_free_votable(votable);
+	mutex_unlock(&votable_create_lock);
+}
 EXPORT_SYMBOL(mca_destroy_votable);
+
+static void __exit mca_voter_exit(void)
+{
+	struct mca_votable *votable, *next;
+
+	/* Importing modules and open debugfs files pin this module. At module
+	 * exit there are no remaining callers; retained owned slots can go.
+	 */
+	list_for_each_entry_safe(votable, next, &votable_list, list)
+		mca_free_votable(votable);
+	debugfs_remove_recursive(debug_root);
+}
+module_exit(mca_voter_exit);
 
 MODULE_DESCRIPTION("mca voter");
 MODULE_AUTHOR("getian@xiaomi.com");

@@ -39,6 +39,20 @@ struct mca_votable *mca_create_votable(
 	int (*callback)(struct mca_votable *votable, void *data,
 			int effective_result, const char *effective_client),
 	int default_value, void *data);
+/* Owned slots retain their address and client votes across provider removal.
+ * Creation attaches one provider and does not call hardware. Same-name/type/
+ * default reattachment is allowed only after detach; replay with rerun_election
+ * or a fresh vote after the provider is ready. A detached slot rejects writes with -ENODEV.
+ * Detach synchronously drains callbacks, then the owner may free its data.
+ * Never create/detach from callbacks or while holding locks they acquire.
+ * Do not destroy an owned slot: consumers may cache find_votable pointers.
+ * This contract does not add lifetime protection to legacy-created voters.
+ */
+struct mca_votable *mca_create_owned_votable(
+	const char *name, int votable_type,
+	int (*callback)(struct mca_votable *, void *, int, const char *),
+	int default_value, void *data);
+int mca_detach_owned_votable(struct mca_votable *votable, void *data);
 void mca_destroy_votable(struct mca_votable *votable);
 
 #endif /* _MCA_COMMON_MCA_VOTER_H_ */

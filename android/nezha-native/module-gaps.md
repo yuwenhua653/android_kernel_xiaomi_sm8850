@@ -2,6 +2,19 @@
 
 适用于国行 nezha 的 nazha 分支，底包 OS4.0.7.0.XPACNXM。以能开机、通信、拍摄、充电及正常待机为验收目标。
 
+## 2026-11-28：共享 voter 提供者解绑与 JEITA 实际退出路径
+
+基于 `5e37256`，本轮修复以下源码路径，仍不打开完整充电策略配置：
+
+- **可解绑的 owned voter**：新增 `mca_create_owned_votable` / `mca_detach_owned_votable`。提供者身份不匹配、重复注册、试图接管 legacy voter 均拒绝；所有回调仍在原 vote_lock 内执行，解绑取得同一把锁，等待已有回调后清空 callback/data。缓存的对象地址和既有投票保留，投票、override、rerun、force_active 在无提供者时返回 `-ENODEV`，有效结果查询也不伪装成功。重新绑定必须名称、类型和默认值一致，由首次有效投票或显式 rerun 应用保留的限制。仅模块退出、依赖使用者已退出后释放保留对象；传统 destroy 不可释放 owned 对象。legacy 创建/销毁合同没有被自动升级，仍需逐提供者迁移。
+- **JEITA 接入实际注销**：策略注册和 smartchg 注册均检查错误；smartchg 使用局部 ops 副本，静态模板不再写入设备 data。失败回退/remove/shutdown 先标记停止，按身份同步注销两类回调，再取消监控任务；停止后的事件、状态查询和 smartchg 回调拒绝继续操作。注册前初始化 online 状态，避免 probe 后段覆盖期间已收到的 Nezha 插拔事件。
+- **去除 Nezha 不需要的依赖**：只有 DT 明确声明 `support-base-flip` 才创建折叠机 `flip_charge_curr`，并使用 owned voter；监控重试不再重复创建。普通直板路径不依赖此 load-switch voter。绑定时不提前把默认电流写入硬件，由首次温度计算投票应用限制。
+- **退出保护行为**：监控停止后保留原有温度限制，尝试向已有 `chg_enable` voter 投入 JEITA 禁止充电票；失败记录错误，不能当作硬件已停充证明。新提供者需要实际温度采样才能重新启用。没有清除限温票来制造“充电恢复”。
+
+验证通过：`test-mca-owned-voter.py`（生产 voter 全文件 + pthread/debugfs/分配模型）、`test-mca-jeita-lifetime.py`（实际 probe/事件/退出函数，通用与 Nezha 两种配置）、原 `test-mca-voter-errors.py`、更新的 `test-nezha-jeita-events.py`、`test-nezha-jeita-parser.py` 的内置畸形/失败用例。测试使用 host cc + ASan/UBSan，覆盖并发解绑等待、旧数据释放后的缓存句柄、同名并发创建、20 次重绑不增长分配、模块退出清理、供应者/注册失败、重复 probe、停止后不重排任务。此轮 parser 回归使用内置 fixture，不是重新核对完整 stock DT。
+
+**仍未完成**：Buck/quickchg/smartchg 自有 voter 向新所有权接口迁移；smartchg 全局对象与 cdev/mmap 生命周期；thermal 全局入口及 cooling device 退出；完整 JEITA/温控/保护执行链和启用；无线接收器；OIS/actuator ABI、固件与实机多摄。JEITA 借用的 Buck legacy voter 仍依赖其原提供者生命周期，不能据此宣称整个充电框架已可安全卸载。没有本轮 ARM64 内核/modpost、最终 DTB/DLKM、充电或相机实机通过记录。模块树、DT 树及 manifest 配套 pin 未变。
+
 ## 2026-11-27：BMD 退出路径、smartchg 注册层与 voter 错误重试
 
 基于 `c7aaf6d` 继续修复充电框架，配置及 DT 启用范围不变：

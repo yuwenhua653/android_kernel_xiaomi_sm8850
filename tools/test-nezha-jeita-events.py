@@ -7,10 +7,12 @@ pre=r'''
 #include <stdbool.h>
 #include <assert.h>
 #include <stdio.h>
+#include <errno.h>
+#define READ_ONCE(x) (x)
 /* Event values are taken from the production header below. */
 #define WRITE_ONCE(x,v) ((x)=(v))
 struct proc {int cur_jeita_index,temp_hys_en,max_chg_curr;};
-struct mca_buckchg_jeita_dev {bool usb_online,wireless_online;int event_lock,monitor_work,online,dtpt_status;struct proc proc_data,flip_proc_data,base_proc_data;};
+struct mca_buckchg_jeita_dev {bool usb_online,wireless_online,stopping;int event_lock,monitor_work,online,dtpt_status;struct proc proc_data,flip_proc_data,base_proc_data;};
 static int starts,cancels;
 static void mutex_lock(int *p){assert(!*p);*p=1;}
 static void mutex_unlock(int *p){assert(*p);*p=0;}
@@ -33,6 +35,7 @@ int main(void){
  mca_nezha_jeita_process_event(&s,2,0);assert(s.online && s.monitor_work && starts==2);
  mca_nezha_jeita_process_event(&s,1,0);assert(starts==2);
  mca_nezha_jeita_process_event(&s,0,0);assert(!s.online && cancels==4);
+ s.stopping=true;assert(mca_nezha_jeita_process_event(&s,1,0)==-ENODEV);assert(!s.online && cancels==4 && starts==2);
  puts("PASS: actual Nezha JEITA wired/wireless handover, repeated events, final disconnect and shared OSS DTPT event (no OEM ID alias)");
 }
 '''

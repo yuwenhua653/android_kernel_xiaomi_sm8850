@@ -92,6 +92,9 @@ struct mca_buckchg_jeita_dev {
 	struct device *dev;
 	int online;
 	bool usb_online, wireless_online;
+	bool stopping;
+	bool strategy_registered;
+	bool smartchg_registered;
 	struct mutex event_lock;
 	int voter_ok;
 	int dtpt_status;

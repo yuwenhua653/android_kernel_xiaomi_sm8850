@@ -612,13 +612,6 @@ static int mca_buckchg_jeita_flip_charge_limit(struct mca_votable *votable,
 
 static void mca_buckchg_jeita_init_voter(struct mca_buckchg_jeita_dev *info)
 {
-	info->flip_fcc_voter = mca_create_votable(
-		"flip_charge_curr", MCA_VOTE_MIN,
-		mca_buckchg_jeita_flip_charge_limit,
-		MCA_BUCKCHG_JEITA_FLIP_CURRENT_DEFAULT_VALUE, info);
-	if (IS_ERR(info->flip_fcc_voter))
-		return;
-
 	info->en_voter = mca_find_votable("chg_enable");
 	if (!info->en_voter)
 		return;
@@ -641,6 +634,9 @@ static void mca_buckchg_jeita_monitor_work(struct work_struct *work)
 	struct mca_buckchg_jeita_dev *info = container_of(
 		work, struct mca_buckchg_jeita_dev, monitor_work.work);
 
+	if (READ_ONCE(info->stopping))
+		return;
+
 	if (!info->voter_ok)
 		mca_buckchg_jeita_init_voter(info);
 
@@ -660,7 +656,9 @@ static void mca_buckchg_jeita_monitor_work(struct work_struct *work)
 		mca_buckchg_flip_jeita_update(info);
 	}
 out:
-	schedule_delayed_work(&info->monitor_work, msecs_to_jiffies(interval));
+	if (!READ_ONCE(info->stopping))
+		schedule_delayed_work(&info->monitor_work,
+				      msecs_to_jiffies(interval));
 }
 
 static bool mca_jeita_table_valid(const struct mca_buckchg_jeita_data *table,
@@ -1022,6 +1020,10 @@ static int mca_nezha_jeita_process_event(struct mca_buckchg_jeita_dev *info,
 	bool online;
 
 	mutex_lock(&info->event_lock);
+	if (READ_ONCE(info->stopping)) {
+		mutex_unlock(&info->event_lock);
+		return -ENODEV;
+	}
 	/* This dispatcher receives the shared OSS event enum, not raw OEM IDs.
 	 * Stock 0x37 is a different ABI and collides with PLATE_SHOCK here. */
 	if (event == MCA_EVENT_BATTERY_DTPT) {
@@ -1071,7 +1073,9 @@ static int mca_buckchg_jeita_process_event(int event, int value, void *data)
 	struct mca_buckchg_jeita_dev *info = data;
 
 	if (!info)
-		return -1;
+		return -EINVAL;
+	if (READ_ONCE(info->stopping))
+		return -ENODEV;
 
 	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA))
 		return mca_nezha_jeita_process_event(info, event, value);
@@ -1207,6 +1211,9 @@ static int mca_strategy_buckchg_jeita_get_status(int status, void *value,
 	if (!info || !value)
 		return -1;
 
+	if (READ_ONCE(info->stopping))
+		return -ENODEV;
+
 	switch (status) {
 	case STRATEGY_STATUS_TYPE_JEITA_FFC_ITERM:
 		*cur_val = mca_strategy_buckchg_jeita_get_ffc_iterm(info);
@@ -1235,6 +1242,9 @@ static int mca_jeita_smartchg_delta_fv_callback(void *data,
 
 	if (!data)
 		return -1;
+
+	if (READ_ONCE(info->stopping))
+		return -ENODEV;
 
 	info->smartchg_data.delta_fv = effective_result;
 	mca_log_err("effective_result: %d\n", effective_result);
@@ -1284,6 +1294,9 @@ static int mca_buckchg_jeita_smartchg_update_baa_para(void *data,
 		return -1;
 	}
 
+	if (READ_ONCE(info->stopping))
+		return -ENODEV;
+
 	// update ffc jeita para
 	jeita_term_para = (struct smart_batt_jeita_term_para *)baa_para;
 	for (int i = 0; i < ffc_size; i++) {
@@ -1319,7 +1332,7 @@ static int mca_buckchg_jeita_smartchg_update_baa_para(void *data,
 	return 0;
 }
 
-static struct mca_smartchg_if_ops g_jeita_smartchg_if_ops = {
+static const struct mca_smartchg_if_ops g_jeita_smartchg_if_ops = {
 	.type = MCA_SMARTCHG_IF_CHG_TYPE_JEITA,
 	.data = NULL,
 	.set_delta_fv = mca_jeita_smartchg_delta_fv_callback,
@@ -1327,9 +1340,45 @@ static struct mca_smartchg_if_ops g_jeita_smartchg_if_ops = {
 	.update_baa_para = mca_buckchg_jeita_smartchg_update_baa_para,
 };
 
+static void mca_buckchg_jeita_stop(struct mca_buckchg_jeita_dev *info)
+{
+	bool had_strategy;
+	int ret;
+
+	if (!info || READ_ONCE(info->stopping))
+		return;
+	WRITE_ONCE(info->stopping, true);
+	had_strategy = info->strategy_registered;
+	if (info->strategy_registered) {
+		mca_strategy_ops_unregister(STRATEGY_FUNC_TYPE_JEITA, info);
+		info->strategy_registered = false;
+	}
+	if (info->smartchg_registered) {
+		mca_smartchg_if_ops_unregister(MCA_SMARTCHG_IF_CHG_TYPE_JEITA,
+					      info);
+		info->smartchg_registered = false;
+	}
+	/* No dispatcher can enqueue more work after both unregisters return. */
+	cancel_delayed_work_sync(&info->monitor_work);
+	/* Retain temperature limits and inhibit charging while JEITA is absent.
+	 * A later provider must sample temperature before enabling it again.
+	 */
+	if (had_strategy && info->en_voter) {
+		ret = mca_vote(info->en_voter, "jeita", true, 0);
+		if (ret)
+			mca_log_err("failed to inhibit charging on JEITA stop: %d\n", ret);
+	}
+	if (info->flip_fcc_voter) {
+		mca_detach_owned_votable(info->flip_fcc_voter, info);
+		info->flip_fcc_voter = NULL;
+	}
+}
+
 static int mca_buckchg_jeita_probe(struct platform_device *pdev)
 {
 	struct mca_buckchg_jeita_dev *info;
+	struct mca_smartchg_if_ops smartchg_ops = g_jeita_smartchg_if_ops;
+	struct mca_votable *flip;
 	int ret;
 	int online = 0, wireless_online = 0;
 
@@ -1338,49 +1387,70 @@ static int mca_buckchg_jeita_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	info->dev = &pdev->dev;
+	platform_set_drvdata(pdev, info);
 	mutex_init(&info->event_lock);
+	INIT_DELAYED_WORK(&info->monitor_work, mca_buckchg_jeita_monitor_work);
 	ret = mca_buckchg_jeita_parse_dt(info);
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret, "invalid/unavailable JEITA parameters\n");
-	INIT_DELAYED_WORK(&info->monitor_work, mca_buckchg_jeita_monitor_work);
+
+	/* A slab phone must not acquire the foldable-only load-switch voter. */
+	if (info->support_base_flip) {
+		flip = mca_create_owned_votable("flip_charge_curr", MCA_VOTE_MIN,
+			mca_buckchg_jeita_flip_charge_limit,
+			MCA_BUCKCHG_JEITA_FLIP_CURRENT_DEFAULT_VALUE, info);
+		if (IS_ERR(flip))
+			return PTR_ERR(flip);
+		info->flip_fcc_voter = flip;
+		/* The first temperature-derived vote replays retained constraints. */
+	}
 	mca_buckchg_jeita_init_voter(info);
-	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_JEITA,
-					mca_buckchg_jeita_process_event,
-					mca_strategy_buckchg_jeita_get_status,
-					NULL, info);
-	g_jeita_smartchg_if_ops.data = info;
-	(void)mca_smartchg_if_ops_register(&g_jeita_smartchg_if_ops);
 
-	(void)mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
-					   STRATEGY_STATUS_TYPE_ONLINE,
-					   &online);
-	(void)mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
-					   STRATEGY_STATUS_TYPE_ONLINE,
-					   &wireless_online);
-
+	ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
+					 STRATEGY_STATUS_TYPE_ONLINE, &online);
+	if (ret)
+		online = 0;
+	ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
+					 STRATEGY_STATUS_TYPE_ONLINE, &wireless_online);
+	if (ret)
+		wireless_online = 0;
 	info->usb_online = !!online;
 	info->wireless_online = !!wireless_online;
-	if (online || wireless_online) {
-		info->online = 1;
-		schedule_delayed_work(&info->monitor_work, 0);
-		return 0;
-	}
+	info->online = !!online || !!wireless_online;
 
-	if (!info->voter_ok)
-		schedule_delayed_work(
-			&info->monitor_work,
-			msecs_to_jiffies(
-				MCA_BUCKCHG_JEITA_INIT_VOTER_INTERVAL));
-	mca_log_err("probe ok\n");
+	ret = mca_strategy_ops_register(STRATEGY_FUNC_TYPE_JEITA,
+				       mca_buckchg_jeita_process_event,
+				       mca_strategy_buckchg_jeita_get_status,
+				       NULL, info);
+	if (ret)
+		goto fail;
+	info->strategy_registered = true;
+	smartchg_ops.data = info;
+	ret = mca_smartchg_if_ops_register(&smartchg_ops);
+	if (ret)
+		goto fail;
+	info->smartchg_registered = true;
+
+	/* A live Nezha event may already have changed the initial online state. */
+	mutex_lock(&info->event_lock);
+	if (info->online || !info->voter_ok)
+		schedule_delayed_work(&info->monitor_work, info->online ? 0 :
+			msecs_to_jiffies(MCA_BUCKCHG_JEITA_INIT_VOTER_INTERVAL));
+	mutex_unlock(&info->event_lock);
 	return 0;
+fail:
+	mca_buckchg_jeita_stop(info);
+	return ret;
 }
 
 static void mca_buckchg_jeita_remove(struct platform_device *pdev)
 {
+	mca_buckchg_jeita_stop(platform_get_drvdata(pdev));
 }
 
 static void mca_buckchg_jeita_shutdown(struct platform_device *pdev)
 {
+	mca_buckchg_jeita_stop(platform_get_drvdata(pdev));
 }
 
 static const struct of_device_id match_table[] = {
