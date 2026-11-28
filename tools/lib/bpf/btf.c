@@ -5259,10 +5259,65 @@ int btf_ext_visit_str_offs(struct btf_ext *btf_ext, str_off_visit_fn visit, void
 struct btf_distill {
 	struct btf_pipe pipe;
 	int *id_map;
+	bool *ambiguous_composite;
 	unsigned int split_start_id;
 	unsigned int split_start_str;
 	int diff_id;
 };
+
+struct btf_distill_composite {
+	const char *name;
+	__u32 size, id;
+};
+
+static int btf_distill_composite_cmp(const void *a, const void *b)
+{
+	const struct btf_distill_composite *x = a, *y = b;
+	int ret = strcmp(x->name, y->name);
+
+	if (ret)
+		return ret;
+	if (x->size != y->size)
+		return x->size < y->size ? -1 : 1;
+	return 0;
+}
+
+/*
+ * A zero-member distilled composite cannot distinguish these base types.
+ * Preserve their complete definitions in split BTF instead, just as for
+ * anonymous composites. Never pick an arbitrary same-name/same-size type.
+ */
+static int btf_distill_find_ambiguous_composites(struct btf_distill *dist)
+{
+	struct btf_distill_composite *types;
+	unsigned int i, count = 0;
+	const struct btf_type *t;
+
+	dist->ambiguous_composite = calloc(dist->split_start_id, sizeof(bool));
+	if (!dist->ambiguous_composite)
+		return -ENOMEM;
+	types = calloc(dist->split_start_id, sizeof(*types));
+	if (!types)
+		return -ENOMEM;
+	for (i = 1; i < dist->split_start_id; i++) {
+		t = btf_type_by_id(dist->pipe.src, i);
+		if (!btf_is_composite(t) || !t->name_off)
+			continue;
+		types[count++] = (struct btf_distill_composite) {
+			.name = btf__name_by_offset(dist->pipe.src, t->name_off),
+			.size = t->size, .id = i,
+		};
+	}
+	qsort(types, count, sizeof(*types), btf_distill_composite_cmp);
+	for (i = 1; i < count; i++) {
+		if (btf_distill_composite_cmp(&types[i - 1], &types[i]))
+			continue;
+		dist->ambiguous_composite[types[i - 1].id] = true;
+		dist->ambiguous_composite[types[i].id] = true;
+	}
+	free(types);
+	return 0;
+}
 
 static int btf_add_distilled_type_ids(struct btf_distill *dist, __u32 i)
 {
@@ -5317,10 +5372,11 @@ static int btf_add_distilled_type_ids(struct btf_distill *dist, __u32 i)
 		 * marked as used also; so for example if we find a PTR to INT
 		 * we need both the PTR and INT.
 		 *
-		 * The only exception is named struct/unions, since distilled
-		 * base BTF composite types have no members.
+		 * Unambiguous named struct/unions need no traversal, since
+		 * their distilled base BTF representations have no members.
 		 */
-		if (btf_is_composite(base_t) && base_t->name_off)
+		if (btf_is_composite(base_t) && base_t->name_off &&
+		    !dist->ambiguous_composite[*id])
 			continue;
 		err = btf_add_distilled_type_ids(dist, *id);
 		if (err)
@@ -5331,7 +5387,7 @@ static int btf_add_distilled_type_ids(struct btf_distill *dist, __u32 i)
 
 static int btf_add_distilled_types(struct btf_distill *dist)
 {
-	bool adding_to_base = dist->pipe.dst->start_id == 1;
+	bool adding_to_base = dist->pipe.dst->base_btf == NULL;
 	int id = btf__type_cnt(dist->pipe.dst);
 	struct btf_type *t;
 	int i, err = 0;
@@ -5362,15 +5418,15 @@ static int btf_add_distilled_types(struct btf_distill *dist)
 		case BTF_KIND_STRUCT:
 		case BTF_KIND_UNION:
 			/* Named struct/union are added to base as 0-vlen
-			 * struct/union of same size.  Anonymous struct/unions
-			 * are added to split BTF as-is.
+			 * struct/union of same size. Anonymous or ambiguous
+			 * struct/unions are added to split BTF as-is.
 			 */
 			if (adding_to_base) {
-				if (!t->name_off)
+				if (!t->name_off || dist->ambiguous_composite[i])
 					continue;
 				err = btf_add_composite(dist->pipe.dst, kind, name, t->size);
 			} else {
-				if (t->name_off)
+				if (t->name_off && !dist->ambiguous_composite[i])
 					continue;
 				err = btf_add_type(&dist->pipe, t);
 			}
@@ -5452,9 +5508,9 @@ static int btf_update_distilled_type_ids(struct btf_distill *dist, __u32 i)
  * Size is recorded for named struct/unions to help guide matching to the
  * target base BTF during later relocation.
  *
- * The only case where structs, unions or enumerated types are fully represented
- * is when they are anonymous; in such cases, the anonymous type is added to
- * split BTF in full.
+ * Anonymous structs, unions and enumerated types are added to split BTF in
+ * full. Named structs/unions that are ambiguous by name and size in
+ * the original base are also kept in full, including their dependencies.
  *
  * We return newly-created split BTF where the split BTF refers to a newly-created
  * distilled base BTF. Both must be freed separately by the caller.
@@ -5494,6 +5550,9 @@ int btf__distill_base(const struct btf *src_btf, struct btf **new_base_btf,
 	}
 	dist.split_start_id = btf__type_cnt(old_base);
 	dist.split_start_str = old_base->hdr->str_len;
+	err = btf_distill_find_ambiguous_composites(&dist);
+	if (err)
+		goto done;
 
 	/* Pass over src split BTF; generate the list of base BTF type ids it
 	 * references; these will constitute our distilled BTF set to be
@@ -5548,6 +5607,7 @@ int btf__distill_base(const struct btf *src_btf, struct btf **new_base_btf,
 	}
 done:
 	free(dist.id_map);
+	free(dist.ambiguous_composite);
 	hashmap__free(dist.pipe.str_off_map);
 	if (err) {
 		btf__free(new_split);
