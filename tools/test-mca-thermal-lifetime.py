@@ -54,7 +54,7 @@ static void srcu_read_unlock(pthread_rwlock_t *s,int idx) {(void)idx;pthread_rwl
 static void synchronize_srcu(pthread_rwlock_t *s) {atomic_store(&syncing,1);pthread_rwlock_wrlock(s);pthread_rwlock_unlock(s);}
 #define msecs_to_jiffies(x) (x)
 #define container_of(p,t,m) ((t *)((char *)(p)-offsetof(t,m)))
-enum {STRATEGY_FUNC_TYPE_THERMAL,STRATEGY_FUNC_TYPE_QUICK_WIRELESS,STRATEGY_FUNC_TYPE_BASIC_WIRELESS,MCA_EVENT_WIRELESS_THERMAL_PHONE_FLAG,MCA_SMARTCHG_IF_CHG_TYPE_THERMAL,MCA_CHARGE_LOG_ID_THERMAL};
+enum {XM_CHARGER_TYPE_UNKNOW,STRATEGY_FUNC_TYPE_THERMAL,STRATEGY_FUNC_TYPE_QUICK_WIRELESS,STRATEGY_FUNC_TYPE_BASIC_WIRELESS,MCA_EVENT_WIRELESS_THERMAL_PHONE_FLAG,MCA_SMARTCHG_IF_CHG_TYPE_THERMAL,MCA_CHARGE_LOG_ID_THERMAL};
 struct device_node {int unused;};
 struct device {void *data;struct device_node *of_node;};
 struct platform_device {struct device dev;};
@@ -83,8 +83,8 @@ static int mca_vote(struct mca_votable *v,const char *who,bool en,int value) {
 }
 static int mca_rerun_election(struct mca_votable *v) {(void)v;return 0;}
 static int mca_strategy_func_process(int t,int e,int v) {(void)t;(void)e;(void)v;return 0;}
-static void mca_charger_thermal_handle_limit(struct mca_thermal_info *i,struct mca_thermal_ctrl_info *c,struct mca_thermal_data *d,struct mca_votable **v) {(void)i;(void)c;(void)d;(void)v;limit_calls++;}
-static void mca_charger_thermal_flip_handle_limit(struct mca_thermal_info *i,struct mca_thermal_ctrl_info *c,int *d,struct mca_votable *v) {(void)i;(void)c;(void)d;(void)v;limit_calls++;}
+static int mca_charger_thermal_handle_limit(struct mca_thermal_info *i,struct mca_thermal_ctrl_info *c,struct mca_thermal_data *d,struct mca_votable **v) {(void)i;(void)c;(void)d;(void)v;limit_calls++;return 0;}
+static int mca_charger_thermal_flip_handle_limit(struct mca_thermal_info *i,struct mca_thermal_ctrl_info *c,int *d,struct mca_votable *v) {(void)i;(void)c;(void)d;(void)v;limit_calls++;return 0;}
 static int mca_charger_thermal_parse_dt(struct mca_thermal_info *i) {i->support_wireless=1;i->wired_ctrl_info.max_level=i->wireless_ctrl_info.max_level=2;return step();}
 static int mca_charger_thermal_init_wired_voter(struct mca_thermal_info *i) {i->wired_ctrl_info.voter_ok=!wired_missing;return wired_missing?-EAGAIN:0;}
 static int mca_charger_thermal_init_wireless_voter(struct mca_thermal_info *i) {i->wireless_ctrl_info.voter_ok=!wireless_missing;return wireless_missing?-EAGAIN:0;}
@@ -106,7 +106,7 @@ static const struct mca_smartchg_if_ops g_thermal_smartchg_if_ops={0};
 static struct mca_log_charge_log_ops g_mca_thermal_log_ops;
 '''
 reg=s[s.index('static struct mca_thermal_info __rcu'):s.index('static void mca_charger_thermal_update_chg_curr')]
-body=reg+''.join(fn(n) for n in ['mca_wireless_charger_thermal_handle_limit','mca_set_wls_charger_thermal_remove','mca_get_wls_charger_thermal_remove','mca_charger_thermal_init_voter_work','mca_charger_thermal_get_max_level','mca_charger_thermal_get_cur_level','mca_charger_thermal_set_cur_level'])
+body=reg+''.join(fn(n) for n in ['mca_thermal_record_error','mca_thermal_retry','mca_charger_thermal_poweroff_clear_voter','mca_wireless_charger_thermal_poweroff_clear_voter','mca_wireless_charger_thermal_flip_handle_limit','mca_wireless_charger_thermal_handle_limit','mca_set_wls_charger_thermal_remove','mca_get_wls_charger_thermal_remove','mca_charger_thermal_init_voter_work','mca_charger_thermal_get_max_level','mca_charger_thermal_get_cur_level','mca_charger_thermal_set_cur_level'])
 body+=s[s.index('static const struct thermal_cooling_device_ops g_mca_charger_tcd_ops'):s.index('static int mca_charger_thermal_wls_super_sts_callback')]
 body+=''.join(fn(n) for n in ['mca_charger_thermal_stop','mca_charger_thermal_probe','mca_charger_thermal_remove','mca_charger_thermal_shutdown'])
 test=r'''
@@ -125,8 +125,8 @@ int main(void) {
  assert(mca_charger_thermal_set_cur_level(i->tcd,ULONG_MAX)==-EINVAL&&i->wired_ctrl_info.limit_level==2);
  assert(mca_get_wls_charger_thermal_remove(NULL)==-EINVAL);
  i->wireless_ctrl_info.limit_level=MAX_THERMAL_LEVEL+1;i->wls_online=1;
- assert(!mca_set_wls_charger_thermal_remove(false)&&!votes); /* no out-of-range table read */
- i->wireless_ctrl_info.limit_level=-1;assert(!mca_set_wls_charger_thermal_remove(false)&&!votes);
+ assert(mca_set_wls_charger_thermal_remove(false)==-EINVAL&&!votes); /* no out-of-range table read */
+ i->wireless_ctrl_info.limit_level=-1;assert(mca_set_wls_charger_thermal_remove(false)==-EINVAL&&!votes);
  i->wireless_ctrl_info.limit_level=1;i->wireless_ctrl_info.chg_curr=1000;
  atomic_store(&block_vote,1);pthread_t r,u;pthread_create(&r,NULL,reader,NULL);
  while(!atomic_load(&entered))sched_yield();

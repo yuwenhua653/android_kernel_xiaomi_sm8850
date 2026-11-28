@@ -5394,21 +5394,19 @@ mca_quick_charge_single_chg_cur_voter_cb(struct mca_votable *votable,
 					 const char *effective_client)
 {
 	struct mca_quick_charge_info *info = data;
-	int i;
+	int i, ret = 0, rc;
 
 	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->sysfs_data.chg_limit[MCA_QUICK_CHG_CH_SINGLE] = effective_result;
-	for (i = 0; i < MCA_QUICK_CHG_CH_MAX * CHG_MODE_MAX; i = i + 2) {
-		if (effective_result)
-			(void)mca_vote(info->voter[i], "if_ops", true,
-				       effective_result);
-		else
-			(void)mca_vote(info->voter[i], "if_ops", false, 0);
+	for (i = 0; i < MCA_QUICK_CHG_CH_MAX * CHG_MODE_MAX; i += 2) {
+		rc = mca_vote(info->voter[i], "if_ops", !!effective_result, effective_result);
+		if (rc && !ret)
+			ret = rc;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int mca_quick_charge_thermal_flip_voter_cb(struct mca_votable *votable,
@@ -5434,21 +5432,19 @@ static int mca_quick_charge_multi_chg_cur_voter_cb(struct mca_votable *votable,
 						   const char *effective_client)
 {
 	struct mca_quick_charge_info *info = data;
-	int i;
+	int i, ret = 0, rc;
 
 	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->sysfs_data.chg_limit[MCA_QUICK_CHG_CH_MULTI] = effective_result;
-	for (i = 1; i < MCA_QUICK_CHG_CH_MAX * CHG_MODE_MAX; i = i + 2) {
-		if (effective_result)
-			(void)mca_vote(info->voter[i], "if_ops", true,
-				       effective_result);
-		else
-			(void)mca_vote(info->voter[i], "if_ops", false, 0);
+	for (i = 1; i < MCA_QUICK_CHG_CH_MAX * CHG_MODE_MAX; i += 2) {
+		rc = mca_vote(info->voter[i], "if_ops", !!effective_result, effective_result);
+		if (rc && !ret)
+			ret = rc;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int mca_quick_charge_create_voter(struct mca_quick_charge_info *info)

@@ -346,10 +346,9 @@ static int strategy_buckchg_input_suspend(struct mca_votable *votable,
 		return -1;
 	mca_log_err("%d\n", effective_result);
 	if (effective_result)
-		mca_vote(info->input_limit_voter, "input_suspend", true, 0);
+		return mca_vote(info->input_limit_voter, "input_suspend", true, 0);
 	else
-		mca_vote(info->input_limit_voter, "input_suspend", false, 0);
-	return 0;
+		return mca_vote(info->input_limit_voter, "input_suspend", false, 0);
 }
 
 static int strategy_buckchg_input_voltage(struct mca_votable *votable,
@@ -357,6 +356,7 @@ static int strategy_buckchg_input_voltage(struct mca_votable *votable,
 					  const char *effective_client)
 {
 	struct strategy_buckchg_dev *info = data;
+	int ret, rc;
 
 	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
@@ -365,26 +365,27 @@ static int strategy_buckchg_input_voltage(struct mca_votable *votable,
 
 	if (info->hvdcp_allow_flag) {
 		info->proc_data.voltage = STATEGY_CHARGE_VBUS_9V;
-		mca_vote(info->input_limit_voter, "volt_limit",
+		ret = mca_vote(info->input_limit_voter, "volt_limit",
 			 info->buck_9v_in, info->buck_9v_in);
-		mca_vote(info->charge_limit_voter, "volt_thermal_limit",
+		rc = mca_vote(info->charge_limit_voter, "volt_thermal_limit",
 			 info->buck_9v_ich, info->buck_9v_ich);
 	} else {
 		info->proc_data.voltage = STATEGY_CHARGE_VBUS_5V;
-		mca_vote(info->input_limit_voter, "volt_limit",
+		ret = mca_vote(info->input_limit_voter, "volt_limit",
 			 info->buck_5v_in, info->buck_5v_in);
-		mca_vote(info->charge_limit_voter, "volt_thermal_limit",
+		rc = mca_vote(info->charge_limit_voter, "volt_thermal_limit",
 			 info->buck_5v_ich, info->buck_5v_ich);
 	}
 
-	return 0;
+	return ret ? ret : rc;
 }
 
 static int
 strategy_buckchg_process_multi_input_limit(struct strategy_buckchg_dev *info,
 					   int result)
 {
-	return 0;
+	/* No verified per-buck split/control implementation is available. */
+	return -EOPNOTSUPP;
 }
 
 static int strategy_buckchg_input_limit(struct mca_votable *votable, void *data,
@@ -392,27 +393,10 @@ static int strategy_buckchg_input_limit(struct mca_votable *votable, void *data,
 					const char *effective_client)
 {
 	struct strategy_buckchg_dev *info = data;
-	struct timespec64 ts;
-	int is_zero_speed = 0;
 	int result = effective_result;
 
 	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
-
-	ktime_get_boottime_ts64(&ts);
-	if ((u64)ts.tv_sec < 60) {
-		int zero_speed = mca_qcom_smem_is_zero_speed();
-
-		if (zero_speed >= 0)
-			is_zero_speed = zero_speed;
-		if (is_zero_speed && effective_result) {
-			result = effective_result < 1500 ? 1500 :
-							   effective_result;
-			mca_log_err(
-				"is_zero_speed, result = %d, effective_result = %d\n",
-				result, effective_result);
-		}
-	}
 
 	mca_log_err("set input current %d\n", result);
 
@@ -427,7 +411,8 @@ static int
 strategy_buckchg_process_multi_charge_limit(struct strategy_buckchg_dev *info,
 					    int result)
 {
-	return 0;
+	/* No verified per-buck split/control implementation is available. */
+	return -EOPNOTSUPP;
 }
 
 static int strategy_buckchg_charge_limit(struct mca_votable *votable,
@@ -453,7 +438,8 @@ static int
 strategy_buckchg_process_multi_vterm(struct strategy_buckchg_dev *info,
 				     int result)
 {
-	return 0;
+	/* No verified per-buck split/control implementation is available. */
+	return -EOPNOTSUPP;
 }
 
 #define BASE_FLIP_VTERM_TEMP_HOT_LOW 48
@@ -552,7 +538,8 @@ static int
 strategy_buckchg_process_multi_iterm(struct strategy_buckchg_dev *info,
 				     int result)
 {
-	return 0;
+	/* No verified per-buck split/control implementation is available. */
+	return -EOPNOTSUPP;
 }
 
 #define BASE_FLIP_PACK_ITERM_HIGH 1046
@@ -653,13 +640,11 @@ static int strategy_buckchg_set_5v_input(struct mca_votable *votable,
 		return 0;
 
 	if (info->buck_5v_in)
-		mca_vote(info->input_limit_voter, "volt_limit", true,
+		return mca_vote(info->input_limit_voter, "volt_limit", true,
 			 effective_result);
 	else
-		mca_vote(info->input_limit_voter, "volt_limit", false,
+		return mca_vote(info->input_limit_voter, "volt_limit", false,
 			 effective_result);
-
-	return 0;
 }
 
 static int strategy_buckchg_set_5v_ichg(struct mca_votable *votable, void *data,
@@ -677,13 +662,11 @@ static int strategy_buckchg_set_5v_ichg(struct mca_votable *votable, void *data,
 		return 0;
 
 	if (info->buck_5v_ich)
-		mca_vote(info->charge_limit_voter, "volt_thermal_limit", true,
+		return mca_vote(info->charge_limit_voter, "volt_thermal_limit", true,
 			 effective_result);
 	else
-		mca_vote(info->charge_limit_voter, "volt_thermal_limit", false,
+		return mca_vote(info->charge_limit_voter, "volt_thermal_limit", false,
 			 effective_result);
-
-	return 0;
 }
 
 static int strategy_buckchg_set_9v_input(struct mca_votable *votable,
@@ -701,13 +684,11 @@ static int strategy_buckchg_set_9v_input(struct mca_votable *votable,
 		return 0;
 
 	if (info->buck_9v_in)
-		mca_vote(info->input_limit_voter, "volt_limit", true,
+		return mca_vote(info->input_limit_voter, "volt_limit", true,
 			 effective_result);
 	else
-		mca_vote(info->input_limit_voter, "volt_limit", false,
+		return mca_vote(info->input_limit_voter, "volt_limit", false,
 			 effective_result);
-
-	return 0;
 }
 
 static int strategy_buckchg_set_9v_ichg(struct mca_votable *votable, void *data,
@@ -725,13 +706,11 @@ static int strategy_buckchg_set_9v_ichg(struct mca_votable *votable, void *data,
 		return 0;
 
 	if (info->buck_9v_ich)
-		mca_vote(info->charge_limit_voter, "volt_thermal_limit", true,
+		return mca_vote(info->charge_limit_voter, "volt_thermal_limit", true,
 			 effective_result);
 	else
-		mca_vote(info->charge_limit_voter, "volt_thermal_limit", false,
+		return mca_vote(info->charge_limit_voter, "volt_thermal_limit", false,
 			 effective_result);
-
-	return 0;
 }
 
 static int strategy_buckchg_init_voter(struct strategy_buckchg_dev *info)

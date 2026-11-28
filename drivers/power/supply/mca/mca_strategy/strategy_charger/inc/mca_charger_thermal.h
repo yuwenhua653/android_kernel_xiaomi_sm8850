@@ -124,6 +124,7 @@ struct mca_sic_data sic_init_list[POWER_MAX_LIST] = {
 
 struct mca_thermal_info {
 	bool stopping;
+	bool wired_clear_pending, wireless_clear_pending;
 	bool strategy_registered, smartchg_registered, sysfs_created, log_registered;
 	int wireless_thermal_removed, wired_thermal_removed;
 	int wired_flip_thermal_removed, wireless_flip_thermal_removed;

@@ -1,0 +1,188 @@
+{
+  "date": "2026-11-28",
+  "base_commit": "4237e3cf38ba2657643dda87cde53b7299cc633f",
+  "branch": "nazha",
+  "compiler": "host cc",
+  "instrumentation": [
+    "ASan",
+    "UBSan"
+  ],
+  "tests": [
+    {
+      "test": "tools/test-mca-charge-interface.py",
+      "result": "PASS",
+      "sha256": "1bc8d15691fd4dc9b74b0728025152efcfea2584881caf56f69d09183c98a756",
+      "output": [
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)",
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)"
+      ]
+    },
+    {
+      "test": "tools/test-mca-jeita-lifetime.py",
+      "result": "PASS",
+      "sha256": "e50c3409b24bf7879dbf601c977b683d24a7ef20b0ba349182206a79df146d39",
+      "output": [
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe",
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe"
+      ]
+    },
+    {
+      "test": "tools/test-mca-limit-fanout.py",
+      "result": "PASS",
+      "sha256": "88ac64bd9460be62ff28e33e2606114b3d57b26327be975baf6ead919289aff6",
+      "output": [
+        "PASS: actual Buck/QC nested errors, all fanout destinations, first errno, retries, exact sub-1500mA limits and unsupported multi-buck"
+      ]
+    },
+    {
+      "test": "tools/test-mca-owned-voter.py",
+      "result": "PASS",
+      "sha256": "8e54c52530c474167ed90b9947a39fe44c034a2abc0c7ad1a12056cf4bd10117",
+      "output": [
+        "PASS: actual owned voter stable handles, callback drain, duplicate/legacy rejection, rebind, allocation failures and module cleanup"
+      ]
+    },
+    {
+      "test": "tools/test-mca-provider-batch.py",
+      "result": "PASS",
+      "sha256": "d5ed760eff5c4465541273d38110d496e07927fd1a829a8e63568fefea6e891d",
+      "output": [
+        "PASS: actual buck probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe",
+        "PASS: actual qc probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe"
+      ]
+    },
+    {
+      "test": "tools/test-mca-qc-battery-selection.py",
+      "result": "PASS",
+      "sha256": "21be05573505576bc0e9e41b52b2343210e0c74b3cd63624dca31ed4ed865da1",
+      "output": [
+        "PASS: actual QC battery selector, mode/role bounds, supplier errors, read failures, selected table and OF reference release"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-lifetime.py",
+      "result": "PASS",
+      "sha256": "4b238a617e066f9b2915f005de1613d4ba963d9ca9b5c1b4f069cc2013e26456",
+      "output": [
+        "PASS: actual smartchg probe faults, 3 owned voters, all global exports/SRCU drain, dual-source events, overflow/errors and 20 rebinds"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-policy.py",
+      "result": "PASS",
+      "sha256": "2e168bbc6ee74cde29c18fb99260d0ef43b1999b98058e4398531246ac5605eb",
+      "output": [
+        "PASS: actual smartchg 1/2-row DT bounds, invalid fields, gauge failures, vote retry and stopped worker",
+        "PASS: actual QC rejects unverified BAA without reading input; non-foldable events do not reparse battery tables"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-registry.py",
+      "result": "PASS",
+      "sha256": "4f8e670b49b62f4cc4868cd48e59ece2dc12a27596f8afaebd32985ed4b283f3",
+      "output": [
+        "PASS: actual smartchg copied registry, allocation failure, identity, seven dispatchers, backend failures and concurrent unregister/cleanup drain model"
+      ]
+    },
+    {
+      "test": "tools/test-mca-thermal-errors.py",
+      "result": "PASS",
+      "sha256": "0973e068fe83681c2b9d6cbd3d1e9a85595098494be743fa0d73d100de6ec0c5",
+      "output": [
+        "PASS: actual thermal 30 apply failure points, first errors, retry/new requests, release retry, independent suppliers, sysfs/cooling bounds and disconnect cleanup"
+      ]
+    },
+    {
+      "test": "tools/test-mca-thermal-lifetime.py",
+      "result": "PASS",
+      "sha256": "a25ec5ceb91128df4a0bbff097d5cae87a95ce4dbeedb9d9f243fba1467e0168",
+      "output": [
+        "PASS: actual thermal SRCU drain, ownership, all probe failures, cooling/wireless bounds and wired supplier retry"
+      ]
+    },
+    {
+      "test": "tools/test-mca-voter-errors.py",
+      "result": "PASS",
+      "sha256": "82c30f5d837e86e7ecfc077b2b586fb965cbd60be90b9561e2cf249774c50ab8",
+      "output": [
+        "PASS: actual MCA voter callback retry, override/force error state, no-callback votes and invalid-type unlock"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-jeita-events.py",
+      "result": "PASS",
+      "sha256": "03febc0c045f941fd4fb565c13be3fd6ba92f0c9cc450b0574cf520b43de7702",
+      "output": [
+        "PASS: actual Nezha JEITA wired/wireless handover, repeated events, final disconnect and shared OSS DTPT event (no OEM ID alias)"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-jeita-parser.py",
+      "result": "PASS",
+      "sha256": "231ff8a7cb540e205ef52c6a7acf921d4b26d609d2afd66938895b5cc6e668bc",
+      "output": [
+        "PASS: JEITA table, 3 allocation failures, 28 read failures and malformed fields"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-thermal-format.py",
+      "result": "PASS",
+      "sha256": "551fe14899656ec531380cae44f05d56ee23562404b0c1ba3bc0c767d51b04af",
+      "output": [
+        "PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures, flip table bounds and unchanged error outputs"
+      ]
+    }
+  ],
+  "changed_files": [
+    {
+      "path": "android/nezha-native/module-gaps.md",
+      "sha256": "f6e21472cdf90105be1bb6f49c138e70cac1ebcd0238d75df62a2d2bec7e102e"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/inc/mca_charger_thermal.h",
+      "sha256": "31d43fb658c147b2c2d17c002d892ae6e4c5253d5bd9f6d148d8709a137c300b"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_charger_thermal.c",
+      "sha256": "04464be4faedf4922646b665a80acccf820f44965509446abf59d9ee2dd62b82"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_buckchg.c",
+      "sha256": "5035f8ffd895a7eb0f7c054962143e03bfa5b13508d4e116ef154978e771d57d"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.c",
+      "sha256": "ffba53278f09754c5d8cbcf49a3723c0add498cb03d71a416ba889f970896e8e"
+    },
+    {
+      "path": "tools/test-mca-limit-fanout.py",
+      "sha256": "88ac64bd9460be62ff28e33e2606114b3d57b26327be975baf6ead919289aff6"
+    },
+    {
+      "path": "tools/test-mca-thermal-errors.py",
+      "sha256": "0973e068fe83681c2b9d6cbd3d1e9a85595098494be743fa0d73d100de6ec0c5"
+    },
+    {
+      "path": "tools/test-mca-thermal-lifetime.py",
+      "sha256": "a25ec5ceb91128df4a0bbff097d5cae87a95ce4dbeedb9d9f243fba1467e0168"
+    }
+  ],
+  "scope": [
+    "Extracted production functions with mocked hardware, workqueues, registries and SRCU; not in-kernel concurrency validation.",
+    "No ARM64 Kbuild/modpost, final image or Nezha hardware test in this batch.",
+    "Thirty thermal apply failure positions plus nested Buck/QC failures; multi-vote changes are not atomic transactions.",
+    "SIC adapter query, complete stop/protection chain and wireless provider lifecycle remain unresolved.",
+    "Pinned thermal DT regression: 91998b30926ec6750803c45fbf25402268aa692e. JEITA uses built-in fixtures.",
+    "Full MCA stays disabled; no module, DT, manifest pin or configuration changes."
+  ],
+  "read_only_audit": [
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.c",
+      "git_blob_sha": "196939007773541bd0d05fff0bbeb10a7f2c5243"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_quick_wireless.c",
+      "git_blob_sha": "892c8b653c445d7fa56a71069a1dfb4b98303b1e"
+    }
+  ]
+}
