@@ -450,9 +450,38 @@ struct mca_quick_charge_smartchg_data {
 	int fcc;
 };
 
+struct mca_quick_charge_runtime {
+	int get_base_limit_cur_over_curr_count;
+	bool get_base_limit_cur_runSwOcp;
+	int get_qc_vbus_tune_status_vbus_cp_mv_before;
+	int get_qc_vbus_tune_status_vbus_counts;
+	int check_charge_done_count;
+	int get_secure_cur_over_volt_count;
+	int eu_pps_anti_disconnection_strategy_timer_start;
+	bool eu_pps_anti_disconnection_strategy_start_flag;
+	bool eu_pps_anti_disconnection_strategy_trigger;
+	int eu_pps_anti_disconnection_strategy_count;
+	int qc_get_vbus_change_trend_ibatt_count;
+	int qc_get_vbus_change_trend_vbatt_count;
+	int qc_get_vbus_change_trend_ibatt_change;
+	int qc_get_vbus_change_trend_vbatt_change;
+	int qc_get_vbus_change_trend_vbat_now_mv_before;
+	int qc_get_vbus_change_trend_ibat_now_ma_before;
+	int qc_get_vbus_change_trend_decrement_count;
+	u64 regulation_last_boost_time_ms;
+	u64 regulation_last_buck_time_ms;
+	int pps_ptf_work_check_mum;
+	int update_batt_para_curr_batt_index[FG_SITE_MAX];
+	int update_batt_para_last_batt_index[FG_SITE_MAX];
+};
+
 struct mca_quick_charge_info {
+	struct mca_quick_charge_runtime runtime;
 	bool ready, stopping;
-	bool stop_pending;
+	bool abort_requested;
+	bool stop_pending, detach_pending, type_update_pending;
+	bool hardware_ready, teardown_done;
+	int requested_type;
 	struct mutex buck_parallel_lock;
 	bool buck_parallel_active, buck_parallel_dirty;
 	int buck_parallel_icl, buck_parallel_fcc;

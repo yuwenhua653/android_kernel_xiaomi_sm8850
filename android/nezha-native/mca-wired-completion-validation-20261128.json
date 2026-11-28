@@ -1,0 +1,577 @@
+{
+  "date": "2026-11-28",
+  "branch": "nazha",
+  "base_commit": "669785fb5a8cd3cf333882d6b5b894d6984ba984",
+  "scope": "Wired QC/Buck source hardening batch; production COMPLETE_SERVICES remains disabled",
+  "tests": [
+    {
+      "test": "tools/test-mca-bmd-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.51,
+      "output": [
+        "PASS: actual BMD supplier errors, managed GPIO, callback publication/unwind, stop ordering and conservative samples"
+      ],
+      "sha256": "d1011ae3798633379fc1b63147bd979685dcb8c3f0d2b3eed17ff17e9cc5f50c"
+    },
+    {
+      "test": "tools/test-mca-charge-interface.py",
+      "result": "PASS",
+      "seconds": 0.44,
+      "output": [
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)",
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)"
+      ],
+      "sha256": "1bc8d15691fd4dc9b74b0728025152efcfea2584881caf56f69d09183c98a756"
+    },
+    {
+      "test": "tools/test-mca-dtpt-route.py",
+      "result": "PASS",
+      "seconds": 0.22,
+      "output": [
+        "PASS: actual FG/business/JEITA DTPT route, failed sample preserves protection, unrelated event rejected"
+      ],
+      "sha256": "9de45e21dc6ff8ccfd22b12cd06f96a395cd69a8dcbce1bd3cd180468fec4c28"
+    },
+    {
+      "test": "tools/test-mca-jeita-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.78,
+      "output": [
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe",
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe"
+      ],
+      "sha256": "e50c3409b24bf7879dbf601c977b683d24a7ef20b0ba349182206a79df146d39"
+    },
+    {
+      "test": "tools/test-mca-limit-fanout.py",
+      "result": "PASS",
+      "seconds": 0.33,
+      "output": [
+        "PASS: actual Buck/QC nested errors, all fanout destinations, first errno, retries, exact sub-1500mA limits and unsupported multi-buck"
+      ],
+      "sha256": "88ac64bd9460be62ff28e33e2606114b3d57b26327be975baf6ead919289aff6"
+    },
+    {
+      "test": "tools/test-mca-log-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.22,
+      "output": [
+        "PASS: log NULL/missing callbacks, invalid slot, negative/oversized returns, newline bounds and synchronized unregister"
+      ],
+      "sha256": "383fac31f0c358821b2949052bbd3ed7e6d272679643256636569f18fab93cdb"
+    },
+    {
+      "test": "tools/test-mca-owned-voter.py",
+      "result": "PASS",
+      "seconds": 0.64,
+      "output": [
+        "PASS: actual owned voter stable handles, callback drain, duplicate/legacy rejection, rebind, allocation failures and module cleanup"
+      ],
+      "sha256": "8e54c52530c474167ed90b9947a39fe44c034a2abc0c7ad1a12056cf4bd10117"
+    },
+    {
+      "test": "tools/test-mca-parallel-buck.py",
+      "result": "PASS",
+      "seconds": 0.49,
+      "output": [
+        "PASS: actual Buck transitions, MIN caps, 12 enable failures, 5 cleanup failures, rollback retry, instance isolation and pthread serialization",
+        "PASS: actual complete-current samples, invalid/overflow input, single/dual CP transitions, rollback and failure state"
+      ],
+      "sha256": "a4aef017fb932a74677f7fc8375afef321b660834c393d57b4e8de6a5056726d"
+    },
+    {
+      "test": "tools/test-mca-protection-errors.py",
+      "result": "PASS",
+      "seconds": 0.34,
+      "output": [
+        "PASS: ibat wired-only sampling, provider failures, fault preservation, per-instance state, topology and stop ordering",
+        "PASS: vbat wired-only sampling, provider failures, fault preservation, per-instance state, topology and stop ordering"
+      ],
+      "sha256": "558914a87f2ae0379c0806685cb96e10508c4208851b92ebd52236de5b2d3e2d"
+    },
+    {
+      "test": "tools/test-mca-provider-batch.py",
+      "result": "PASS",
+      "seconds": 0.79,
+      "output": [
+        "PASS: actual buck probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe",
+        "PASS: actual qc probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe"
+      ],
+      "sha256": "a980fde4267cfdf8197af1969a943515f3b22e1e7995dcfae3c66e44bc191c44"
+    },
+    {
+      "test": "tools/test-mca-qc-battery-selection.py",
+      "result": "PASS",
+      "seconds": 0.27,
+      "output": [
+        "PASS: actual QC battery selector, mode/role bounds, supplier errors, read failures, selected table and OF reference release"
+      ],
+      "sha256": "21be05573505576bc0e9e41b52b2343210e0c74b3cd63624dca31ed4ed865da1"
+    },
+    {
+      "test": "tools/test-mca-sic-power.py",
+      "result": "PASS",
+      "seconds": 0.28,
+      "output": [
+        "PASS: actual SIC query errors, retained limits, both rating APIs, all rating boundaries, retry, source changes and independent wireless replay"
+      ],
+      "sha256": "2a1d78d3b0ebf43414fdbcb47fcfc7954c0d9bd17278be7e67b59a66452f643e"
+    },
+    {
+      "test": "tools/test-mca-smartchg-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.49,
+      "output": [
+        "PASS: actual smartchg probe faults, 3 owned voters, all global exports/SRCU drain, dual-source events, overflow/errors and 20 rebinds"
+      ],
+      "sha256": "4b238a617e066f9b2915f005de1613d4ba963d9ca9b5c1b4f069cc2013e26456"
+    },
+    {
+      "test": "tools/test-mca-smartchg-policy.py",
+      "result": "PASS",
+      "seconds": 0.46,
+      "output": [
+        "PASS: actual smartchg 1/2-row DT bounds, invalid fields, gauge failures, vote retry and stopped worker",
+        "PASS: actual QC rejects unverified BAA without reading input; non-foldable events do not reparse battery tables"
+      ],
+      "sha256": "8e97cf7bf7b5bdd2164d5316b1d82fd63d6487b4a8e3e348b04c90ba40a46a9f"
+    },
+    {
+      "test": "tools/test-mca-smartchg-registry.py",
+      "result": "PASS",
+      "seconds": 0.34,
+      "output": [
+        "PASS: actual smartchg copied registry, allocation failure, identity, seven dispatchers, backend failures and concurrent unregister/cleanup drain model"
+      ],
+      "sha256": "4f8e670b49b62f4cc4868cd48e59ece2dc12a27596f8afaebd32985ed4b283f3"
+    },
+    {
+      "test": "tools/test-mca-strategy-build.py",
+      "result": "PASS",
+      "seconds": 0.06,
+      "output": [
+        "PASS: generic registry-only, legacy SERVICES-only and COMPLETE Makefile selection; Nezha policy remains gated"
+      ],
+      "sha256": "b1d186312775a36b06819b50eea613599d2b4467a477b64b773e695cce706199"
+    },
+    {
+      "test": "tools/test-mca-strategy-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.24,
+      "output": [
+        "PASS: actual strategy dispatch errors, duplicate registration, allocation failure, synchronized unregister and concurrent replacement"
+      ],
+      "sha256": "03ce10c0f0cdbc51c40f6ab57c0373cf43c65fc8a812933c76cbc9778e154e68"
+    },
+    {
+      "test": "tools/test-mca-thermal-errors.py",
+      "result": "PASS",
+      "seconds": 0.71,
+      "output": [
+        "PASS: actual thermal 30 apply failure points, first errors, retry/new requests, release retry, independent suppliers, sysfs/cooling bounds and disconnect cleanup"
+      ],
+      "sha256": "0973e068fe83681c2b9d6cbd3d1e9a85595098494be743fa0d73d100de6ec0c5"
+    },
+    {
+      "test": "tools/test-mca-thermal-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.59,
+      "output": [
+        "PASS: actual thermal SRCU drain, ownership, all probe failures, cooling/wireless bounds and wired supplier retry"
+      ],
+      "sha256": "270cc3160b5ac378e8ef0c02caa2b3b8c7df38b7c0708e0756433a71133de9a3"
+    },
+    {
+      "test": "tools/test-mca-usb-ownership.py",
+      "result": "PASS",
+      "seconds": 0.39,
+      "output": [
+        "PASS: USB owned/borrowed lifetime, descriptor isolation, deferral, allocation/register/action failure and repeated cleanup",
+        "PASS: USB owned/borrowed lifetime, descriptor isolation, deferral, allocation/register/action failure and repeated cleanup"
+      ],
+      "sha256": "79d05d809ba8ee6111771bad8ef73864a6dce2207fb288f1b17f5f06fe6c75c8"
+    },
+    {
+      "test": "tools/test-mca-voter-errors.py",
+      "result": "PASS",
+      "seconds": 0.5,
+      "output": [
+        "PASS: actual MCA voter callback retry, override/force error state, no-callback votes and invalid-type unlock"
+      ],
+      "sha256": "82c30f5d837e86e7ecfc077b2b586fb965cbd60be90b9561e2cf249774c50ab8"
+    },
+    {
+      "test": "tools/test-mca-wired-stop.py",
+      "result": "PASS",
+      "seconds": 0.77,
+      "output": [
+        "PASS: actual single/dual CP and gauge read errors; dual-CP path no longer skips gauge checks",
+        "PASS: actual protection events propagate vote/stop errors, attempt both CPs and preserve the first failure",
+        "PASS: actual wired CP/FG/adapter/readback stop ordering, blocked release, retry state, detach preservation, single/dual CP, voter errors and PD/PPS/QC request failures"
+      ],
+      "sha256": "5f4230d1835100fc5da0359e29565d8ecc333dc74fba9f0ef42cf2744b2abfc9"
+    },
+    {
+      "test": "tools/test-nezha-jeita-events.py",
+      "result": "PASS",
+      "seconds": 0.14,
+      "output": [
+        "PASS: actual Nezha JEITA wired/wireless handover, repeated events, final disconnect and shared OSS DTPT event (no OEM ID alias)"
+      ],
+      "sha256": "03febc0c045f941fd4fb565c13be3fd6ba92f0c9cc450b0574cf520b43de7702"
+    },
+    {
+      "test": "tools/test-nezha-jeita-parser.py",
+      "result": "PASS",
+      "seconds": 0.39,
+      "output": [
+        "PASS: JEITA table, 3 allocation failures, 28 read failures and malformed fields"
+      ],
+      "sha256": "231ff8a7cb540e205ef52c6a7acf921d4b26d609d2afd66938895b5cc6e668bc"
+    },
+    {
+      "test": "tools/test-nezha-thermal-format.py",
+      "result": "PASS",
+      "seconds": 0.56,
+      "output": [
+        "PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures, flip table bounds and unchanged error outputs"
+      ],
+      "sha256": "551fe14899656ec531380cae44f05d56ee23562404b0c1ba3bc0c767d51b04af"
+    },
+    {
+      "test": "tools/test-mca-wired-controls.py",
+      "result": "PASS",
+      "seconds": 0.63,
+      "output": [
+        "PASS: production-layout PPS start fault injection, timeout/abort, UCP restoration, PMIC/VTERM MIN caps and rollback, VFC writes/readback/bounds, transactional mode/path parsing"
+      ],
+      "sha256": "b4af3f8860d5e3ed4b5b3ac8785b8136cfe984ddb87f3a883876d440437f6ce2"
+    },
+    {
+      "test": "tools/test-mca-wired-concurrency.py",
+      "result": "PASS",
+      "seconds": 0.46,
+      "output": [
+        "PASS: actual event/worker/status entry locks, voter trylock/deferred retry, handled errno, disconnect abort before lock, 100 concurrent entries and stopping gate (pthread model)"
+      ],
+      "sha256": "7953723949b19b6816ee2ed1eed6bbc24e70ba50a9d6b8e057709036954864a2"
+    },
+    {
+      "test": "tools/test-mca-wired-quiesce.py",
+      "result": "PASS",
+      "seconds": 0.22,
+      "output": [
+        "PASS: actual QC/Buck final quiesce across 14 failing operations, independent shutdown attempts, first errno, failed-pump ADC retained, single topology and Buck enable rollback"
+      ],
+      "sha256": "822caa03dcf231857c7e9ab84d008ed69eaf15047cce4ff66eaf0b9a19162a99"
+    },
+    {
+      "test": "tools/test-mca-wired-mode-samples.py",
+      "result": "PASS",
+      "seconds": 0.33,
+      "output": [
+        "PASS: actual CP mode stop-before-open and six faults, fixed-PDO flag reset, unsupported modes, complete sample publication, INT_MIN conversion, end-stage bounds with/without skip tables"
+      ],
+      "sha256": "c6b9fbccc323a67c9199675fa279aff6aea3533d2e7c1c59fcce997696ebe641"
+    },
+    {
+      "test": "tools/test-mca-qc-start.py",
+      "result": "PASS",
+      "seconds": 0.36,
+      "output": [
+        "PASS: actual QC tuning/start I/O faults, sleep errno, zero-FCC before voltage, enabled-but-no-current timeout, abort, voltage overflow and tuner read failure"
+      ],
+      "sha256": "c5e4cd0e4d05d73225349a0eac04608f4574dbcf07b53edf29c9348fdc7da688"
+    }
+  ],
+  "arm64_build": {
+    "result": "PASS",
+    "toolchain": "Debian Clang/LLVM/LLD 19.1.7",
+    "target": "drivers/power/supply/mca/",
+    "config_base": [
+      "gki_defconfig",
+      "vendor/canoe_GKI.config",
+      "vendor/nezha_GKI.config"
+    ],
+    "local_compile_only_enable": [
+      "MYRON_MCA_BASE=m",
+      "MYRON_MCA_INTERFACE=m",
+      "MYRON_MCA_PLATFORM=m",
+      "MYRON_MCA_SERVICES=m",
+      "MYRON_MCA_COMPLETE_SERVICES=m"
+    ],
+    "local_toolchain_adjustments": [
+      "RUST=n",
+      "DEBUG_INFO_BTF=n",
+      "DEBUG_INFO_BTF_MODULES=n",
+      "MODULE_SIG_ALL=n"
+    ],
+    "checks": [
+      "WERROR=y",
+      "CFI_CLANG=y",
+      "MODVERSIONS=y",
+      "GENDWARFKSYMS=y"
+    ],
+    "command": "make -C kernel O=$PWD/out-nezha-check ARCH=arm64 LLVM=-19 -j4 drivers/power/supply/mca/",
+    "initial_compile_and_relocatable_link_tasks": 55,
+    "final_changed_object_recompile_log": [
+      "make: Entering directory '/workspace/scratch/d0800c08afb2/kernel'",
+      "make[1]: Entering directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+      "  GEN     Makefile",
+      "  CALL    /workspace/scratch/d0800c08afb2/kernel/scripts/checksyscalls.sh",
+      "  CC [M]  drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.o",
+      "make[1]: Leaving directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+      "make: Leaving directory '/workspace/scratch/d0800c08afb2/kernel'"
+    ],
+    "config_sha256": "d28df2640bb0dd44ecb04aa1be8cfa1b8037e7f5dd008bcc5d45d259bc9b5c72",
+    "objects": [
+      {
+        "path": "drivers/power/supply/mca/mca_business/business_battery/mca_battery_psy.o",
+        "sha256": "d00a8b1473df8e9cd5ce3815c347a761a3d5d3228e5e8225f9eccaf7b239ab9a"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_business/business_battery/mca_business_battery.o",
+        "sha256": "94b7f05c5328a8604016f8d48c9ea3d066e778a5e5f78c95ed52029485354feb"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_business/business_battery/mca_business_battery_comp.o",
+        "sha256": "d948b44c5fdec3307b0222f3a99533cacdeefbb442d07f7638d4452295d3a947"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_business/business_charger/mca_business_charger.o",
+        "sha256": "7f95fd59d1cdd4ac78d7a0da610cbf8330e7192654383551b2bdfbdf7c7d9c9e"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_business/business_charger/mca_business_charger_comp.o",
+        "sha256": "d0a9da34cacad9f5ef22bd2baed6ebb9c5a76ce54a455b830458cf838a0747e5"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_business/business_charger/mca_charger_usb_psy.o",
+        "sha256": "ad520cdc6bfae4b738b880d9b02a7d205b058cdef8b2ecbd77852eb5a2f29234"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_business/business_charger/mca_charger_wireless_psy.o",
+        "sha256": "5d9b08961653182431c36cc4a717b96d3a0e2cdf0234f4e8123442834e710562"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_adsp_glink.o",
+        "sha256": "5b879389c0d6dc7a3d8c24376f20bbebef73ca985ebdd945f451affb3eb4c57e"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_charge_interface.o",
+        "sha256": "6a368b38ff8132c4820ab461288d223d4183e60fea822b44781554ebd82cae16"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_charge_mievent.o",
+        "sha256": "369e89827e6a09b39194530174d37af4092443bb01a61771d66c7d6947bf343e"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_event.o",
+        "sha256": "140cf8c1a70def33d071383746a8f357dabde72bebb1690c8eab2bc6bec61b59"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_hwid.o",
+        "sha256": "c494f320c0c3e86c8ea1e1197e5d4f568e244c68a9b78f2c1b00079c59ae39f4"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_log.o",
+        "sha256": "5097d226247d2d23e40d3d857fc46680ae9cc58219ad676a4d499d8f10687d1d"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_parse_dts.o",
+        "sha256": "671c02b31f89af71fe85b433e9172864b7271efda3d2385b2da1291ef6201a3c"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_qcom_panel.o",
+        "sha256": "2f055be1497ab3b798b84e0374b1a998dc79e57eaaebb242430abb63c10f852d"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_qcom_smem.o",
+        "sha256": "3c2543e0d3822c972d23feb9ac55fd467f507b7a14a84af94a0060c8dc1ee783"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_sysfs.o",
+        "sha256": "0d3295ba429be493f28329c1289f1a482e318dd6860b911b1fede25f0a584b0f"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_voter.o",
+        "sha256": "304a6799206a0b31de59f9ae2318d0381eab7255832d63ef71b221d92443f34c"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_common/mca_workqueue.o",
+        "sha256": "4f98822b6b99ef37b937b71914aedd25c22c5065525f06c0742be53cffc6c162"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_hardware_ic/charge_pump_ic/sc8581/sc8581.o",
+        "sha256": "b9c43f7092860c78159f514bd7c69e051d8825dde7ff84a965ba43ef782b92ca"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_hardware_monitor/mca_bmd.o",
+        "sha256": "2d2163bde6a76dc09665c456beed219f33be59b128ccd81ddbba71f54568ef2a"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_hardware_monitor/mca_connector_antiburn.o",
+        "sha256": "fdd8b16637c9f6fa62d9a757ca18a825ef4b88cb9834726c7450d77a30defb43"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_hardware_monitor/mca_ibat_ocp_monitor.o",
+        "sha256": "ee1d87ea84cb2fd800e5a643c08395fa27a9e7ec330ec794d36aed1077ab05c7"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_hardware_monitor/mca_lpd_detect.o",
+        "sha256": "4efcc6bf26db67a4ba94abee64367af7456b0acf7c0302a1a21d49780cd69e00"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_hardware_monitor/mca_path_control.o",
+        "sha256": "92859226df5b2b16a09547bf7a1f7fc24ab94a6cd17457f4d14dc0bcf116c427"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_hardware_monitor/mca_vbat_ovp_monitor.o",
+        "sha256": "451345f903be4366d41043d23f1f99dce31126cda40a809e9f46b04e1a9ee7fc"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_platform/mca_platform_bc12_class.o",
+        "sha256": "1a49911bc354e75e5ca0bae0e1f98c72e65e27cc5933432c69115004354843be"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_platform/mca_platform_buckchg_class.o",
+        "sha256": "b31e0b87d77cf6210038839456f9d85d34b94e916a767211f831f289cabd8fe8"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_platform/mca_platform_cp_class.o",
+        "sha256": "2eb6f2d9afc8b5d43eb4f29cb45e3c92a2d11bdad5574a9a855b4ce4ab5c8d00"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_platform/mca_platform_fg_ic_ops.o",
+        "sha256": "10b6a4a07eaddd20d5dbb9f49c0bf7d62f0af5f249be8c322c24deb793feebb7"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_platform/mca_platform_loadsw_class.o",
+        "sha256": "7781e1f325fe704c6b3d3d4bb0d9b37a88e0f6313abd69c6654e1c8720b11b2e"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_platform/mca_platform_wireless_class.o",
+        "sha256": "117b42243cf10fe719cf6473ae5a18e097b4af7df97654087127c50c7c20af52"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_protocol/mca_protocol_class.o",
+        "sha256": "7bf61e7b98a2e5071643f8137c9ed3e28be147e410f9e4de00d80214e588d4a2"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_protocol/protocol_pd/mca_protocol_pd_class.o",
+        "sha256": "2a24e4581b276f27e072f8b477621db9a69c28ba6587f97aa2d1c57c1b92d331"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_protocol/protocol_pd/qcom_tcpc/qcom_adsp_pd_protocol.o",
+        "sha256": "b80a6800e25227731e431734894bebf4ef23afc29bbda3e101c6af4c9aec8602"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_protocol/protocol_qc/mca_protocol_qc_class.o",
+        "sha256": "380da9c3020df942804dc9bbb1943b1f9f19fb1308827ff146aea4b25ebbbbbe"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_qcom_subpmic_proxy/mca_nezha_subpmic.o",
+        "sha256": "332ac746455767fe8de8c9dd31d68655d9ddb96cc4cc7231db47d8b92d4b681b"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_qcom_subpmic_proxy/mca_qcom_subpmic_proxy.o",
+        "sha256": "be16c9e6c95852a7780c63e715dc8743bb060c830af68b51574af9a1c64ceff4"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_qcom_sysfs/mca_qcom_sysfs.o",
+        "sha256": "319426e20293a89a16f96f9982465400847aead4db2b2e1c6c88c3d5fc1f9115"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_shared_memory/charger_partition.o",
+        "sha256": "a621b0f6bf3a48c2a68a2186fde0c9569d723dc10605944a55dcaa84a4cb8ecd"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_smart_charge/mca_smart_charge.o",
+        "sha256": "25fc3297475143c440ecc89d96afa63eba5230792950f0c4a04cc92d7c27e8a3"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/mca_strategy_class.o",
+        "sha256": "8ba2b8ccfcbafe15211c24fea3d02df81fe3c1eccaf0f626a813fefb3ecd7159"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_buckchg_jeita.o",
+        "sha256": "7c6eb3b03068c2116058925b95afac8aebf485af91a31c642c6d347e7f42b312"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_charger_thermal.o",
+        "sha256": "b480f21b32df9188d31b000b86de3b8bb8b3bf9e54bd590524177937def21bf8"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_buckchg.o",
+        "sha256": "121b814941ed6a3734e6a2140677819cc41dc3ae0b01ed895033a16638d10569"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.o",
+        "sha256": "ca1da48eeb817f7465e1e15515bbc635a31e5b42f832292b5334528d3b8aeb54"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_fg/mca_battery_shutdown.o",
+        "sha256": "793c996e968eda8652f903c9a25f8404c8cb8ce8641d3d032fd3918fefc14e3b"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_fg/mca_soc_smooth.o",
+        "sha256": "be16fa2bbeeeb83012652de78cf0b2634229197088ae08778dc10a394a18812d"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_fg/mca_strategy_fg.o",
+        "sha256": "e71e060f49d2e4aac9eb679b059a409dfe94d5e46c003f49f3acb99f1d9265a6"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_fg/mca_strategy_fg_class.o",
+        "sha256": "e39d6310c5764593c551980c2c32b4cc51b119abb9a4c82c8f7db050ac1577cc"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_fg/mca_strategy_fg_comp.o",
+        "sha256": "857974e8b90ecb966e625873e76db0764a189850cc0dfae1c32ea23fdc2b9305"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_pd/mca_pd_auth.o",
+        "sha256": "bc1bd9d1a7d50767d0770dc653b7a46d5f0a1923533b5a3de760429b6c67e3b0"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.o",
+        "sha256": "22475899204395ce05d90f3e9847bf86002f53579c290cd5d350e9a51ddc96ca"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_quick_wireless.o",
+        "sha256": "d2c2e8c830001d74141ef84938bcc809fa1a6843da007393b01b75737f783f77"
+      },
+      {
+        "path": "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_wireless_revchg.o",
+        "sha256": "fdc5e1f13c855ae17429c6135704d59b76b6864fc35172cd0808300905df88bf"
+      }
+    ],
+    "not_run": [
+      "full Image link",
+      "strict complete-tree modpost",
+      "final .ko CRC/signature compatibility",
+      "DTB/DLKM/flashable image build",
+      "device runtime and kernel lockdep/KCSAN"
+    ]
+  },
+  "source_sha256": {
+    "drivers/power/supply/mca/mca_strategy/strategy_charger/inc/mca_quick_charger.h": "9388372ec9c6ff21553d1749d475c9d96d0f73e4dad46cbb3daf765fcd3a763f",
+    "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_buckchg.c": "047b5c2f03d7bd3ffb07435b7e9874a248a36d00a39b803627c6457862bb2590",
+    "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.c": "b6ce71c344e27ea35301f6e8c75a519039a5b4f7b3d35cb04cf916f9f9e95bd0",
+    "tools/test-mca-parallel-buck.py": "a4aef017fb932a74677f7fc8375afef321b660834c393d57b4e8de6a5056726d",
+    "tools/test-mca-provider-batch.py": "a980fde4267cfdf8197af1969a943515f3b22e1e7995dcfae3c66e44bc191c44",
+    "tools/test-mca-smartchg-policy.py": "8e97cf7bf7b5bdd2164d5316b1d82fd63d6487b4a8e3e348b04c90ba40a46a9f",
+    "tools/test-mca-wired-stop.py": "5f4230d1835100fc5da0359e29565d8ecc333dc74fba9f0ef42cf2744b2abfc9"
+  },
+  "fixed_inputs": {
+    "modules": "e1864d663b34f9d683895e7ebd0a3a388f404c31",
+    "devicetrees": "91998b30926ec6750803c45fbf25402268aa692e"
+  },
+  "limitations": [
+    "Host tests execute extracted production functions with mocked I/O and production QC data layout for the new controls tests. They cannot certify physical safety or Linux workqueue behavior.",
+    "Concurrency coverage exercises production entry wrappers with pthreads and modeled worker bodies, not the complete charging state machine under kernel workqueues.",
+    "I/O errors can prevent physical shutdown; teardown attempts independent operations and reports failures but cannot retry after unbind.",
+    "Optional multi-Buck current split remains explicitly unsupported; simultaneous single-CP PMIC and parallel-Buck policies rejected; BAA and wireless integration unchanged.",
+    "Full MCA services are enabled only in the local compilation output, never in production defconfig, module installation lists or DT."
+  ]
+}

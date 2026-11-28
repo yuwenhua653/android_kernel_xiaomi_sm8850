@@ -89,7 +89,7 @@ qcpre=r'''
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
 #define mca_log_err(...) ((void)0)
 enum {FG_IC_MASTER,FG_IC_SLAVE,FG_SITE_MAX};
-struct mca_quick_charge_info {bool ready,stopping;int support_base_flip,batt_type,batt_para_cc_thr[2];};
+struct mca_quick_charge_info {struct {int update_batt_para_curr_batt_index[2],update_batt_para_last_batt_index[2];} runtime;bool ready,stopping;int support_base_flip,batt_type,batt_para_cc_thr[2];};
 static int fg_calls,parse_calls;
 static int platform_fg_ops_get_cyclecount(int role,int *out) {(void)role;fg_calls++;*out=300;return 0;}
 static int mca_quick_charge_parse_batt_info(struct mca_quick_charge_info *i,int mode) {(void)i;(void)mode;parse_calls++;return 0;}

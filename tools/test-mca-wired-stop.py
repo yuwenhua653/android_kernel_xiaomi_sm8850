@@ -22,6 +22,7 @@ pre=r'''
 #include <errno.h>
 #include <stdio.h>
 #define READ_ONCE(x) (x)
+#define WRITE_ONCE(x,v) ((x)=(v))
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
 #define min(a,b) ((a)<(b)?(a):(b))
 #define mca_log_info(...) ((void)0)
@@ -42,7 +43,7 @@ enum {XM_CHARGER_TYPE_UNKNOW,XM_CHARGER_TYPE_PD,XM_CHARGER_TYPE_PPS,XM_CHARGER_T
 struct adapter_power_cap_info {int nums;struct {int max_voltage,min_voltage;} cap[7];};
 struct delayed_work {bool pending;};struct mca_votable {int id;};
 struct process {int adp_type,cur_adp_cur,max_adp_curr,cur_adp_volt,min_adp_volt,max_adp_volt,cur_protocol,dual_cp_count,charge_flag,type_chg,sw_ocp_curr,total_err,error_num[2],cur_work_cp;bool cp_iic_ok,stop_charging,ffc_flag;int cur_stage[2],secure_info;struct {int data[4],index,count,sum,avg;} ibus_queue;};
-struct mca_quick_charge_info {bool ready,stopping,stop_pending,online,pd_switch_to_pmic,trigger_antr_burn,pmic_chg_need_fixed_volt,en_buck_parallel_chg,pmic_single_cp_chg,support_base_flip,master_batt_close,check_vbat_ov;int batt_type;int force_normal_volt_para,parall_force_normal_volt_para[2],batt_auth,init_volt_para,parall_init_volt_para,is_platform_qc,fake_pps_ptf,is_eu_model,data_lock,dtpt_status,pps_ptf;int mult_to_single_cnt,cp_type,ffc_final_vterm,last_override_vterm,base_close_curr,force_stop;struct {int chg_enable;} sysfs_data;struct process proc_data;struct delayed_work vfc_work,monitor_work,pps_ptf_work;struct mca_votable *input_suspend_voter,*buck_charge_curr_voter,*term_volt_voter,*flip_charge_curr_voter,*chg_disable_voter,*chg_en_voter;};
+struct mca_quick_charge_info {bool abort_requested,detach_pending,type_update_pending;int requested_type;bool ready,stopping,stop_pending,online,pd_switch_to_pmic,trigger_antr_burn,pmic_chg_need_fixed_volt,en_buck_parallel_chg,pmic_single_cp_chg,support_base_flip,master_batt_close,check_vbat_ov;int batt_type;int force_normal_volt_para,parall_force_normal_volt_para[2],batt_auth,init_volt_para,parall_init_volt_para,is_platform_qc,fake_pps_ptf,is_eu_model,data_lock,dtpt_status,pps_ptf;int mult_to_single_cnt,cp_type,ffc_final_vterm,last_override_vterm,base_close_curr,force_stop;struct {int chg_enable;} sysfs_data;struct process proc_data;struct delayed_work vfc_work,monitor_work,pps_ptf_work;struct mca_votable *input_suspend_voter,*buck_charge_curr_voter,*term_volt_voter,*flip_charge_curr_voter,*chg_disable_voter,*chg_en_voter;};
 enum {OFF0=1,OFF1,FG,FSW0,FSW1,REQUEST,READBACK,MODE0,MODE1,VOTE0,VOTE1,ADC0,ADC1,OVERRIDE,RERUN,TERM,ADC_ON};
 static int trace[256],count,fail_op,fail_op2,error1,error2,readback,request_volt,request_cur,request_kind,request_count,read_count,cap_ret,cap_num,parallel_calls,parallel_error;
 static bool pdo9;
@@ -57,7 +58,7 @@ static int protocol_class_get_adapter_power_cap(int protocol,struct adapter_powe
 static int protocol_class_pd_set_fixed_volt(int port,int v){assert(!port);request_kind=1;request_volt=v;request_count++;return op(REQUEST);}
 static int protocol_class_set_adapter_volt_and_curr(int protocol,int v,int c){(void)protocol;request_kind=2;request_volt=v;request_cur=c;request_count++;return op(REQUEST);}
 static int protocol_class_qc_set_volt(int port,int v){assert(!port);request_kind=3;request_volt=v;request_count++;return op(REQUEST);}
-static void cancel_delayed_work_sync(struct delayed_work*w){w->pending=false;}
+static void cancel_delayed_work(struct delayed_work*w){w->pending=false;}
 static int schedule_delayed_work(struct delayed_work*w,int delay){(void)delay;w->pending=true;return 1;}
 static void msleep(int ms){assert(ms==300);}
 static int mca_vote(struct mca_votable*v,const char*c,bool en,int val){assert(v);(void)c;(void)en;(void)val;return op(v->id?VOTE1:VOTE0);}
@@ -68,8 +69,8 @@ static int platform_class_buckchg_ops_set_term_volt(int r,int v){(void)r;(void)v
 static int strategy_quickchg_enable_buck_charging(struct mca_quick_charge_info*i,int a,int b,bool en){(void)i;(void)a;(void)b;(void)en;parallel_calls++;return parallel_error;}
 static void mca_eu_pps_anti_disconnection_strategy(struct mca_quick_charge_info*i){(void)i;}
 '''
-names=['mca_quick_charge_is_charge_abnormal','mca_qc_quick_charge_is_charge_abnormal','stategy_quickchg_is_pdo_9v','mca_quick_charge_req_adp_volt_and_cur','mca_quick_charge_record_error','mca_quick_charge_stop_charging','mca_quick_charge_force_stop_charging','mca_quick_charge_exit_charging','mca_quick_charge_chg_disable_voter_cb','mca_quick_charge_chg_en_voter_cb']
-events=fn('mca_quick_charge_process_event')
+names=['mca_quick_charge_is_charge_abnormal','mca_qc_quick_charge_is_charge_abnormal','stategy_quickchg_is_pdo_9v','mca_quick_charge_req_adp_volt_and_cur','mca_quick_charge_record_error','mca_quick_charge_stop_charging','mca_quick_charge_force_stop_charging','mca_quick_charge_exit_charging','mca_quick_charge_request_stop','mca_quick_charge_chg_disable_voter_cb','mca_quick_charge_chg_en_voter_cb']
+events=fn('mca_quick_charge_apply_type')+fn('mca_quick_charge_process_event_locked')+fn('mca_quick_charge_protection_event')+fn('mca_quick_charge_process_event')
 event_names=sorted(set(re.findall(r'\bMCA_EVENT_\w+',events)))
 pre+='enum {'+','.join(event_names)+'};\n'
 pre+=r'''
@@ -83,12 +84,18 @@ pre+=r'''
 #define USBPD_QUICK_DPM_PORT_PPS_PTF_NOT_OVERTEMP 1
 #define OCP_THRESHOLD_MAINT 10000
 #define OCP_THRESHOLD_FLIP 10000
+static int mutex_trylock(int*p){(void)p;return 1;}
 static void mutex_lock(int*p){(void)p;}
 static void mutex_unlock(int*p){(void)p;}
 static int mca_quick_charge_can_tbat_do_charge(int role,struct mca_quick_charge_info*i,bool init){(void)role;(void)i;(void)init;return 0;}
 static int mca_quick_charge_parallel_judge_temp(struct mca_quick_charge_info*i){(void)i;return 0;}
 static void update_batt_para(struct mca_quick_charge_info*i){(void)i;}
 static void mca_quick_charge_pre_charge_check(struct mca_quick_charge_info*i){(void)i;}
+static void mca_quick_charge_apply_type(struct mca_quick_charge_info*i);
+static int mca_quick_charge_busucp(struct mca_quick_charge_info*i,bool en){(void)i;assert(en);return 0;}
+static int strategy_quickchg_single_cp_cleanup(struct mca_quick_charge_info*i){(void)i;return op(OVERRIDE);}
+#define system_wq NULL
+static void mod_delayed_work(void*q,struct delayed_work*w,int d){(void)q;schedule_delayed_work(w,d);}
 static void mca_quick_charge_reset_charge_para(struct mca_quick_charge_info*i){(void)i;}
 '''
 pre+=r'''
@@ -104,8 +111,8 @@ static void platform_class_cp_dump_register(int r){(void)r;}
 '''
 body=''.join(fn(n) for n in names)+events
 # These actual entry functions must service pending stop before normal charging.
-monitor=fn('mca_quick_charge_monitor_work');precheck=fn('mca_quick_charge_pre_charge_check')
-assert monitor.index('if (info->stop_pending)')<monitor.index('strategy_class_fg_is_chip_ok')
+monitor=fn('mca_quick_charge_monitor_work_locked');precheck=fn('mca_quick_charge_pre_charge_check')
+assert monitor.index('if (info->stop_pending ||')<monitor.index('strategy_class_fg_is_chip_ok')
 assert precheck.index('if (info->stop_pending)')<precheck.index('MCA_QUICK_CHG_STS_CHARGING')
 test=r'''
 static struct mca_votable v[3]={{0},{1},{2}};
@@ -151,7 +158,7 @@ int main(void){struct mca_quick_charge_info i;
  int protection[]={MCA_EVENT_CONN_ANTIBURN_CHANGE,MCA_EVENT_BATT_BTB_CHANGE,MCA_EVENT_LPD_STATUS_CHANGE,MCA_EVENT_WIRELESS_REVCHG,MCA_EVENT_CC_SHORT_VBUS,MCA_EVENT_VBAT_OVP_CHANGE,MCA_EVENT_CP_CBOOT_FAIL,MCA_EVENT_PPS_PTF,MCA_EVENT_PLATE_SHOCK,MCA_EVENT_CSD_SEND_PULSE};
  for(unsigned j=0;j<ARRAY_SIZE(protection);j++){setup(&i);fail_op=VOTE0;fail_op2=VOTE1;error2=-EIO;
   assert(mca_quick_charge_process_event(protection[j],1,&i)==-EIO);}
- setup(&i);fail_op=OFF0;fail_op2=VOTE0;error2=-ETIMEDOUT;assert(mca_quick_charge_process_event(MCA_EVENT_SINK_PWR_SUSPEND_CHANGE,1,&i)==-EIO&&seen(OFF1)&&seen(VOTE0));
+ setup(&i);fail_op=OFF0;fail_op2=VOTE0;error2=-ETIMEDOUT;assert(mca_quick_charge_process_event(MCA_EVENT_SINK_PWR_SUSPEND_CHANGE,1,&i)==-ETIMEDOUT&&seen(VOTE0));
  setup(&i);fail_op=FG;assert(mca_quick_charge_process_event(MCA_EVENT_CHARGE_ABNORMAL,1,&i)==-EIO&&i.stop_pending);
  setup(&i);fail_op=FG;assert(mca_quick_charge_process_event(MCA_EVENT_USB_DISCONNECT,1,&i)==-EIO&&!i.online&&i.proc_data.adp_type==XM_CHARGER_TYPE_PPS&&!request_count);
  setup(&i);cp_enabled[0]=cp_enabled[1]=true;fg_fault[0]=fg_fault[1]=false;

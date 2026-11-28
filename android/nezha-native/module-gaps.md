@@ -2,6 +2,29 @@
 
 适用于国行 nezha 的 nazha 分支，底包 OS4.0.7.0.XPACNXM。以能开机、通信、拍摄、充电及正常待机为验收目标。
 
+
+## 2026-11-28：四类有线缺口合并收尾（当前状态）
+
+基于 `669785f`。本节覆盖前面所说的四类**有线源码缺口**，以下历史章节的“仍需完成”以本节为准。此次一次提交启充、保护、停充和串行化的相关修改；完整 MCA 生产启用、最终镜像和真机验收仍有独立门槛。
+
+| 范围 | 本批源码修复 | 验证 |
+| --- | --- | --- |
+| 并行 Buck 错误处理 | 复测前批并行 helper 的 MIN 限流、失败回滚与 dirty 重试；补齐 Buck 主/从使能失败回滚和首个 errno。单 CP PMIC 的输入/FCC/VTERM 改为普通 MIN 票，成功才缓存，失败先暂停再清理 | 并行 helper、完整样本、PMIC/VTERM 每步 I/O 失败、保留其他客户端限流 |
+| remove / shutdown | QC 完整停充之后，再独立尝试输入暂停、零 FCC、每个实际 CP 关闭、已关 CP 的 ADC 关闭、FG fastcharge 复位。Buck 独立尝试各配置芯片输入归零/关闭/ADC 与 FG。reboot 先停任务和硬件，后续 remove 仍能完成注销释放 | 生命周期所有 probe 故障点、重复清理，以及独立关断失败注入；故障不能被当作物理停充成功 |
+| 启充与保护接口 | PPS/QC 的 ADC、模式、升压、使能、读回、电流和超时检查；任何开启失败走受检查停充。动态变比先停旧路径再开新路径，清除固定 PDO 回退标志。恢复所有已配置 CP 的 UCP；VFC 有步数边界和最终读回。SOC/电压/电流/温度错误不会使用半更新样本；表尾阶段不越界；修正低于再充阈值却被阻止再充的判断。sysfs 先完整校验，模式/路径更新需先停活动充电，接口返回实际错误 | 实际 start/open、QC tuner/retry、动态变比、采样、阶段边界、PMIC/VFC 和模式/路径解析函数，ASan/UBSan |
+| 并发状态切换 | QC 的事件、monitor、VFC、PTF 与硬件状态转换由 data_lock 串行；保护投票在锁外分发，回调用 trylock，竞争时保留目标、排队并返回 EAGAIN。数据锁内不同步等待 worker；卸载锁外禁用并等待任务。断开先发布中断标志，成功停充后才清旧状态。运行计数器改为实例字段；独立限制值用 READ/WRITE_ONCE | 实际入口锁的 100 次 pthread 并发调用、回调锁竞争、断开先中断再等待、保护 errno 保留；不能外推为 kernel lockdep/KCSAN 已通过 |
+
+**构建与回归**：30 个主机脚本全部通过。Clang/LLVM/LLD 19.1.7、WERROR/CFI/MODVERSIONS 开启下，先通过四个充电策略对象，再在本地临时启用 `MYRON_MCA_COMPLETE_SERVICES=m` 及依赖，对完整 MCA 子树完成 55 条编译/组合链接任务；最终改动再次增量编译通过。详细脚本、SHA256、对象清单和范围见 `mca-wired-completion-validation-20261128.json`。这仍是 ARM64 对象/组合对象构建，**没有完整 Image、严格 modpost、最终 .ko 或刷机包通过记录**。
+
+**实际剩余**：
+
+- 完整 MCA 的 JEITA/保护执行端、事件来源和原厂边界、GLINK 所有权及无线策略仍须整链集成核验；本次未宣称整套 MCA 生产可用。
+- Nezha 单 Buck 以外的多 Buck 电流分配仍返回 `-EOPNOTSUPP`；同时设置 single-CP PMIC 和 parallel Buck 的冲突配置在 DT 解析时返回 `-EINVAL`。没有猜测硬件分流值，也没有改变原有 DTS 功率/电压/温度阈值。
+- 生产工具链全量构建/modpost、最终 DTB/DLKM、USB 插拔与快速重插、PD/PPS/QC、保护退充、reboot/shutdown、待机和实机锁检查尚未验收。硬件拒绝关断写入时，代码只能保留错误并尽力继续关闭其他路径，不能保证物理关断。
+- BAA/BASP 私有布局、折叠专用拓扑、无线和相机的既有缺口不由这批有线修改宣告完成。无效的 legacy cur_ratio/volt_dec/current-limit sysfs 写入现在明确返回不支持，因为原实现没有消费这些值。
+
+仓库生产 defconfig、安装/加载列表、设备树、模块仓库与 manifest pins 不变；完整 MCA 仍未启用。本地完整服务配置仅用于编译资格检查。
+
 ## 2026-11-28：并行 Buck 事务、单/双 CP 切换及退出停充
 
 基于 `3321769` 接续。此节更新前一轮的并行 Buck helper、CP 路径切换与 QC remove/shutdown 缺口，**不是完整有线策略或基础功能全部完成**。

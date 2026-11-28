@@ -9,7 +9,7 @@ import os, re, subprocess, tempfile
 root = Path(__file__).resolve().parents[1]
 s = (root/'drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.c').read_text()
 def fn(name):
-    m = re.search(r'static\s+(?:int|void)\s+'+name+r'\([^;]*?\n\{', s)
+    m = re.search(r'static\s+(?:int|void|bool)\s+'+name+r'\([^;]*?\n\{', s)
     assert m, name
     end, depth = m.end(), 1
     while depth:
@@ -45,6 +45,7 @@ struct mca_quick_charge_process_data {
  bool stop_charging,cp_path_enable[2];
 };
 struct mca_quick_charge_info {
+ bool online,abort_requested,force_stop; struct {bool chg_enable;} sysfs_data;
  bool ready,stopping,stop_pending,en_buck_parallel_chg,buck_parallel_active,buck_parallel_dirty,is_platform_qc;
  int buck_parallel_icl,buck_parallel_fcc,mult_to_single_cnt,mult_to_single_count,cp_type;
  pthread_mutex_t buck_parallel_lock;
@@ -80,7 +81,7 @@ static int platform_class_cp_set_mode(int r,int m){(void)m;assert(r==0||r==1);re
 static int platform_class_cp_set_charging_enable(int r,bool en){assert(r==0||r==1);int ret=op(en?(r?ENABLE1:ENABLE0):(r?DISABLE1:DISABLE0));if(!ret)enabled[r]=en;return ret;}
 static int mca_quick_charge_msleep(int ms,struct mca_quick_charge_info*i){assert(ms==500);(void)i;return op(SLEEP);}
 '''
-names = ['mca_quick_charge_record_error', 'mca_quick_charge_update_ibus',
+names = ['mca_quick_charge_blocked', 'mca_quick_charge_record_error', 'mca_quick_charge_update_ibus',
          'strategy_quickchg_disable_buck_parallel', 'strategy_quickchg_enable_buck_charging',
          'mca_quick_charge_try2_single_path', 'mca_quick_charge_try2_multi_path',
          'mca_quick_charge_change_path']
@@ -88,7 +89,7 @@ body = ''.join(fn(n) for n in names)
 test = r'''
 static struct mca_votable v[3]={{0},{1},{2}};
 static void clear_trace(void){count=fail_op=fail_op2=0;fail_code=-EIO;}
-static void init(struct mca_quick_charge_info*i){memset(i,0,sizeof(*i));assert(!pthread_mutex_init(&i->buck_parallel_lock,NULL));i->ready=i->en_buck_parallel_chg=true;i->cp_type=MCA_CP_TYPE_PARALLEL;i->proc_data.cur_work_cp=2;i->input_suspend_voter=&v[0];i->buck_input_voter=&v[1];i->buck_charge_curr_voter=&v[2];}
+static void init(struct mca_quick_charge_info*i){memset(i,0,sizeof(*i));assert(!pthread_mutex_init(&i->buck_parallel_lock,NULL));i->online=i->sysfs_data.chg_enable=i->ready=i->en_buck_parallel_chg=true;i->cp_type=MCA_CP_TYPE_PARALLEL;i->proc_data.cur_work_cp=2;i->input_suspend_voter=&v[0];i->buck_input_voter=&v[1];i->buck_charge_curr_voter=&v[2];}
 static void reset(struct mca_quick_charge_info*i){assert(!pthread_mutex_destroy(&i->buck_parallel_lock));init(i);clear_trace();suspended=cp_zero=true;icl=fcc=0;read0=read1=1800;buck_read=200000;enabled[0]=enabled[1]=true;}
 static void *enable_thread(void*p){assert(!strategy_quickchg_enable_buck_charging(p,900,2000,true));return NULL;}
 int main(void){struct mca_quick_charge_info i,j;init(&i);reset(&i);

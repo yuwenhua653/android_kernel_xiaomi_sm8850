@@ -103,18 +103,20 @@ strategy_buckchg_check_charger_change(struct strategy_buckchg_dev *info);
 static void strategy_buckchg_sw_cv_start(struct strategy_buckchg_dev *info);
 static void strategy_buckchg_sw_cv_stop(struct strategy_buckchg_dev *info);
 
-
 static int
 strategy_class_buckchg_ops_set_input_volt(struct strategy_buckchg_dev *info,
 					  int mv)
 {
-	int ret;
+	int ret, rc;
 
 	ret = platform_class_buckchg_ops_set_input_volt_lmt(MAIN_BUCK_CHARGER,
 							    mv);
-	if (info && info->support_multi_buck)
-		ret |= platform_class_buckchg_ops_set_input_volt_lmt(
+	if (info && info->support_multi_buck) {
+		rc = platform_class_buckchg_ops_set_input_volt_lmt(
 			AUX_BUCK_CHARGER, mv);
+		if (!ret)
+			ret = rc;
+	}
 
 	return ret;
 }
@@ -122,12 +124,28 @@ strategy_class_buckchg_ops_set_input_volt(struct strategy_buckchg_dev *info,
 static int strategy_class_buckchg_ops_set_chg(struct strategy_buckchg_dev *info,
 					      bool en)
 {
-	int ret;
-
+	int ret, rc;
 	ret = platform_class_buckchg_ops_set_chg(MAIN_BUCK_CHARGER, en);
-	if (info && info->support_multi_buck)
-		ret |= platform_class_buckchg_ops_set_chg(AUX_BUCK_CHARGER, en);
-
+	if (en && ret)
+		goto rollback;
+	if (info && info->support_multi_buck) {
+		rc = platform_class_buckchg_ops_set_chg(AUX_BUCK_CHARGER, en);
+		if (!ret)
+			ret = rc;
+	}
+	if (!en || !ret)
+		return ret;
+rollback:
+	/* The failed write may have reached hardware. Attempt both disables. */
+	rc = platform_class_buckchg_ops_set_chg(MAIN_BUCK_CHARGER, false);
+	if (rc)
+		mca_log_err("main Buck rollback failed: %d\n", rc);
+	if (info && info->support_multi_buck) {
+		rc = platform_class_buckchg_ops_set_chg(AUX_BUCK_CHARGER,
+							false);
+		if (rc)
+			mca_log_err("aux Buck rollback failed: %d\n", rc);
+	}
 	return ret;
 }
 
@@ -135,12 +153,15 @@ static int
 strategy_class_buckchg_ops_set_opt_fws(struct strategy_buckchg_dev *info,
 				       int mv)
 {
-	int ret;
+	int ret, rc;
 
 	ret = platform_class_buckchg_ops_set_opt_fws(MAIN_BUCK_CHARGER, mv);
-	if (info && info->support_multi_buck)
-		ret |= platform_class_buckchg_ops_set_opt_fws(AUX_BUCK_CHARGER,
-							      mv);
+	if (info && info->support_multi_buck) {
+		rc = platform_class_buckchg_ops_set_opt_fws(AUX_BUCK_CHARGER,
+							    mv);
+		if (!ret)
+			ret = rc;
+	}
 
 	return ret;
 }
@@ -149,12 +170,15 @@ static int
 strategy_class_buckchg_ops_adc_enable(struct strategy_buckchg_dev *info,
 				      bool en)
 {
-	int ret;
+	int ret, rc;
 
 	ret = platform_class_buckchg_ops_adc_enable(MAIN_BUCK_CHARGER, en);
-	if (info && info->support_multi_buck)
-		ret |= platform_class_buckchg_ops_adc_enable(AUX_BUCK_CHARGER,
-							     en);
+	if (info && info->support_multi_buck) {
+		rc = platform_class_buckchg_ops_adc_enable(AUX_BUCK_CHARGER,
+							   en);
+		if (!ret)
+			ret = rc;
+	}
 
 	return ret;
 }
@@ -162,13 +186,16 @@ strategy_class_buckchg_ops_adc_enable(struct strategy_buckchg_dev *info,
 static int strategy_class_buckchg_ops_set_usb_aicl_cont_thd(
 	struct strategy_buckchg_dev *info, int mv)
 {
-	int ret;
+	int ret, rc;
 
 	ret = platform_class_buckchg_ops_set_usb_aicl_cont_thd(
 		MAIN_BUCK_CHARGER, mv);
-	if (info && info->support_multi_buck)
-		ret |= platform_class_buckchg_ops_set_usb_aicl_cont_thd(
+	if (info && info->support_multi_buck) {
+		rc = platform_class_buckchg_ops_set_usb_aicl_cont_thd(
 			AUX_BUCK_CHARGER, mv);
+		if (!ret)
+			ret = rc;
+	}
 
 	return ret;
 }
@@ -3425,6 +3452,30 @@ static const struct mca_smartchg_if_ops g_buck_smartchg_if_ops = {
 	.set_fcc = strategy_buckchg_smartchg_set_fcc_callback,
 };
 
+static int strategy_buckchg_quiesce_hardware(struct strategy_buckchg_dev *info)
+{
+	int ret = 0, rc;
+	for (int role = MAIN_BUCK_CHARGER; role <= AUX_BUCK_CHARGER; role++) {
+		if (role == AUX_BUCK_CHARGER && !info->support_multi_buck)
+			continue;
+		rc = platform_class_buckchg_ops_set_input_curr_lmt(role, 0);
+		if (!ret)
+			ret = rc;
+		rc = platform_class_buckchg_ops_set_chg(role, false);
+		if (!ret)
+			ret = rc;
+		if (!rc) {
+			rc = platform_class_buckchg_ops_adc_enable(role, false);
+			if (!ret)
+				ret = rc;
+		}
+	}
+	rc = strategy_class_fg_set_fastcharge(false);
+	if (!ret)
+		ret = rc;
+	return ret;
+}
+
 static void strategy_buckchg_stop(struct strategy_buckchg_dev *info)
 {
 	bool was_ready;
@@ -3436,15 +3487,18 @@ static void strategy_buckchg_stop(struct strategy_buckchg_dev *info)
 	was_ready = info->ready;
 	WRITE_ONCE(info->ready, false);
 	if (info->panel_registered) {
-		mca_event_block_notify_unregister(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
+		mca_event_block_notify_unregister(MCA_EVENT_TYPE_PANEL,
+						  &info->panel_nb);
 		info->panel_registered = false;
 	}
 	if (info->thermal_registered) {
-		mca_event_block_notify_unregister(MCA_EVENT_TYPE_THERMAL_TEMP, &info->thermal_board_nb);
+		mca_event_block_notify_unregister(MCA_EVENT_TYPE_THERMAL_TEMP,
+						  &info->thermal_board_nb);
 		info->thermal_registered = false;
 	}
 	if (info->strategy_registered) {
-		mca_strategy_ops_unregister(STRATEGY_FUNC_TYPE_BUCK_CHARGE, info);
+		mca_strategy_ops_unregister(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
+					    info);
 		info->strategy_registered = false;
 	}
 	if (info->charge_if_registered) {
@@ -3452,7 +3506,8 @@ static void strategy_buckchg_stop(struct strategy_buckchg_dev *info)
 		info->charge_if_registered = false;
 	}
 	if (info->smartchg_registered) {
-		mca_smartchg_if_ops_unregister(MCA_SMARTCHG_IF_CHG_TYPE_BUCK, info);
+		mca_smartchg_if_ops_unregister(MCA_SMARTCHG_IF_CHG_TYPE_BUCK,
+					       info);
 		info->smartchg_registered = false;
 	}
 	if (!IS_ERR_OR_NULL(info->chg_enable_voter))
@@ -3488,7 +3543,7 @@ static void strategy_buckchg_stop(struct strategy_buckchg_dev *info)
 	disable_delayed_work_sync(&info->rerun_handle_pd_auth_work);
 	disable_delayed_work_sync(&info->soc_limit_stepper_work);
 	if (was_ready) {
-		ret = strategy_class_buckchg_ops_set_chg(info, false);
+		ret = strategy_buckchg_quiesce_hardware(info);
 		if (ret)
 			mca_log_err("buck stop failed: %d\n", ret);
 	}
