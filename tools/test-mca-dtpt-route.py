@@ -20,6 +20,7 @@ pre=r'''
 #include <assert.h>
 #include <errno.h>
 #define container_of(p,t,m) ((t*)((char*)(p)-offsetof(t,m)))
+#define READ_ONCE(x) (x)
 #define WRITE_ONCE(x,v) ((x)=(v))
 #define mca_log_info(...) ((void)0)
 #define max(a,b) ((a)>(b)?(a):(b))
@@ -28,7 +29,7 @@ pre=r'''
 #define MCA_FG_TYPE_SINGLE_NUM_MAX 0
 #define STRATEGY_FG_WORK_INTERVAL_DTPT 1000
 struct proc {int cur_jeita_index,temp_hys_en,max_chg_curr;};
-struct mca_buckchg_jeita_dev {bool usb_online,wireless_online;int event_lock,monitor_work,online,dtpt_status;struct proc proc_data,flip_proc_data,base_proc_data;};
+struct mca_buckchg_jeita_dev {bool stopping,usb_online,wireless_online;int event_lock,monitor_work,online,dtpt_status;struct proc proc_data,flip_proc_data,base_proc_data;};
 struct work_struct {int unused;};
 struct delayed_work {struct work_struct work;};
 struct strategy_fg {struct {int fg_type;} cfg;struct delayed_work dtpt_monitor_work;};
@@ -63,6 +64,7 @@ int main(void){
  bad_gauge=1;alert=0;strategy_fg_dtpt_monitor_work(&gauge.dtpt_monitor_work.work);assert(ji.dtpt_status==1&&notifications==1);
  bad_gauge=0;strategy_fg_dtpt_monitor_work(&gauge.dtpt_monitor_work.work);assert(!ji.dtpt_status&&notifications==2&&schedules==3);
  mca_nezha_jeita_process_event(&ji,MCA_EVENT_PLATE_SHOCK,1);assert(!ji.dtpt_status);
+ ji.stopping=true;assert(mca_nezha_jeita_process_event(&ji,MCA_EVENT_BATTERY_DTPT,1)==-ENODEV&&!ji.dtpt_status);
  puts("PASS: actual FG/business/JEITA DTPT route, failed sample preserves protection, unrelated event rejected");
 }
 '''

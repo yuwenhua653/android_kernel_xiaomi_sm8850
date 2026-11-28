@@ -211,7 +211,7 @@ strategy_quickchg_map_ibus_to_fsw(struct mca_quick_charge_info *info,
 				  int *fsw_target);
 static int strategy_quickchg_update_cp_fsw(struct mca_quick_charge_info *info,
 					   int fsw_target);
-static void
+static int
 strategy_quickchg_enable_buck_charging(struct mca_quick_charge_info *info,
 				       int buck_icl_val, int buck_fcc_val,
 				       bool enable);
@@ -303,43 +303,37 @@ mca_quick_charge_update_system_soc(struct mca_quick_charge_info *info)
 
 static int mca_quick_charge_update_ibus(struct mca_quick_charge_info *info)
 {
-	int ret;
-	int ibus_buck = 0;
-	int ibus[CP_ROLE_MAX] = { 0 };
+	int ret, role = info->proc_data.cur_work_cp;
+	int ibus_buck = 0, ibus[CP_ROLE_MAX] = { 0 };
+	s64 total;
 
-	if (info->proc_data.cur_work_cp == MCA_QUICK_CHG_CP_DUAL) {
-		ret = platform_class_cp_get_bus_current(CP_ROLE_MASTER,
-							&ibus[CP_ROLE_MASTER]);
+	if (role != MCA_QUICK_CHG_CP_MASTER && role != MCA_QUICK_CHG_CP_SLAVE &&
+	    role != MCA_QUICK_CHG_CP_DUAL)
+		return -EINVAL;
+	for (int i = CP_ROLE_MASTER; i <= CP_ROLE_SLAVE; i++) {
+		if (role != MCA_QUICK_CHG_CP_DUAL && role != i)
+			continue;
+		ret = platform_class_cp_get_bus_current(i, &ibus[i]);
 		if (ret) {
-			info->proc_data.error_num[CP_ROLE_MASTER]++;
-			return -1;
+			info->proc_data.error_num[i]++;
+			return ret;
 		}
-		ret = platform_class_cp_get_bus_current(CP_ROLE_SLAVE,
-							&ibus[CP_ROLE_SLAVE]);
-		if (ret) {
-			info->proc_data.error_num[CP_ROLE_SLAVE]++;
-			return -1;
-		}
-	} else {
-		ret = platform_class_cp_get_bus_current(
-			info->proc_data.cur_work_cp,
-			&ibus[info->proc_data.cur_work_cp]);
-		if (ret) {
-			info->proc_data.error_num[info->proc_data.cur_work_cp]++;
-			return -1;
-		}
+		if (ibus[i] < 0)
+			return -ERANGE;
 	}
-	info->proc_data.ibus = ibus[CP_ROLE_MASTER] + ibus[CP_ROLE_SLAVE];
-
+	total = (s64)ibus[CP_ROLE_MASTER] + ibus[CP_ROLE_SLAVE];
 	if (info->en_buck_parallel_chg) {
-		ret = platform_class_buckchg_ops_get_bus_curr(MAIN_BUCK_CHARGER,
-							      &ibus_buck);
-		if (ret) {
-			mca_log_err("get buck ibus failed!\n");
-			return -1;
-		}
-		info->proc_data.ibus += ibus_buck / 1000;
+		ret = platform_class_buckchg_ops_get_bus_curr(MAIN_BUCK_CHARGER, &ibus_buck);
+		if (ret)
+			return ret;
+		if (ibus_buck < 0)
+			return -ERANGE;
+		total += ibus_buck / 1000;
 	}
+	if (total > INT_MAX)
+		return -ERANGE;
+	/* Publish only a complete sample. Failed reads preserve the old sample. */
+	info->proc_data.ibus = total;
 	return 0;
 }
 
@@ -585,6 +579,9 @@ static int mca_quick_charge_stop_charging(struct mca_quick_charge_info *info)
 			ret = rc;
 	}
 	info->proc_data.cp_iic_ok = !ret;
+	if (READ_ONCE(info->stopping))
+		mca_quick_charge_record_error(&ret,
+			mca_vote(info->input_suspend_voter, "wire_qc", true, 1));
 	/* Always attempt the gauge reset, including when a pump failed to stop. */
 	rc = strategy_class_fg_set_fastcharge(false);
 	if (!ret)
@@ -656,8 +653,20 @@ static int mca_quick_charge_stop_charging(struct mca_quick_charge_info *info)
 	}
 	if (ret)
 		goto out;
-	if (info->en_buck_parallel_chg && info->proc_data.cp_iic_ok) {
-		strategy_quickchg_enable_buck_charging(info, 0, 0, false);
+	if (info->en_buck_parallel_chg) {
+		ret = strategy_quickchg_enable_buck_charging(info, 0, 0, false);
+		if (ret)
+			goto out;
+	}
+	/* Unbind/shutdown must not resume Buck or release shared policy votes. */
+	if (READ_ONCE(info->stopping)) {
+		ret = platform_class_cp_enable_adc(CP_ROLE_MASTER, false);
+		if (info->cp_type == MCA_CP_TYPE_PARALLEL)
+			mca_quick_charge_record_error(&ret,
+				platform_class_cp_enable_adc(CP_ROLE_SLAVE, false));
+		if (ret)
+			goto out;
+		goto stopped;
 	}
 	if (info->pmic_single_cp_chg) {
 		mca_quick_charge_record_error(&ret, mca_vote_override(info->term_volt_voter, "single_cp_pmic",
@@ -694,6 +703,7 @@ static int mca_quick_charge_stop_charging(struct mca_quick_charge_info *info)
 		mca_quick_charge_record_error(&ret, mca_rerun_election(info->flip_charge_curr_voter));
 	if (ret)
 		goto out;
+stopped:
 	info->stop_pending = false;
 	info->proc_data.stop_charging = false;
 	if (info->proc_data.charge_flag != MCA_QUICK_CHG_STS_CHARGE_DONE)
@@ -2957,51 +2967,126 @@ strategy_quickchg_pmic_single_cp_charging(struct mca_quick_charge_info *info,
 		    fcc, icl);
 }
 
-static void
+/* Caller holds buck_parallel_lock. Keep input suspended until all limits and
+ * frequency changes are acknowledged. A failed cleanup must be retried.
+ */
+static int strategy_quickchg_disable_buck_parallel(struct mca_quick_charge_info *info)
+{
+	int ret, rc;
+
+	info->buck_parallel_dirty = true;
+	ret = mca_vote(info->input_suspend_voter, "wire_qc", true, 1);
+	if (ret)
+		return ret;
+	ret = mca_vote(info->buck_charge_curr_voter, "wire_qc", true, 0);
+	rc = platform_class_buckchg_ops_set_buck_fsw(MAIN_BUCK_CHARGER, 5000);
+	mca_quick_charge_record_error(&ret, rc);
+	rc = mca_vote(info->buck_input_voter, "parallel_qc", false, 0);
+	mca_quick_charge_record_error(&ret, rc);
+	rc = mca_vote(info->buck_charge_curr_voter, "parallel_qc", false, 0);
+	mca_quick_charge_record_error(&ret, rc);
+	if (!ret) {
+		info->buck_parallel_active = false;
+		info->buck_parallel_dirty = false;
+	}
+	return ret;
+}
+
+static int
 strategy_quickchg_enable_buck_charging(struct mca_quick_charge_info *info,
 				       int buck_icl_val, int buck_fcc_val,
 				       bool enable)
 {
-	int ret = 0;
-	bool cp_enabled = false;
-	static bool enable_once = true;
-	static bool disable_once = false;
-	ret |= platform_class_cp_get_charging_enabled(
-		info->proc_data.cur_work_cp, &cp_enabled);
-	mca_quick_charge_update_ibus(info);
-	if (enable && cp_enabled && enable_once &&
-	    info->proc_data.ibus > 2500) {
-		enable_once = false;
-		disable_once = true;
-		platform_class_buckchg_ops_set_buck_fsw(MAIN_BUCK_CHARGER,
-							18000);
-		mca_vote(info->input_suspend_voter, "wire_qc", false, 0);
-		mca_vote_override(info->buck_input_voter, "icl_limit", true,
-				  buck_icl_val); // ICL
-		mca_vote_override(info->buck_charge_curr_voter, "fcc_limit",
-				  true, buck_fcc_val); // FCC
-		platform_class_buckchg_ops_set_restart_aicl(MAIN_BUCK_CHARGER,
-							    true);
-		mca_log_err(
-			"enable buck parallel charging, pmih_fcc :%d, pmih_icl :%d\n",
-			buck_fcc_val, buck_icl_val);
-	} else if (!enable && disable_once) {
-		if (info->proc_data.ibus > 0 && info->proc_data.ibus < 3850) {
-			disable_once = false;
-			enable_once = true;
-			platform_class_buckchg_ops_set_buck_fsw(
-				MAIN_BUCK_CHARGER, 5000);
-			mca_vote(info->input_suspend_voter, "wire_qc", true, 1);
-			mca_vote_override(info->buck_input_voter, "icl_limit",
-					  false, buck_icl_val); // ICL
-			mca_vote_override(info->buck_charge_curr_voter,
-					  "fcc_limit", false,
-					  buck_fcc_val); // FCC
-			mca_log_err(
-				"disable buck parallel charging!, ibus: %d\n",
-				info->proc_data.ibus);
+	int ret = 0, role;
+	bool cp_enabled;
+
+	mutex_lock(&info->buck_parallel_lock);
+	if (enable && (READ_ONCE(info->stopping) || info->stop_pending ||
+		       info->proc_data.stop_charging)) {
+		ret = -ESHUTDOWN;
+		goto out;
+	}
+	if (info->buck_parallel_dirty) {
+		ret = strategy_quickchg_disable_buck_parallel(info);
+		if (ret)
+			goto out;
+	}
+	if (!enable) {
+		if (!info->buck_parallel_active)
+			goto out;
+		/* Teardown cannot depend on a sensor, or on a CP already disabled. */
+		if (!info->stop_pending && !READ_ONCE(info->stopping)) {
+			ret = mca_quick_charge_update_ibus(info);
+			if (ret)
+				goto out;
+			if (info->proc_data.ibus <= 0 || info->proc_data.ibus >= 3850)
+				goto out;
+		}
+		ret = strategy_quickchg_disable_buck_parallel(info);
+		goto out;
+	}
+	if (buck_icl_val <= 0 || buck_fcc_val <= 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+	role = info->proc_data.cur_work_cp;
+	if (role != MCA_QUICK_CHG_CP_MASTER && role != MCA_QUICK_CHG_CP_SLAVE &&
+	    role != MCA_QUICK_CHG_CP_DUAL) {
+		ret = -EINVAL;
+		goto out;
+	}
+	for (int i = CP_ROLE_MASTER; i <= CP_ROLE_SLAVE; i++) {
+		if (role != MCA_QUICK_CHG_CP_DUAL && role != i)
+			continue;
+		ret = platform_class_cp_get_charging_enabled(i, &cp_enabled);
+		if (ret)
+			goto out;
+		if (!cp_enabled) {
+			ret = -EAGAIN;
+			goto out;
 		}
 	}
+	ret = mca_quick_charge_update_ibus(info);
+	if (ret || info->proc_data.ibus <= 2500)
+		goto out;
+	if (info->buck_parallel_active && info->buck_parallel_icl == buck_icl_val &&
+	    info->buck_parallel_fcc == buck_fcc_val)
+		goto out;
+	info->buck_parallel_dirty = true;
+	ret = mca_vote(info->input_suspend_voter, "wire_qc", true, 1);
+	if (ret)
+		goto rollback;
+	ret = platform_class_buckchg_ops_set_buck_fsw(MAIN_BUCK_CHARGER, 18000);
+	if (ret)
+		goto rollback;
+	/* Ordinary MIN votes preserve thermal/JEITA restrictions. */
+	ret = mca_vote(info->buck_input_voter, "parallel_qc", true, buck_icl_val);
+	if (ret)
+		goto rollback;
+	ret = mca_vote(info->buck_charge_curr_voter, "parallel_qc", true, buck_fcc_val);
+	if (ret)
+		goto rollback;
+	/* Replace only our own CP-only zero-current vote; retain all others. */
+	ret = mca_vote(info->buck_charge_curr_voter, "wire_qc", false, 0);
+	if (ret)
+		goto rollback;
+	ret = mca_vote(info->input_suspend_voter, "wire_qc", false, 0);
+	if (ret)
+		goto rollback;
+	ret = platform_class_buckchg_ops_set_restart_aicl(MAIN_BUCK_CHARGER, true);
+	if (ret)
+		goto rollback;
+	info->buck_parallel_active = true;
+	info->buck_parallel_dirty = false;
+	info->buck_parallel_icl = buck_icl_val;
+	info->buck_parallel_fcc = buck_fcc_val;
+	goto out;
+rollback:
+	/* Return the first error; dirty state records failed rollback separately. */
+	strategy_quickchg_disable_buck_parallel(info);
+out:
+	mutex_unlock(&info->buck_parallel_lock);
+	return ret;
 }
 
 #define MCA_QUICK_CHG_O11U_P0GL 0x100000
@@ -3163,17 +3248,20 @@ static int mca_quick_charge_regulation(struct mca_quick_charge_info *info)
 	 */
 	if (info->en_buck_parallel_chg && cur_max > 16000) {
 		if (0 /*mca_quick_charge_is_en_buck_hwid()*/) {
-			strategy_quickchg_enable_buck_charging(
+			ret = strategy_quickchg_enable_buck_charging(
 				info, info->buck_icl_fcc_curr[0],
 				info->buck_icl_fcc_curr[1], true);
 		} else {
-			strategy_quickchg_enable_buck_charging(
+			ret = strategy_quickchg_enable_buck_charging(
 				info, info->buck_icl_fcc_curr[0] - 500,
 				info->buck_icl_fcc_curr[1] - 2000, true);
 		}
 	} else if (info->en_buck_parallel_chg) {
-		strategy_quickchg_enable_buck_charging(info, 0, 0, false);
+		ret = strategy_quickchg_enable_buck_charging(info, 0, 0, false);
 	}
+
+	if (info->en_buck_parallel_chg && ret)
+		return ret;
 
 	/*
 	 * TODO: Implement buck parallel charging logic
@@ -3273,87 +3361,83 @@ mca_qc_quick_charge_is_charge_abnormal(struct mca_quick_charge_info *info)
 	return 0;
 }
 
-static void
-mca_quick_charge_try2_single_path(struct mca_quick_charge_info *info)
+static int mca_quick_charge_try2_single_path(struct mca_quick_charge_info *info)
 {
-	int ret;
-	int ibus;
 	struct mca_quick_charge_process_data *proc_data = &info->proc_data;
+	int ret, keep, drop;
 
 	ret = mca_quick_charge_update_ibus(info);
 	if (ret)
-		return;
-
-	ibus = proc_data->ibus;
-	if (ibus > proc_data->multi_ibus_th - proc_data->ibus_dec)
-		return;
+		return ret;
+	if (proc_data->ibus > proc_data->multi_ibus_th - proc_data->ibus_dec)
+		return 0;
 	if (++info->mult_to_single_cnt <= info->mult_to_single_count)
-		return;
-
-	if (proc_data->cp_path_enable[CP_ROLE_MASTER]) {
-		(void)platform_class_cp_set_charging_enable(CP_ROLE_SLAVE,
-							    false);
-		(void)platform_class_cp_enable_adc(CP_ROLE_SLAVE, false);
-		proc_data->cur_work_cp = MCA_QUICK_CHG_CP_MASTER;
-	} else {
-		(void)platform_class_cp_set_charging_enable(CP_ROLE_MASTER,
-							    false);
-		(void)platform_class_cp_enable_adc(CP_ROLE_MASTER, false);
-		proc_data->cur_work_cp = MCA_QUICK_CHG_CP_SLAVE;
-	}
+		return 0;
+	keep = proc_data->cp_path_enable[CP_ROLE_MASTER] ? CP_ROLE_MASTER : CP_ROLE_SLAVE;
+	drop = keep == CP_ROLE_MASTER ? CP_ROLE_SLAVE : CP_ROLE_MASTER;
+	ret = platform_class_cp_set_charging_enable(drop, false);
+	if (ret)
+		return ret;
+	ret = platform_class_cp_enable_adc(drop, false);
+	if (ret)
+		return ret;
+	/* Do not publish single mode while the other CP's state is unknown. */
+	proc_data->cur_work_cp = keep;
+	info->mult_to_single_cnt = 0;
+	return 0;
 }
 
-static void mca_quick_charge_try2_multi_path(struct mca_quick_charge_info *info)
+static int mca_quick_charge_try2_multi_path(struct mca_quick_charge_info *info)
 {
-	int ret;
-	int ibus;
-	int cp_role;
-	int th;
 	struct mca_quick_charge_process_data *proc_data = &info->proc_data;
+	int ret, rc, ibus, cp_role, th;
 
+	if (proc_data->cur_work_cp != MCA_QUICK_CHG_CP_MASTER &&
+	    proc_data->cur_work_cp != MCA_QUICK_CHG_CP_SLAVE)
+		return -EINVAL;
 	ret = mca_quick_charge_update_ibus(info);
 	if (ret)
-		return;
-
-	ibus = proc_data->ibus;
-	th = proc_data->dual_cp_count ? proc_data->again_multi_ibus_th :
-					proc_data->multi_ibus_th;
-	mca_log_info("multi_ibus_th:%d, dual_cp_count:%d\n", th,
-		     proc_data->dual_cp_count);
-	if (ibus < th + proc_data->ibus_inc)
-		return;
-
-	if (proc_data->cur_work_cp == MCA_QUICK_CHG_CP_MASTER)
-		cp_role = CP_ROLE_SLAVE;
-	else
-		cp_role = CP_ROLE_MASTER;
-
+		return ret;
+	th = proc_data->dual_cp_count ? proc_data->again_multi_ibus_th : proc_data->multi_ibus_th;
+	if (proc_data->ibus < th + proc_data->ibus_inc)
+		return 0;
+	cp_role = proc_data->cur_work_cp == MCA_QUICK_CHG_CP_MASTER ?
+		CP_ROLE_SLAVE : CP_ROLE_MASTER;
 	if (proc_data->error_num[cp_role] >= MCA_QUICK_CHG_SINGLE_MAX_ERR_COUNT)
-		return;
-
-	(void)platform_class_cp_enable_adc(cp_role, true);
-	ret = platform_class_cp_set_mode(cp_role, info->proc_data.cur_cp_mode);
-	if (ret) {
-		mca_log_err("open path set cp mode fail\n");
-		return;
-	}
-	(void)platform_class_cp_set_charging_enable(cp_role, true);
+		return 0;
+	ret = platform_class_cp_enable_adc(cp_role, true);
+	if (ret)
+		goto rollback;
+	ret = platform_class_cp_set_mode(cp_role, proc_data->cur_cp_mode);
+	if (ret)
+		goto rollback;
+	ret = platform_class_cp_set_charging_enable(cp_role, true);
+	if (ret)
+		goto rollback;
 	ret = mca_quick_charge_msleep(500, info);
 	if (ret)
-		return;
-
+		goto rollback;
 	ret = platform_class_cp_get_bus_current(cp_role, &ibus);
-	if (ret) {
-		proc_data->error_num[cp_role]++;
-		(void)platform_class_cp_set_charging_enable(cp_role, false);
-		return;
+	if (ret)
+		goto rollback;
+	if (ibus < MCA_QUICK_CHG_OPEN_PATH_IBUS_TH) {
+		ret = -EAGAIN;
+		goto rollback;
 	}
-
-	if (ibus < MCA_QUICK_CHG_OPEN_PATH_IBUS_TH)
-		return;
-
 	proc_data->cur_work_cp = MCA_QUICK_CHG_CP_DUAL;
 	proc_data->dual_cp_count++;
+	return 0;
+rollback:
+	proc_data->error_num[cp_role]++;
+	rc = platform_class_cp_set_charging_enable(cp_role, false);
+	if (!rc)
+		rc = platform_class_cp_enable_adc(cp_role, false);
+	if (rc) {
+		info->stop_pending = true;
+		proc_data->stop_charging = true;
+		mca_log_err("CP path rollback failed: %d\\n", rc);
+	}
+	return ret;
 }
 
 static void mca_check_cp_work_mode(struct mca_quick_charge_info *info)
@@ -3494,17 +3578,13 @@ static void mca_check_cp_work_mode(struct mca_quick_charge_info *info)
 	info->cur_cp_work_mode = select_mode;
 }
 
-static void
-mca_quick_charge_change_path(struct mca_quick_charge_info *info)
+static int mca_quick_charge_change_path(struct mca_quick_charge_info *info)
 {
 	if (info->cp_type != MCA_CP_TYPE_PARALLEL || info->is_platform_qc)
-		return;
-
-	mca_log_debug("cur_work_cp: %d\n", info->proc_data.cur_work_cp);
+		return 0;
 	if (info->proc_data.cur_work_cp == MCA_QUICK_CHG_CP_DUAL)
-		mca_quick_charge_try2_single_path(info);
-	else
-		mca_quick_charge_try2_multi_path(info);
+		return mca_quick_charge_try2_single_path(info);
+	return mca_quick_charge_try2_multi_path(info);
 }
 
 static void mca_quick_charge_pps_ptf_work(struct work_struct *work)
@@ -3627,7 +3707,9 @@ static void mca_quick_charge_monitor_work(struct work_struct *work)
 		mca_log_info("monitor qc charge done\n");
 		goto out;
 	}
-	mca_quick_charge_change_path(info);
+	ret = mca_quick_charge_change_path(info);
+	if (ret)
+		goto out;
 	mca_check_cp_work_mode(info);
 
 	if (info->is_platform_qc)
@@ -5254,11 +5336,12 @@ static int mca_quick_charge_shutdown(struct notifier_block *nb,
 	struct mca_quick_charge_info *info = container_of(
 		nb, struct mca_quick_charge_info, shutdown_notifier);
 	struct mca_event_notify_data n_data = { 0 };
+	int ret = 0;
 
 	mca_log_err("receive shutdown\n");
 
 	if (info->online)
-		mca_vote(info->chg_disable_voter, "shutdown", true, 1);
+		ret = mca_vote(info->chg_disable_voter, "shutdown", true, 1);
 
 	n_data.event = "MCA_LOG_FULL_EVENT";
 	n_data.event_len = 18;
@@ -5266,7 +5349,9 @@ static int mca_quick_charge_shutdown(struct notifier_block *nb,
 	msleep(20); // wait log dump
 
 	mca_log_err("end shutdown\n");
-	return 0;
+	if (ret)
+		mca_log_err("reboot stop failed: %d\n", ret);
+	return NOTIFY_DONE;
 }
 
 static int mca_quick_charge_div1_single_voter_cb(struct mca_votable *votable,
@@ -5889,23 +5974,18 @@ static void mca_quick_charge_stop(struct mca_quick_charge_info *info)
 	disable_delayed_work_sync(&info->monitor_work);
 	disable_delayed_work_sync(&info->pps_ptf_work);
 	disable_delayed_work_sync(&info->vfc_work);
+	/* All producers are drained. Reuse checked CP/FG/adapter stop while
+	 * stopping prevents fallback release and asynchronous retry.
+	 */
+	if (was_ready) {
+		ret = mca_quick_charge_stop_charging(info);
+		if (ret)
+			mca_log_err("quick charge teardown incomplete: %d\n", ret);
+	}
 	for (int i = 0; i < ARRAY_SIZE(info->batt_para); i++)
 		mca_quick_charge_free_batt_para(&info->batt_para[i]);
 	for (int i = 0; i < ARRAY_SIZE(info->base_flip_para); i++)
 		mca_quick_charge_free_batt_para(&info->base_flip_para[i]);
-	/* Stop the charge pumps after dispatchers and workers are drained.
-	 * Do not clear borrowed thermal/JEITA limits or enable a fallback path.
-	 */
-	if (was_ready) {
-		ret = platform_class_cp_set_charging_enable(CP_ROLE_MASTER, false);
-		if (ret)
-			mca_log_err("master CP stop failed: %d\n", ret);
-		if (info->cp_type == MCA_CP_TYPE_PARALLEL) {
-			ret = platform_class_cp_set_charging_enable(CP_ROLE_SLAVE, false);
-			if (ret)
-				mca_log_err("slave CP stop failed: %d\n", ret);
-		}
-	}
 }
 
 static int mca_quick_charge_probe(struct platform_device *pdev)
@@ -5965,6 +6045,7 @@ static int mca_quick_charge_probe(struct platform_device *pdev)
 	info->dev = &pdev->dev;
 	platform_set_drvdata(pdev, info);
 	mutex_init(&info->data_lock);
+	mutex_init(&info->buck_parallel_lock);
 	INIT_DELAYED_WORK(&info->monitor_work, mca_quick_charge_monitor_work);
 	INIT_DELAYED_WORK(&info->pps_ptf_work, mca_quick_charge_pps_ptf_work);
 	INIT_DELAYED_WORK(&info->vfc_work, mca_quick_charge_vfc_work);

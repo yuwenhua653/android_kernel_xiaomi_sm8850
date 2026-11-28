@@ -1,0 +1,331 @@
+{
+  "date": "2026-11-28",
+  "base_commit": "332176957ee5f438ecbfdecf55c50f7a326fe5b2",
+  "branch": "nazha",
+  "tests": [
+    {
+      "test": "tools/test-mca-bmd-lifetime.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual BMD supplier errors, managed GPIO, callback publication/unwind, stop ordering and conservative samples"
+      ],
+      "sha256": "d1011ae3798633379fc1b63147bd979685dcb8c3f0d2b3eed17ff17e9cc5f50c"
+    },
+    {
+      "test": "tools/test-mca-charge-interface.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)",
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)"
+      ],
+      "sha256": "1bc8d15691fd4dc9b74b0728025152efcfea2584881caf56f69d09183c98a756"
+    },
+    {
+      "test": "tools/test-mca-dtpt-route.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual FG/business/JEITA DTPT route, failed sample preserves protection, unrelated event rejected"
+      ],
+      "sha256": "9de45e21dc6ff8ccfd22b12cd06f96a395cd69a8dcbce1bd3cd180468fec4c28"
+    },
+    {
+      "test": "tools/test-mca-jeita-lifetime.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe",
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe"
+      ],
+      "sha256": "e50c3409b24bf7879dbf601c977b683d24a7ef20b0ba349182206a79df146d39"
+    },
+    {
+      "test": "tools/test-mca-limit-fanout.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual Buck/QC nested errors, all fanout destinations, first errno, retries, exact sub-1500mA limits and unsupported multi-buck"
+      ],
+      "sha256": "88ac64bd9460be62ff28e33e2606114b3d57b26327be975baf6ead919289aff6"
+    },
+    {
+      "test": "tools/test-mca-log-lifetime.py",
+      "result": "PASS",
+      "output": [
+        "PASS: log NULL/missing callbacks, invalid slot, negative/oversized returns, newline bounds and synchronized unregister"
+      ],
+      "sha256": "383fac31f0c358821b2949052bbd3ed7e6d272679643256636569f18fab93cdb"
+    },
+    {
+      "test": "tools/test-mca-owned-voter.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual owned voter stable handles, callback drain, duplicate/legacy rejection, rebind, allocation failures and module cleanup"
+      ],
+      "sha256": "8e54c52530c474167ed90b9947a39fe44c034a2abc0c7ad1a12056cf4bd10117"
+    },
+    {
+      "test": "tools/test-mca-parallel-buck.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual Buck transitions, MIN caps, 12 enable failures, 5 cleanup failures, rollback retry, instance isolation and pthread serialization",
+        "PASS: actual complete-current samples, invalid/overflow input, single/dual CP transitions, rollback and failure state"
+      ],
+      "sha256": "3944f5b10552c6970dc0dd1eec06334c9dd2fcd3fcf2a829abfd014a121e51c8"
+    },
+    {
+      "test": "tools/test-mca-protection-errors.py",
+      "result": "PASS",
+      "output": [
+        "PASS: ibat wired-only sampling, provider failures, fault preservation, per-instance state, topology and stop ordering",
+        "PASS: vbat wired-only sampling, provider failures, fault preservation, per-instance state, topology and stop ordering"
+      ],
+      "sha256": "558914a87f2ae0379c0806685cb96e10508c4208851b92ebd52236de5b2d3e2d"
+    },
+    {
+      "test": "tools/test-mca-provider-batch.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual buck probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe",
+        "PASS: actual qc probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe"
+      ],
+      "sha256": "703d6d50e616f88172c70e082aa7d0d2a2b186f0de92ffc078adf10b721d4d43"
+    },
+    {
+      "test": "tools/test-mca-qc-battery-selection.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual QC battery selector, mode/role bounds, supplier errors, read failures, selected table and OF reference release"
+      ],
+      "sha256": "21be05573505576bc0e9e41b52b2343210e0c74b3cd63624dca31ed4ed865da1"
+    },
+    {
+      "test": "tools/test-mca-sic-power.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual SIC query errors, retained limits, both rating APIs, all rating boundaries, retry, source changes and independent wireless replay"
+      ],
+      "sha256": "2a1d78d3b0ebf43414fdbcb47fcfc7954c0d9bd17278be7e67b59a66452f643e"
+    },
+    {
+      "test": "tools/test-mca-smartchg-lifetime.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual smartchg probe faults, 3 owned voters, all global exports/SRCU drain, dual-source events, overflow/errors and 20 rebinds"
+      ],
+      "sha256": "4b238a617e066f9b2915f005de1613d4ba963d9ca9b5c1b4f069cc2013e26456"
+    },
+    {
+      "test": "tools/test-mca-smartchg-policy.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual smartchg 1/2-row DT bounds, invalid fields, gauge failures, vote retry and stopped worker",
+        "PASS: actual QC rejects unverified BAA without reading input; non-foldable events do not reparse battery tables"
+      ],
+      "sha256": "2e168bbc6ee74cde29c18fb99260d0ef43b1999b98058e4398531246ac5605eb"
+    },
+    {
+      "test": "tools/test-mca-smartchg-registry.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual smartchg copied registry, allocation failure, identity, seven dispatchers, backend failures and concurrent unregister/cleanup drain model"
+      ],
+      "sha256": "4f8e670b49b62f4cc4868cd48e59ece2dc12a27596f8afaebd32985ed4b283f3"
+    },
+    {
+      "test": "tools/test-mca-strategy-build.py",
+      "result": "PASS",
+      "output": [
+        "PASS: generic registry-only, legacy SERVICES-only and COMPLETE Makefile selection; Nezha policy remains gated"
+      ],
+      "sha256": "b1d186312775a36b06819b50eea613599d2b4467a477b64b773e695cce706199"
+    },
+    {
+      "test": "tools/test-mca-strategy-lifetime.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual strategy dispatch errors, duplicate registration, allocation failure, synchronized unregister and concurrent replacement"
+      ],
+      "sha256": "03ce10c0f0cdbc51c40f6ab57c0373cf43c65fc8a812933c76cbc9778e154e68"
+    },
+    {
+      "test": "tools/test-mca-thermal-errors.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual thermal 30 apply failure points, first errors, retry/new requests, release retry, independent suppliers, sysfs/cooling bounds and disconnect cleanup"
+      ],
+      "sha256": "0973e068fe83681c2b9d6cbd3d1e9a85595098494be743fa0d73d100de6ec0c5"
+    },
+    {
+      "test": "tools/test-mca-thermal-lifetime.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual thermal SRCU drain, ownership, all probe failures, cooling/wireless bounds and wired supplier retry"
+      ],
+      "sha256": "270cc3160b5ac378e8ef0c02caa2b3b8c7df38b7c0708e0756433a71133de9a3"
+    },
+    {
+      "test": "tools/test-mca-usb-ownership.py",
+      "result": "PASS",
+      "output": [
+        "PASS: USB owned/borrowed lifetime, descriptor isolation, deferral, allocation/register/action failure and repeated cleanup",
+        "PASS: USB owned/borrowed lifetime, descriptor isolation, deferral, allocation/register/action failure and repeated cleanup"
+      ],
+      "sha256": "79d05d809ba8ee6111771bad8ef73864a6dce2207fb288f1b17f5f06fe6c75c8"
+    },
+    {
+      "test": "tools/test-mca-voter-errors.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual MCA voter callback retry, override/force error state, no-callback votes and invalid-type unlock"
+      ],
+      "sha256": "82c30f5d837e86e7ecfc077b2b586fb965cbd60be90b9561e2cf249774c50ab8"
+    },
+    {
+      "test": "tools/test-mca-wired-stop.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual single/dual CP and gauge read errors; dual-CP path no longer skips gauge checks",
+        "PASS: actual protection events propagate vote/stop errors, attempt both CPs and preserve the first failure",
+        "PASS: actual wired CP/FG/adapter/readback stop ordering, blocked release, retry state, detach preservation, single/dual CP, voter errors and PD/PPS/QC request failures"
+      ],
+      "sha256": "76644df7fc72553408fed279dd7b5bd0eae7fecf86664df6d31266344390b802"
+    },
+    {
+      "test": "tools/test-nezha-jeita-events.py",
+      "result": "PASS",
+      "output": [
+        "PASS: actual Nezha JEITA wired/wireless handover, repeated events, final disconnect and shared OSS DTPT event (no OEM ID alias)"
+      ],
+      "sha256": "03febc0c045f941fd4fb565c13be3fd6ba92f0c9cc450b0574cf520b43de7702"
+    },
+    {
+      "test": "tools/test-nezha-jeita-parser.py",
+      "result": "PASS",
+      "output": [
+        "PASS: JEITA table, 3 allocation failures, 28 read failures and malformed fields"
+      ],
+      "sha256": "231ff8a7cb540e205ef52c6a7acf921d4b26d609d2afd66938895b5cc6e668bc"
+    },
+    {
+      "test": "tools/test-nezha-thermal-format.py",
+      "result": "PASS",
+      "output": [
+        "PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures, flip table bounds and unchanged error outputs"
+      ],
+      "sha256": "551fe14899656ec531380cae44f05d56ee23562404b0c1ba3bc0c767d51b04af"
+    }
+  ],
+  "changed_files": [
+    {
+      "path": "android/nezha-native/module-gaps.md",
+      "sha256": "fc5f24c365a91d9d18a245383e7254a9b82c8005d5129419573e9e4c00de550e"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/inc/mca_quick_charger.h",
+      "sha256": "bfe6555dcad826ec9a3bf45ef8702c684c1a6c451ac322076b45958fb74d4211"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.c",
+      "sha256": "c96058fa36b51969f370121086ee28626af984092212f8f5e2e250433573070f"
+    },
+    {
+      "path": "tools/test-mca-dtpt-route.py",
+      "sha256": "9de45e21dc6ff8ccfd22b12cd06f96a395cd69a8dcbce1bd3cd180468fec4c28"
+    },
+    {
+      "path": "tools/test-mca-provider-batch.py",
+      "sha256": "703d6d50e616f88172c70e082aa7d0d2a2b186f0de92ffc078adf10b721d4d43"
+    },
+    {
+      "path": "tools/test-mca-wired-stop.py",
+      "sha256": "76644df7fc72553408fed279dd7b5bd0eae7fecf86664df6d31266344390b802"
+    },
+    {
+      "path": "tools/test-mca-parallel-buck.py",
+      "sha256": "3944f5b10552c6970dc0dd1eec06334c9dd2fcd3fcf2a829abfd014a121e51c8"
+    }
+  ],
+  "arm64_object_build": {
+    "compiler": "Debian clang 19.1.7 (3+b1)",
+    "config_base": [
+      "gki_defconfig",
+      "vendor/canoe_GKI.config",
+      "vendor/nezha_GKI.config"
+    ],
+    "local_config_changes": [
+      "RUST=n",
+      "DEBUG_INFO_BTF=n",
+      "DEBUG_INFO_BTF_MODULES=n",
+      "MODULE_SIG_ALL=n",
+      "WERROR=y"
+    ],
+    "config_sha256": "6da3b09aff27730b151f60596dd99e20c27bead13e4ae0d84c7a643823e8cde5",
+    "command": "make O=<out> ARCH=arm64 LLVM=-19 -j4 drivers/power/supply/mca/mca_strategy/strategy_charger/{mca_strategy_quickchg,mca_strategy_buckchg,mca_buckchg_jeita,mca_charger_thermal}.o",
+    "module_uapi_commit": "e1864d663b34f9d683895e7ebd0a3a388f404c31",
+    "result": "PASS",
+    "log": [
+      "make: Entering directory '<kernel>'",
+      "make[1]: Entering directory '<out>'",
+      "  SYNC    include/config/auto.conf",
+      "  GEN     Makefile",
+      "  GEN     Makefile",
+      "  CC      scripts/mod/empty.o",
+      "  CC      scripts/mod/devicetable-offsets.s",
+      "  MKELF   scripts/mod/elfconfig.h",
+      "  HOSTCC  scripts/mod/modpost.o",
+      "  HOSTCC  scripts/mod/sumversion.o",
+      "  HOSTCC  scripts/mod/symsearch.o",
+      "  HOSTCC  scripts/mod/file2alias.o",
+      "  HOSTLD  scripts/mod/modpost",
+      "  CC      kernel/bounds.s",
+      "  CC      arch/arm64/kernel/asm-offsets.s",
+      "  CALL    <kernel>/scripts/checksyscalls.sh",
+      "  LDS     arch/arm64/kernel/vdso/vdso.lds",
+      "  CC      arch/arm64/kernel/vdso/vgettimeofday.o",
+      "  AS      arch/arm64/kernel/vdso/note.o",
+      "  AS      arch/arm64/kernel/vdso/sigreturn.o",
+      "  CC      arch/arm64/kernel/vdso/vgetrandom.o",
+      "  AS      arch/arm64/kernel/vdso/vgetrandom-chacha.o",
+      "  LD      arch/arm64/kernel/vdso/vdso.so.dbg",
+      "  VDSOSYM include/generated/vdso-offsets.h",
+      "  OBJCOPY arch/arm64/kernel/vdso/vdso.so",
+      "  LDS     arch/arm64/kernel/vdso32/vdso.lds",
+      "  LD32    arch/arm64/kernel/vdso32/vdso.so.raw",
+      "  MUNGE   arch/arm64/kernel/vdso32/vdso32.so.dbg",
+      "  OBJCOPY arch/arm64/kernel/vdso32/vdso.so",
+      "  CC      drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.o",
+      "  CC      drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_buckchg.o",
+      "  CC      drivers/power/supply/mca/mca_strategy/strategy_charger/mca_buckchg_jeita.o",
+      "  CC      drivers/power/supply/mca/mca_strategy/strategy_charger/mca_charger_thermal.o",
+      "make[1]: Leaving directory '<out>'",
+      "make: Leaving directory '<kernel>'"
+    ],
+    "objects": [
+      {
+        "name": "mca_buckchg_jeita.o",
+        "sha256": "9d463fc5bdcc88c50f956baf4ff1557db0e72362aad3c0185d47a2ff811a5bd3",
+        "format": "ELF64 AArch64 relocatable"
+      },
+      {
+        "name": "mca_charger_thermal.o",
+        "sha256": "38302583d8b12f155835cce35f723e801aa9c2a308354fba5e3dcfee1fb60591",
+        "format": "ELF64 AArch64 relocatable"
+      },
+      {
+        "name": "mca_strategy_buckchg.o",
+        "sha256": "7683ed4b1390ed68ed714bd6c3a9435d9a666abbbe69a25e7d1c2bbacea648f7",
+        "format": "ELF64 AArch64 relocatable"
+      },
+      {
+        "name": "mca_strategy_quickchg.o",
+        "sha256": "dd42beca7cfaa9d055316100bee8fa919de1f5b4b94f40706b8615ff13beca0d",
+        "format": "ELF64 AArch64 relocatable"
+      }
+    ]
+  },
+  "limits": [
+    "Extracted production functions with modeled hardware/voter backend, real pthread serialization only for parallel Buck helper.",
+    "Provider teardown drain test and actual hardware-stop test are separate host harnesses; no complete kernel lifecycle execution.",
+    "Full MCA remains disabled; production configuration, module/DT repositories and manifest pins unchanged.",
+    "No full Image, .ko linkage, modpost, final DTB/DLKM image or hardware testing.",
+    "Global event/workqueue serialization, single-CP PMIC/VTERM and dynamic CP ratio-switch paths remain open."
+  ]
+}

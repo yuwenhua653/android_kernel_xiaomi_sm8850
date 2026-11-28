@@ -2,6 +2,27 @@
 
 适用于国行 nezha 的 nazha 分支，底包 OS4.0.7.0.XPACNXM。以能开机、通信、拍摄、充电及正常待机为验收目标。
 
+## 2026-11-28：并行 Buck 事务、单/双 CP 切换及退出停充
+
+基于 `3321769` 接续。此节更新前一轮的并行 Buck helper、CP 路径切换与 QC remove/shutdown 缺口，**不是完整有线策略或基础功能全部完成**。
+
+- **并行 Buck**：移除函数静态启停标记，改为实例状态与独立 mutex。先暂停输入，再设置频率和限流，全部确认后恢复输入并启动 AICL；确认成功才缓存生效值。失败返回首个错误并回滚，回滚失败保留 dirty 状态供下次重试。单/双 CP 的实际角色逐个检查，不向 CP 后端传 DUAL 作为芯片索引。
+- **限流边界**：该 helper 改用普通 MIN 投票 `parallel_qc`；新限流建立后只撤本策略自己的 `wire_qc` 零电流票，保留温控/JEITA 等其他客户端的限流。停用先暂停输入、恢复自己的零电流票，再清理并行限流。没有上调 DTS 电流、功率、温度或电压参数。独立的 `pmic_single_cp_charging` 旧 override 路径仍未重构，不能把本节结论外推到它或两个功能同时配置的组合。
+- **强制停充**：不再要求电流落入运行时滞回区间才能关闭并行 Buck；停充时电荷泵已关闭或传感器失效不能跳过清理。运行调节和停充调用方均检查 helper 的返回值。
+- **完整电流样本**：先验证 CP 索引，再检查所有本次读取；用宽类型累加并检查负值和溢出，全部成功才发布总电流，读取失败不留下半更新样本并返回后端 errno。
+- **单/双 CP 路径切换**：双转单必须完成关闭与 ADC 停用才更新工作角色；单转双检查 ADC、模式、使能、等待、读回及最小电流，每个失败都关闭新增 CP。回滚失败设置 stop_pending；monitor 收到切换错误进入已有停充路径。低电流未成功开通的 CP 不再遗留开启。
+- **QC remove/platform shutdown**：等待接口、owned voter 与三个 worker 退出后，调用已检查的 CP/FG/适配器停充，再释放电池参数。teardown 保持 Buck 输入暂停，不执行正常运行停充的回退放行，不再只尝试关闭 CP。错误会记录并保持失败状态，但驱动卸载后不能异步重试，仍不能声称 I/O 失败时物理硬件已停止。reboot notifier 记录停充失败。
+- **旧测试修复**：DTPT route 测试桩补齐前轮已加入的 JEITA stopping/READ_ONCE，并验证停止后的事件被拒绝。
+
+验证见 `mca-wired-transitions-validation-20261128.json`：25 个主机检查通过；新增生产函数故障注入覆盖 12 个启用失败点、5 个清理失败点、首错/回滚、MIN 限流、双实例、同实例 pthread 竞争以及 CP 切换。使用完整源码和固定模块 UAPI，Clang 19.1.7 在 gki + canoe + nezha 配置上对 quickchg、Buck、JEITA、thermal 四个生产翻译单元完成 ARM64 Kbuild，输出为 AArch64 ELF；WERROR、CFI、DWARF module version 配置开启。宿主缺少生产 Rust/BTF 工具链，局部编译关闭 Rust/BTF/自动模块签名；**这是四个对象编译，不是完整 Image、模块链接/modpost、镜像或实机验证**。仓库生产配置未改变，完整 MCA 仍未启用。
+
+**接续仍需完成**：
+
+1. `pmic_single_cp_charging` / VTERM override、动态 CP 比率切换、其余启充/传感器/保护 I/O 的完整错误处理，以及 Buck 本体多芯片分配接口。
+2. 全局事件、monitor、调压/调频与 stop 的串行化及重入/取消等待；本次 mutex 只串行化并行 Buck helper，pthread 测试不代表内核 lockdep 或完整 workqueue 无竞态。
+3. 初始在线状态、disconnect 后保护票清理、完整保护提供者与原厂事件边界，之后才可评估完整 MCA 启用。
+4. 生产 ARM64 全量编译/modpost、DTB/DLKM/镜像及 17U USB 插拔、PD/PPS/QC、过温退充、充电功率与待机实测；无线与相机仍按现有 P0 清单推进。
+
 ## 2026-11-28：有线功率查询、停充错误恢复及保护事件
 
 基于 `86de4ff`，继续处理有线充电。本节更新上一节的 SIC 查询和部分停充缺口；完整 MCA 策略仍未启用。

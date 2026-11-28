@@ -155,7 +155,7 @@ static void strategy_buckchg_panel_notifier_cb(void) {}
  else:
   body=fn(s,'mca_quick_charge_free_batt_para')+body
   defs='';ws=['monitor_work','pps_ptf_work','vfc_work'];voters=['input_suspend_voter','buck_input_voter','buck_charge_curr_voter','term_volt_voter','flip_charge_curr_voter','thermal_flip_voter','chg_disable_voter','chg_en_voter','single_chg_cur_voter','multi_chg_cur_voter']
-  decl='struct mca_quick_charge_volt_para_info {void *stage_para,*volt_para;};struct mca_quick_charge_temp_para_info {struct mca_quick_charge_volt_para_info volt_info,volt_ffc_info;};struct mca_quick_charge_batt_para_info {int temp_para_size;struct mca_quick_charge_temp_para_info *temp_info;};struct mca_quick_charge_info {struct device *dev;bool ready,stopping,strategy_registered,charge_if_registered,smartchg_registered,sysfs_created,reboot_registered;struct mca_charge_if_ops charge_if_ops;struct notifier_block shutdown_notifier;struct mutex data_lock;int cp_chip_vendor,support_base_flip,cp_type;struct {int delta_ichg;} smartchg_data;struct mca_votable *voter[6];struct mca_quick_charge_batt_para_info batt_para[3],base_flip_para[2];'+''.join('struct mca_votable *'+v+';' for v in voters)+''.join('struct delayed_work '+w+';' for w in ws)+'};\n'
+  decl='struct mca_quick_charge_volt_para_info {void *stage_para,*volt_para;};struct mca_quick_charge_temp_para_info {struct mca_quick_charge_volt_para_info volt_info,volt_ffc_info;};struct mca_quick_charge_batt_para_info {int temp_para_size;struct mca_quick_charge_temp_para_info *temp_info;};struct mca_quick_charge_info {struct device *dev;bool ready,stopping,strategy_registered,charge_if_registered,smartchg_registered,sysfs_created,reboot_registered;struct mca_charge_if_ops charge_if_ops;struct notifier_block shutdown_notifier;struct mutex data_lock,buck_parallel_lock;int cp_chip_vendor,support_base_flip,cp_type;struct {int delta_ichg;} smartchg_data;struct mca_votable *voter[6];struct mca_quick_charge_batt_para_info batt_para[3],base_flip_para[2];'+''.join('struct mca_votable *'+v+';' for v in voters)+''.join('struct delayed_work '+w+';' for w in ws)+'};\n'
   stubs=r'''
 static const struct mca_charge_if_ops g_strategy_quickchg_if_ops={0};
 static const struct mca_smartchg_if_ops g_quickchg_smartchg_if_ops={0};
@@ -183,6 +183,11 @@ static void mca_quick_charge_init_data(struct mca_quick_charge_info *i) {(void)i
 static int mca_quick_charge_create_group(struct device *d) {(void)d;int ret=step();if(!ret)sysfs_created=1;return ret;}
 static void mca_quick_charge_remove_group(struct device *d) {(void)d;assert(sysfs_created);sysfs_created=0;late_enqueue();}
 static int platform_class_cp_set_charging_enable(int role,bool enable) {(void)role;assert(!enable);check_drained();stop_io++;return 0;}
+static int mca_quick_charge_stop_charging(struct mca_quick_charge_info *i) {
+ assert(i->stopping&&!i->ready);check_drained();stop_io++;
+ /* Actual hardware stop is exercised by test-mca-wired-stop.py. */
+ return 0;
+}
 static void mca_quick_charge_process_event(void) {}
 static void mca_quick_charge_get_status(void) {}
 static void mca_quick_charge_shutdown(void) {}

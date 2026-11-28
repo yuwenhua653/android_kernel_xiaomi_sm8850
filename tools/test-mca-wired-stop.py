@@ -44,7 +44,7 @@ struct delayed_work {bool pending;};struct mca_votable {int id;};
 struct process {int adp_type,cur_adp_cur,max_adp_curr,cur_adp_volt,min_adp_volt,max_adp_volt,cur_protocol,dual_cp_count,charge_flag,type_chg,sw_ocp_curr,total_err,error_num[2],cur_work_cp;bool cp_iic_ok,stop_charging,ffc_flag;int cur_stage[2],secure_info;struct {int data[4],index,count,sum,avg;} ibus_queue;};
 struct mca_quick_charge_info {bool ready,stopping,stop_pending,online,pd_switch_to_pmic,trigger_antr_burn,pmic_chg_need_fixed_volt,en_buck_parallel_chg,pmic_single_cp_chg,support_base_flip,master_batt_close,check_vbat_ov;int batt_type;int force_normal_volt_para,parall_force_normal_volt_para[2],batt_auth,init_volt_para,parall_init_volt_para,is_platform_qc,fake_pps_ptf,is_eu_model,data_lock,dtpt_status,pps_ptf;int mult_to_single_cnt,cp_type,ffc_final_vterm,last_override_vterm,base_close_curr,force_stop;struct {int chg_enable;} sysfs_data;struct process proc_data;struct delayed_work vfc_work,monitor_work,pps_ptf_work;struct mca_votable *input_suspend_voter,*buck_charge_curr_voter,*term_volt_voter,*flip_charge_curr_voter,*chg_disable_voter,*chg_en_voter;};
 enum {OFF0=1,OFF1,FG,FSW0,FSW1,REQUEST,READBACK,MODE0,MODE1,VOTE0,VOTE1,ADC0,ADC1,OVERRIDE,RERUN,TERM,ADC_ON};
-static int trace[256],count,fail_op,fail_op2,error1,error2,readback,request_volt,request_cur,request_kind,request_count,read_count,cap_ret,cap_num,parallel_calls;
+static int trace[256],count,fail_op,fail_op2,error1,error2,readback,request_volt,request_cur,request_kind,request_count,read_count,cap_ret,cap_num,parallel_calls,parallel_error;
 static bool pdo9;
 static int op(int id){assert(count<256);trace[count++]=id;return id==fail_op?error1:id==fail_op2?error2:0;}
 static int platform_class_cp_set_charging_enable(int role,bool en){assert(!en);return op(role?OFF1:OFF0);}
@@ -65,7 +65,7 @@ static int mca_vote_override(struct mca_votable*v,const char*c,bool en,int val){
 static int mca_rerun_election(struct mca_votable*v){assert(v);return op(RERUN);}
 static int mca_get_client_vote(struct mca_votable*v,const char*c){(void)v;(void)c;return 4400;}
 static int platform_class_buckchg_ops_set_term_volt(int r,int v){(void)r;(void)v;return op(TERM);}
-static void strategy_quickchg_enable_buck_charging(struct mca_quick_charge_info*i,int a,int b,bool en){(void)i;(void)a;(void)b;(void)en;parallel_calls++;}
+static int strategy_quickchg_enable_buck_charging(struct mca_quick_charge_info*i,int a,int b,bool en){(void)i;(void)a;(void)b;(void)en;parallel_calls++;return parallel_error;}
 static void mca_eu_pps_anti_disconnection_strategy(struct mca_quick_charge_info*i){(void)i;}
 '''
 names=['mca_quick_charge_is_charge_abnormal','mca_qc_quick_charge_is_charge_abnormal','stategy_quickchg_is_pdo_9v','mca_quick_charge_req_adp_volt_and_cur','mca_quick_charge_record_error','mca_quick_charge_stop_charging','mca_quick_charge_force_stop_charging','mca_quick_charge_exit_charging','mca_quick_charge_chg_disable_voter_cb','mca_quick_charge_chg_en_voter_cb']
@@ -110,7 +110,7 @@ assert precheck.index('if (info->stop_pending)')<precheck.index('MCA_QUICK_CHG_S
 test=r'''
 static struct mca_votable v[3]={{0},{1},{2}};
 static bool seen(int id){for(int j=0;j<count;j++)if(trace[j]==id)return true;return false;}
-static void reset_trace(void){count=request_count=read_count=fail_op=fail_op2=parallel_calls=0;error1=-EIO;error2=-ENODEV;readback=9000;cap_num=1;cap_ret=0;pdo9=true;}
+static void reset_trace(void){count=request_count=read_count=fail_op=fail_op2=parallel_calls=parallel_error=0;error1=-EIO;error2=-ENODEV;readback=9000;cap_num=1;cap_ret=0;pdo9=true;}
 static void setup(struct mca_quick_charge_info*i){memset(i,0,sizeof(*i));reset_trace();i->ready=i->online=true;i->cp_type=MCA_CP_TYPE_PARALLEL;i->proc_data.adp_type=XM_CHARGER_TYPE_PPS;i->proc_data.cur_adp_volt=16000;i->proc_data.min_adp_volt=11000;i->proc_data.max_adp_volt=21000;i->proc_data.cur_adp_cur=2000;i->proc_data.max_adp_curr=3000;i->proc_data.ffc_flag=true;i->proc_data.charge_flag=MCA_QUICK_CHG_STS_CHARGING;i->input_suspend_voter=&v[0];i->buck_charge_curr_voter=&v[1];i->term_volt_voter=&v[2];i->chg_disable_voter=&v[0];i->chg_en_voter=&v[1];}
 int main(void){struct mca_quick_charge_info i;
  setup(&i);assert(!mca_quick_charge_stop_charging(&i));assert(!i.stop_pending&&!i.proc_data.stop_charging&&i.proc_data.charge_flag==MCA_QUICK_CHG_STS_NO_CHARGING&&request_kind==1&&request_volt==9000);assert(trace[0]==OFF0&&trace[1]==OFF1&&trace[2]==FG&&seen(VOTE0)&&seen(VOTE1));
@@ -132,6 +132,11 @@ int main(void){struct mca_quick_charge_info i;
  setup(&i);i.online=false;assert(!mca_quick_charge_exit_charging(&i)&&!request_count&&!read_count&&!i.proc_data.adp_type);
  setup(&i);i.online=false;fail_op=FG;assert(mca_quick_charge_exit_charging(&i)==-EIO&&i.proc_data.adp_type==XM_CHARGER_TYPE_PPS&&i.stop_pending);
  setup(&i);fail_op=OFF0;i.stopping=true;assert(mca_quick_charge_stop_charging(&i)==-EIO&&!i.monitor_work.pending);
+ setup(&i);i.en_buck_parallel_chg=true;parallel_error=-EAGAIN;
+ assert(mca_quick_charge_stop_charging(&i)==-EAGAIN&&i.stop_pending&&parallel_calls==1&&!seen(VOTE0));
+ reset_trace();assert(!mca_quick_charge_stop_charging(&i)&&!i.stop_pending);
+ setup(&i);i.stopping=true;assert(!mca_quick_charge_stop_charging(&i)&&!seen(VOTE1)&&!i.monitor_work.pending&&seen(ADC0)&&seen(ADC1));
+ setup(&i);i.stopping=true;fail_op=VOTE0;assert(mca_quick_charge_stop_charging(&i)==-EIO&&seen(OFF0)&&seen(OFF1)&&seen(FG)&&!i.monitor_work.pending);
  setup(&i);fail_op=FG;assert(mca_quick_charge_chg_disable_voter_cb(NULL,&i,1,"test")==-EIO&&i.force_stop&&i.stop_pending);
  reset_trace();assert(!mca_quick_charge_chg_disable_voter_cb(NULL,&i,1,"test")&&!i.stop_pending);
  setup(&i);fail_op=FG;assert(mca_quick_charge_chg_en_voter_cb(NULL,&i,0,"test")==-EIO&&!i.sysfs_data.chg_enable);
