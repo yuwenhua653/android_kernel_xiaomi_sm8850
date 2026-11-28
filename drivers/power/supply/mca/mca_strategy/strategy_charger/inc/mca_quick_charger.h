@@ -452,6 +452,7 @@ struct mca_quick_charge_smartchg_data {
 
 struct mca_quick_charge_info {
 	bool ready, stopping;
+	bool stop_pending;
 	bool strategy_registered, charge_if_registered, smartchg_registered;
 	bool sysfs_created, reboot_registered;
 	struct mca_charge_if_ops charge_if_ops;

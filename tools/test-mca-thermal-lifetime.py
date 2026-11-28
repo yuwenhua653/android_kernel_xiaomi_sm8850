@@ -86,6 +86,7 @@ static int mca_strategy_func_process(int t,int e,int v) {(void)t;(void)e;(void)v
 static int mca_charger_thermal_handle_limit(struct mca_thermal_info *i,struct mca_thermal_ctrl_info *c,struct mca_thermal_data *d,struct mca_votable **v) {(void)i;(void)c;(void)d;(void)v;limit_calls++;return 0;}
 static int mca_charger_thermal_flip_handle_limit(struct mca_thermal_info *i,struct mca_thermal_ctrl_info *c,int *d,struct mca_votable *v) {(void)i;(void)c;(void)d;(void)v;limit_calls++;return 0;}
 static int mca_charger_thermal_parse_dt(struct mca_thermal_info *i) {i->support_wireless=1;i->wired_ctrl_info.max_level=i->wireless_ctrl_info.max_level=2;return step();}
+static int mca_charger_thermal_sic_initial_chg_curr(struct mca_thermal_info *i) {(void)i;return 0;}
 static int mca_charger_thermal_init_wired_voter(struct mca_thermal_info *i) {i->wired_ctrl_info.voter_ok=!wired_missing;return wired_missing?-EAGAIN:0;}
 static int mca_charger_thermal_init_wireless_voter(struct mca_thermal_info *i) {i->wireless_ctrl_info.voter_ok=!wireless_missing;return wireless_missing?-EAGAIN:0;}
 static int mca_strategy_ops_register(int t,void *f,void *g,void *set,void *data) {(void)t;(void)f;(void)g;(void)set;int ret=step();if(!ret){assert(!active[0]);active[0]=1;strategy_owner=data;}return ret;}

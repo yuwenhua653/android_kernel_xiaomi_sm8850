@@ -89,7 +89,7 @@ static void mca_thermal_record_error(int *ret, int error)
 
 static int mca_thermal_retry(struct mca_thermal_info *info, int ret)
 {
-	if (ret && ret != -EINVAL && ret != -EOPNOTSUPP &&
+	if (ret && ret != -EINVAL && ret != -EOPNOTSUPP && ret != -ERANGE &&
 	    !READ_ONCE(info->stopping))
 		schedule_delayed_work(&info->init_voter_work, msecs_to_jiffies(1000));
 	return ret;
@@ -929,6 +929,7 @@ out:
 	return -1;
 }
 
+static int mca_charger_thermal_sic_initial_chg_curr(struct mca_thermal_info *info);
 static int mca_charger_thermal_poweroff_clear_voter(struct mca_thermal_info *info);
 static int mca_wireless_charger_thermal_poweroff_clear_voter(struct mca_thermal_info *info);
 
@@ -940,7 +941,11 @@ static void mca_charger_thermal_init_voter_work(struct work_struct *work)
 
 	if (READ_ONCE(info->stopping))
 		return;
+	if (info->online && info->sic_power_pending)
+		mca_thermal_record_error(&ret,
+			mca_charger_thermal_sic_initial_chg_curr(info));
 	rc = mca_charger_thermal_init_wired_voter(info);
+	mca_thermal_retry(info, rc);
 	mca_thermal_record_error(&ret, rc);
 	if (!rc) {
 		if (!info->online)
@@ -956,6 +961,7 @@ static void mca_charger_thermal_init_voter_work(struct work_struct *work)
 	}
 	if (info->support_wireless) {
 		rc = mca_charger_thermal_init_wireless_voter(info);
+		mca_thermal_retry(info, rc);
 		mca_thermal_record_error(&ret, rc);
 		if (!rc) {
 			if (!info->wls_online)
@@ -1097,53 +1103,51 @@ static void mca_charger_thermal_update_chg_curr(struct mca_thermal_info *info)
 static int
 mca_charger_thermal_sic_initial_chg_curr(struct mca_thermal_info *info)
 {
-	int ret = 0;
-	int power_max = 0;
-	int qc_power_max = 0;
+	unsigned int power_max = 0;
+	int qc_power_max = 0, fcc, ret, i;
 
 	if (info->real_type == XM_CHARGER_TYPE_PPS ||
 	    info->real_type == XM_CHARGER_TYPE_PD_VERIFY) {
-		(void)mca_strategy_func_get_status(
-			STRATEGY_FUNC_TYPE_QUICK_CHARGE,
+		info->sic_power_pending = true;
+		ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_QUICK_CHARGE,
 			STRATEGY_STATUS_TYPE_POWER_MAX, &qc_power_max);
+		if (ret)
+			return mca_thermal_retry(info, ret);
+		if (qc_power_max < 0)
+			return -EINVAL;
 		if (qc_power_max < SIC_PWR_MAX_POWER_THR)
-			protocol_class_get_adapter_pwr_max_power(
-				ADAPTER_PROTOCOL_PPS,
-				(unsigned int *)(&power_max));
+			ret = protocol_class_get_adapter_pwr_max_power(
+				ADAPTER_PROTOCOL_PPS, &power_max);
 		else
-			protocol_class_get_adapter_max_power(
-				ADAPTER_PROTOCOL_PPS,
-				(unsigned int *)(&power_max));
-		for (int i = 0; i < POWER_MAX_LIST; i++) {
-			if (power_max <= sic_init_list[i].power_max) {
-				info->wired_ctrl_info.sic_init_fcc =
-					sic_init_list[i].sic_init_fcc;
-				mca_charger_thermal_update_chg_curr(info);
+			ret = protocol_class_get_adapter_max_power(
+				ADAPTER_PROTOCOL_PPS, &power_max);
+		if (ret)
+			return mca_thermal_retry(info, ret);
+		/* A missing/unknown rating is not a valid low-power adapter. */
+		if (!power_max)
+			return mca_thermal_retry(info, -EAGAIN);
+		for (i = 0; i < POWER_MAX_LIST; i++)
+			if (power_max <= sic_init_list[i].power_max)
 				break;
-			}
-		}
-
-		if (info->online)
-			ret = mca_charger_thermal_handle_limit(info,
-				&info->wired_ctrl_info,
-				info->wired_thermal_data, info->wired_voter);
-
+		if (i == POWER_MAX_LIST)
+			return -ERANGE;
+		fcc = sic_init_list[i].sic_init_fcc;
 	} else if (info->real_type == XM_CHARGER_TYPE_HVDCP3P5 ||
 		   info->real_type == XM_CHARGER_TYPE_HVDCP3_B ||
 		   info->real_type == XM_CHARGER_TYPE_HVDCP3) {
-		info->wired_ctrl_info.sic_init_fcc = QC_27W_SIC_INIT_FCC;
-		mca_charger_thermal_update_chg_curr(info);
-		if (info->online)
-			ret = mca_charger_thermal_handle_limit(info,
-				&info->wired_ctrl_info,
-				info->wired_thermal_data, info->wired_voter);
-		mca_log_info("QC3.0 sic_init_fcc %d\n",
-			     info->wired_ctrl_info.sic_init_fcc);
+		fcc = QC_27W_SIC_INIT_FCC;
 	} else {
-		mca_log_info("not support type %d\n", info->real_type);
+		/* A new non-QC source must not inherit the old adapter's SIC cap. */
+		fcc = 0;
 	}
 
-	return ret;
+	info->sic_power_pending = false;
+	info->wired_ctrl_info.sic_init_fcc = fcc;
+	mca_charger_thermal_update_chg_curr(info);
+	if (!info->online)
+		return 0;
+	return mca_charger_thermal_handle_limit(info, &info->wired_ctrl_info,
+		info->wired_thermal_data, info->wired_voter);
 }
 
 static int
@@ -1157,13 +1161,13 @@ mca_charger_thermal_poweroff_clear_voter(struct mca_thermal_info *info)
 		return 0;
 	}
 	info->wired_clear_pending = true;
-	if (!info->wired_ctrl_info.voter_ok)
-		return mca_thermal_retry(info, -EAGAIN);
-
+	info->sic_power_pending = false;
 	info->wired_ctrl_info.chg_curr = 0;
 	info->wired_ctrl_info.sic_chg_curr = 0;
 	info->wired_ctrl_info.sic_init_fcc = 0;
 	info->real_type = XM_CHARGER_TYPE_UNKNOW;
+	if (!info->wired_ctrl_info.voter_ok)
+		return mca_thermal_retry(info, -EAGAIN);
 
 	if (info->support_base_flip) {
 		ret = mca_vote(info->flip_voter, "mca_thermal", false, 0);

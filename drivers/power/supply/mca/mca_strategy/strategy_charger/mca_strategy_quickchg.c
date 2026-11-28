@@ -491,7 +491,7 @@ static bool stategy_quickchg_is_pdo_9v(struct mca_quick_charge_info *info)
 	if (ret)
 		return false;
 
-	if (cap_info.nums == 0) {
+	if (cap_info.nums <= 0 || cap_info.nums > ARRAY_SIZE(cap_info.cap)) {
 		mca_log_info(" pd 2.0 pwr_cap.nums is null\n");
 		return false;
 	}
@@ -515,63 +515,38 @@ mca_quick_charge_req_adp_volt_and_cur(struct mca_quick_charge_info *info)
 {
 	int pd_request_volt;
 
-	mca_log_info("req adp volt=%d, cur=%d\n", info->proc_data.cur_adp_volt,
-		     info->proc_data.cur_adp_cur);
-
-	if (info->proc_data.cur_adp_cur > info->proc_data.max_adp_curr)
-		info->proc_data.cur_adp_cur = info->proc_data.max_adp_curr;
-
-	if (info->proc_data.cur_adp_volt > info->proc_data.max_adp_volt)
-		info->proc_data.cur_adp_volt = info->proc_data.max_adp_volt;
-
-	if (info->proc_data.cur_adp_volt < info->proc_data.min_adp_volt) {
-		mca_log_err("volt req too low, return err\n");
-		return -1;
+	/* Fixed PDO fallback is independent of the old APDO's minimum voltage. */
+	if (info->proc_data.adp_type == XM_CHARGER_TYPE_PD ||
+	    ((info->proc_data.adp_type == XM_CHARGER_TYPE_PPS ||
+	      info->proc_data.adp_type == XM_CHARGER_TYPE_PD_VERIFY) &&
+	     info->pd_switch_to_pmic)) {
+		pd_request_volt = stategy_quickchg_is_pdo_9v(info) &&
+			!info->trigger_antr_burn ? MCA_QUICK_PD_FIXED_CHG_ADP_DEFAULT_VOLT :
+			MCA_QUICK_CHG_ADP_DEFAULT_VOLT;
+		return protocol_class_pd_set_fixed_volt(TYPEC_PORT_0, pd_request_volt);
 	}
 
-	switch (info->proc_data.adp_type) {
-	case XM_CHARGER_TYPE_PPS:
-	case XM_CHARGER_TYPE_PD_VERIFY:
-		if (!info->pd_switch_to_pmic) {
-			protocol_class_set_adapter_volt_and_curr(
-				info->proc_data.cur_protocol,
-				info->proc_data.cur_adp_volt,
-				info->proc_data.cur_adp_cur);
-		} else {
-			if (stategy_quickchg_is_pdo_9v(info) &&
-			    !info->trigger_antr_burn)
-				pd_request_volt =
-					MCA_QUICK_PD_FIXED_CHG_ADP_DEFAULT_VOLT;
-			else
-				pd_request_volt =
-					MCA_QUICK_CHG_ADP_DEFAULT_VOLT;
-			(void)protocol_class_pd_set_fixed_volt(TYPEC_PORT_0,
-							       pd_request_volt);
-			mca_log_err("PD2.0 REQUEST VOLT = %d\n",
-				    pd_request_volt);
-		}
-		break;
-	case XM_CHARGER_TYPE_PD:
-		if (stategy_quickchg_is_pdo_9v(info) &&
-		    !info->trigger_antr_burn)
-			pd_request_volt =
-				MCA_QUICK_PD_FIXED_CHG_ADP_DEFAULT_VOLT;
-		else
-			pd_request_volt = MCA_QUICK_CHG_ADP_DEFAULT_VOLT;
-		(void)protocol_class_pd_set_fixed_volt(TYPEC_PORT_0,
-						       pd_request_volt);
-		mca_log_err("PD2.0 REQUEST VOLT = %d\n", pd_request_volt);
-		break;
-	case XM_CHARGER_TYPE_HVDCP3_B:
-	case XM_CHARGER_TYPE_HVDCP3P5:
-		protocol_class_qc_set_volt(TYPEC_PORT_0,
-					   info->proc_data.cur_adp_volt);
-		break;
-	default:
-		break;
-	}
+	if (info->proc_data.adp_type != XM_CHARGER_TYPE_PPS &&
+	    info->proc_data.adp_type != XM_CHARGER_TYPE_PD_VERIFY &&
+	    info->proc_data.adp_type != XM_CHARGER_TYPE_HVDCP3_B &&
+	    info->proc_data.adp_type != XM_CHARGER_TYPE_HVDCP3P5)
+		return -EOPNOTSUPP;
+	if (info->proc_data.cur_adp_cur <= 0 || info->proc_data.max_adp_curr <= 0 ||
+	    info->proc_data.cur_adp_volt <= 0 || info->proc_data.min_adp_volt <= 0 ||
+	    info->proc_data.max_adp_volt < info->proc_data.min_adp_volt)
+		return -ERANGE;
+	info->proc_data.cur_adp_cur = min(info->proc_data.cur_adp_cur,
+		info->proc_data.max_adp_curr);
+	info->proc_data.cur_adp_volt = min(info->proc_data.cur_adp_volt,
+		info->proc_data.max_adp_volt);
+	if (info->proc_data.cur_adp_volt < info->proc_data.min_adp_volt)
+		return -ERANGE;
 
-	return 0;
+	if (info->proc_data.adp_type == XM_CHARGER_TYPE_HVDCP3_B ||
+	    info->proc_data.adp_type == XM_CHARGER_TYPE_HVDCP3P5)
+		return protocol_class_qc_set_volt(TYPEC_PORT_0, info->proc_data.cur_adp_volt);
+	return protocol_class_set_adapter_volt_and_curr(info->proc_data.cur_protocol,
+		info->proc_data.cur_adp_volt, info->proc_data.cur_adp_cur);
 }
 
 static void
@@ -587,30 +562,45 @@ mca_quick_charge_reset_charge_para(struct mca_quick_charge_info *info)
 	mca_vote(info->chg_en_voter, "lpd", false, 0);
 }
 
-static void mca_quick_charge_stop_charging(struct mca_quick_charge_info *info)
+static void mca_quick_charge_record_error(int *ret, int error)
 {
-	int ret;
+	if (!*ret && error)
+		*ret = error;
+}
+
+static int mca_quick_charge_stop_charging(struct mca_quick_charge_info *info)
+{
+	int ret = 0, rc;
 	int vbus_mv = 0;
 	int check_count = 0;
 
 	mca_log_err("stop charge\n");
-
-	info->mult_to_single_cnt = 0;
-	info->proc_data.cp_iic_ok = true;
-
-	if (info->proc_data.cp_iic_ok) {
-		platform_class_cp_set_charging_enable(CP_ROLE_MASTER, false);
-		platform_class_cp_set_charging_enable(CP_ROLE_SLAVE, false);
-	}
+	info->stop_pending = true;
+	info->proc_data.stop_charging = true;
 	cancel_delayed_work_sync(&info->vfc_work);
-	if (info->proc_data.cp_iic_ok) {
-		if (info->proc_data.cur_work_cp == MCA_QUICK_CHG_CP_DUAL) {
-			platform_class_cp_set_default_fsw(CP_ROLE_MASTER);
-			platform_class_cp_set_default_fsw(CP_ROLE_SLAVE);
-		} else
-			platform_class_cp_set_default_fsw(
-				info->proc_data.cur_work_cp);
+	ret = platform_class_cp_set_charging_enable(CP_ROLE_MASTER, false);
+	if (info->cp_type == MCA_CP_TYPE_PARALLEL) {
+		rc = platform_class_cp_set_charging_enable(CP_ROLE_SLAVE, false);
+		if (!ret)
+			ret = rc;
 	}
+	info->proc_data.cp_iic_ok = !ret;
+	/* Always attempt the gauge reset, including when a pump failed to stop. */
+	rc = strategy_class_fg_set_fastcharge(false);
+	if (!ret)
+		ret = rc;
+	if (ret)
+		goto out;
+	info->proc_data.ffc_flag = false;
+	info->mult_to_single_cnt = 0;
+	ret = platform_class_cp_set_default_fsw(CP_ROLE_MASTER);
+	if (info->cp_type == MCA_CP_TYPE_PARALLEL) {
+		rc = platform_class_cp_set_default_fsw(CP_ROLE_SLAVE);
+		if (!ret)
+			ret = rc;
+	}
+	if (ret)
+		goto out;
 
 	memset(info->proc_data.ibus_queue.data, 0,
 	       sizeof(info->proc_data.ibus_queue.data));
@@ -619,7 +609,6 @@ static void mca_quick_charge_stop_charging(struct mca_quick_charge_info *info)
 	info->proc_data.ibus_queue.sum = 0;
 	info->proc_data.ibus_queue.avg = 0;
 	info->check_vbat_ov = false;
-	info->proc_data.stop_charging = false;
 	info->proc_data.dual_cp_count = 0;
 
 	if (info->proc_data.adp_type == XM_CHARGER_TYPE_HVDCP3_B ||
@@ -633,69 +622,89 @@ static void mca_quick_charge_stop_charging(struct mca_quick_charge_info *info)
 		info->proc_data.cur_adp_volt = MCA_QUICK_CHG_ADP_DEFAULT_VOLT;
 	info->proc_data.cur_adp_cur = MCA_QUICK_CHG_ADP_DEFAULT_CURR;
 	info->pd_switch_to_pmic = true;
-	if ((info->proc_data.adp_type == XM_CHARGER_TYPE_PD_VERIFY ||
-	     info->proc_data.adp_type == XM_CHARGER_TYPE_PPS) &&
-	    info->pmic_chg_need_fixed_volt) {
-		protocol_class_pd_set_fixed_volt(TYPEC_PORT_0,
-						 MCA_QUICK_CHG_ADP_DEFAULT_VOLT);
-		if (stategy_quickchg_is_pdo_9v(info) && !info->trigger_antr_burn)
-			protocol_class_pd_set_fixed_volt(
-				TYPEC_PORT_0,
-				MCA_QUICK_PD_FIXED_CHG_ADP_DEFAULT_VOLT);
-	} else {
-		while (check_count++ < 10 && info->proc_data.cp_iic_ok) {
-			ret = mca_quick_charge_req_adp_volt_and_cur(info);
-			platform_class_cp_get_bus_voltage(CP_ROLE_MASTER,
-							  &vbus_mv);
-			mca_log_info("avoid vusb_ovp. cp_vbus: %d\n", vbus_mv);
-			if (vbus_mv < MCA_QUICK_CHG_VBUS_OK_HIGH_TH)
+	/* After physical detach no adapter command is required, but the CP and
+	 * gauge writes above must still succeed before clearing software state.
+	 */
+	if (info->online) {
+		ret = platform_class_cp_enable_adc(CP_ROLE_MASTER, true);
+		if (ret)
+			goto out;
+		do {
+			if ((info->proc_data.adp_type == XM_CHARGER_TYPE_PD_VERIFY ||
+			     info->proc_data.adp_type == XM_CHARGER_TYPE_PPS) &&
+			    info->pmic_chg_need_fixed_volt)
+				ret = protocol_class_pd_set_fixed_volt(TYPEC_PORT_0,
+					MCA_QUICK_CHG_ADP_DEFAULT_VOLT);
+			else
+				ret = mca_quick_charge_req_adp_volt_and_cur(info);
+			rc = platform_class_cp_get_bus_voltage(CP_ROLE_MASTER, &vbus_mv);
+			if (!ret && !rc && vbus_mv > 0 &&
+			    vbus_mv < MCA_QUICK_CHG_VBUS_OK_HIGH_TH)
 				break;
-
-			if (ret)
-				mca_log_err("stop req volt failed\n");
+			ret = ret ? ret : rc ? rc : -ETIMEDOUT;
+			if (++check_count == 10)
+				goto out;
 			msleep(300);
-		}
+		} while (true);
 	}
 
 	if (info->proc_data.cp_iic_ok) {
-		platform_class_cp_set_mode(CP_ROLE_MASTER, CP_MODE_FORWARD_2_1);
+		mca_quick_charge_record_error(&ret, platform_class_cp_set_mode(CP_ROLE_MASTER, CP_MODE_FORWARD_2_1));
 		if (info->cp_type == MCA_CP_TYPE_PARALLEL)
-			platform_class_cp_set_mode(CP_ROLE_SLAVE,
-						   CP_MODE_FORWARD_2_1);
+			mca_quick_charge_record_error(&ret, platform_class_cp_set_mode(CP_ROLE_SLAVE,
+						   CP_MODE_FORWARD_2_1));
 	}
+	if (ret)
+		goto out;
 	if (info->en_buck_parallel_chg && info->proc_data.cp_iic_ok) {
 		strategy_quickchg_enable_buck_charging(info, 0, 0, false);
 	}
 	if (info->pmic_single_cp_chg) {
-		mca_vote_override(info->term_volt_voter, "single_cp_pmic",
-				  false, 0);
-		mca_rerun_election(info->term_volt_voter);
+		mca_quick_charge_record_error(&ret, mca_vote_override(info->term_volt_voter, "single_cp_pmic",
+				  false, 0));
+		mca_quick_charge_record_error(&ret, mca_rerun_election(info->term_volt_voter));
+		if (ret)
+			goto out;
 		info->ffc_final_vterm = 0;
 		info->last_override_vterm = 0;
 	}
-	(void)mca_vote(info->input_suspend_voter, "wire_qc", false, 0);
-	(void)mca_vote(info->buck_charge_curr_voter, "wire_qc", false, 0);
+	mca_quick_charge_record_error(&ret, mca_vote(info->input_suspend_voter, "wire_qc", false, 0));
+	mca_quick_charge_record_error(&ret, mca_vote(info->buck_charge_curr_voter, "wire_qc", false, 0));
 	if (info->proc_data.cp_iic_ok) {
-		(void)platform_class_cp_enable_adc(CP_ROLE_MASTER, false);
-		(void)platform_class_cp_enable_adc(CP_ROLE_SLAVE, false);
+		mca_quick_charge_record_error(&ret, platform_class_cp_enable_adc(CP_ROLE_MASTER, false));
+		if (info->cp_type == MCA_CP_TYPE_PARALLEL)
+			mca_quick_charge_record_error(&ret, platform_class_cp_enable_adc(CP_ROLE_SLAVE, false));
 	}
 	memset(info->proc_data.cur_stage, 0, sizeof(info->proc_data.cur_stage));
 	memset(&(info->proc_data.secure_info), 0,
 	       sizeof(info->proc_data.secure_info));
-	if (info->master_batt_close) {
+	if (info->support_base_flip && info->master_batt_close) {
 		int term_volt = mca_get_client_vote(info->term_volt_voter,
 						    "jeita");
 
-		(void)platform_class_buckchg_ops_set_term_volt(
+		mca_quick_charge_record_error(&ret, platform_class_buckchg_ops_set_term_volt(
 			MAIN_BUCK_CHARGER,
-			term_volt + MCA_QUICK_CHG_BASE_CLOSE_VTERM_OFFSET);
-		(void)mca_vote(info->flip_charge_curr_voter, "base_close_curr",
-			       true, info->base_close_curr);
-		info->master_batt_close = false;
+			term_volt + MCA_QUICK_CHG_BASE_CLOSE_VTERM_OFFSET));
+		mca_quick_charge_record_error(&ret, mca_vote(info->flip_charge_curr_voter, "base_close_curr",
+			       true, info->base_close_curr));
+		if (!ret)
+			info->master_batt_close = false;
 	}
-	(void)mca_rerun_election(info->flip_charge_curr_voter);
+	if (info->support_base_flip)
+		mca_quick_charge_record_error(&ret, mca_rerun_election(info->flip_charge_curr_voter));
+	if (ret)
+		goto out;
+	info->stop_pending = false;
+	info->proc_data.stop_charging = false;
 	if (info->proc_data.charge_flag != MCA_QUICK_CHG_STS_CHARGE_DONE)
 		info->proc_data.charge_flag = MCA_QUICK_CHG_STS_NO_CHARGING;
+out:
+	if (ret) {
+		mca_log_err("incomplete stop, keeping retry state: %d\n", ret);
+		if (!READ_ONCE(info->stopping))
+			schedule_delayed_work(&info->monitor_work, msecs_to_jiffies(1000));
+	}
+	return ret;
 }
 
 static int
@@ -711,6 +720,10 @@ mca_quick_charge_adjust_adapter_mode(struct mca_quick_charge_info *info)
 						   &cap_info);
 	if (ret)
 		return ret;
+
+	if (cap_info.nums <= 0 || cap_info.nums > ARRAY_SIZE(cap_info.cap) ||
+	    cap_info.nums > ARRAY_SIZE(info->proc_data.adp_info))
+		return -EINVAL;
 
 	if (info->batt_type == MCA_BATTERY_TYPE_SERIES ||
 	    info->batt_type == MCA_BATTERY_TYPE_SINGLE_SERIES)
@@ -2179,15 +2192,6 @@ static void mca_quick_charge_start_charging(struct mca_quick_charge_info *info)
 err_stop:
 	if (ret) {
 		info->proc_data.total_err++;
-		mca_vote(info->input_suspend_voter, "wire_qc", false, 0);
-		mca_vote(info->buck_charge_curr_voter, "wire_qc", false, 0);
-		platform_class_cp_set_charging_enable(
-			info->proc_data.cur_work_cp, false);
-		info->pd_switch_to_pmic = true;
-		if (info->is_platform_qc)
-			info->proc_data.cur_adp_volt =
-				MCA_QUICK_QC_CHG_ADP_DEFAULT_VOLT;
-		mca_quick_charge_req_adp_volt_and_cur(info);
 		mca_quick_charge_stop_charging(info);
 		mca_log_err("start charging failed: %d\n", ret);
 		return;
@@ -2230,6 +2234,12 @@ mca_quick_charge_pre_charge_check(struct mca_quick_charge_info *info)
 {
 	int ret;
 	bool cp_present = false;
+
+	if (info->stop_pending) {
+		ret = mca_quick_charge_stop_charging(info);
+		if (ret)
+			return;
+	}
 
 	if (info->proc_data.charge_flag == MCA_QUICK_CHG_STS_CHARGING)
 		return;
@@ -3197,77 +3207,69 @@ static int mca_quick_charge_regulation(struct mca_quick_charge_info *info)
 static int
 mca_quick_charge_is_charge_abnormal(struct mca_quick_charge_info *info)
 {
-	bool chg_enable = false;
-	bool chg_enable_slave = false;
-	bool fg_err = false;
-	bool fg_err_slave = false;
+	bool chg_enable = false, chg_enable_slave = false;
+	bool fg_err = false, fg_err_slave = false;
+	int ret, rc;
+
+	if (info->proc_data.cur_work_cp != MCA_QUICK_CHG_CP_DUAL &&
+	    info->proc_data.cur_work_cp != MCA_QUICK_CHG_CP_MASTER &&
+	    info->proc_data.cur_work_cp != MCA_QUICK_CHG_CP_SLAVE)
+		return -EINVAL;
 
 	if (info->proc_data.cur_work_cp == MCA_QUICK_CHG_CP_DUAL) {
-		(void)platform_class_cp_get_charging_enabled(CP_ROLE_MASTER,
-							     &chg_enable);
-		(void)platform_class_cp_get_charging_enabled(CP_ROLE_SLAVE,
-							     &chg_enable_slave);
-		if (chg_enable && chg_enable_slave)
-			return 0;
-
-		mca_log_err("cp work abnormal, master %d slave %d\n",
-			    chg_enable, chg_enable_slave);
+		ret = platform_class_cp_get_charging_enabled(CP_ROLE_MASTER, &chg_enable);
+		rc = platform_class_cp_get_charging_enabled(CP_ROLE_SLAVE, &chg_enable_slave);
+		if (ret || rc)
+			return ret ? ret : rc;
+		if (!chg_enable || !chg_enable_slave) {
+			info->proc_data.total_err++;
+			info->proc_data.error_num[!chg_enable ?
+				MCA_QUICK_CHG_CP_MASTER : MCA_QUICK_CHG_CP_SLAVE]++;
+			platform_class_cp_dump_register(CP_ROLE_MASTER);
+			platform_class_cp_dump_register(CP_ROLE_SLAVE);
+			return -EIO;
+		}
+	} else {
+		ret = platform_class_cp_get_charging_enabled(info->proc_data.cur_work_cp,
+			&chg_enable);
+		if (ret)
+			return ret;
 		if (!chg_enable) {
 			info->proc_data.total_err++;
-			info->proc_data.error_num[MCA_QUICK_CHG_CP_MASTER]++;
-		} else {
-			info->proc_data.total_err++;
-			info->proc_data.error_num[MCA_QUICK_CHG_CP_SLAVE]++;
+			info->proc_data.error_num[info->proc_data.cur_work_cp]++;
+			platform_class_cp_dump_register(CP_ROLE_MASTER);
+			return -EIO;
 		}
-		platform_class_cp_dump_register(CP_ROLE_MASTER);
-		platform_class_cp_dump_register(CP_ROLE_SLAVE);
-
-		return -1;
-	}
-	(void)platform_class_cp_get_charging_enabled(
-		info->proc_data.cur_work_cp, &chg_enable);
-	if (!chg_enable) {
-		mca_log_err("cp work abnormal, role %d enbale %d\n",
-			    info->proc_data.cur_work_cp, chg_enable);
-		platform_class_cp_dump_register(CP_ROLE_MASTER);
-		info->proc_data.total_err++;
-		info->proc_data.error_num[info->proc_data.cur_work_cp]++;
-		return -1;
 	}
 
+	/* Dual-CP operation must check gauge errors too; it is not an early
+	 * success path. Unknown I/O status must never become a healthy sample.
+	 */
+	ret = platform_fg_ops_get_error_state(FG_IC_MASTER, &fg_err);
 	if (info->batt_type > MCA_BATTERY_TYPE_SINGLE_NUM_MAX) {
-		(void)platform_fg_ops_get_error_state(FG_IC_MASTER, &fg_err);
-		(void)platform_fg_ops_get_error_state(FG_IC_SLAVE,
-						      &fg_err_slave);
-		if (!fg_err && !fg_err_slave)
-			return 0;
-		mca_log_err("fg work abnormal, fg_err %d fg_err_slave %d\n",
-			    fg_err, fg_err_slave);
-		return -1;
+		rc = platform_fg_ops_get_error_state(FG_IC_SLAVE, &fg_err_slave);
+		if (!ret)
+			ret = rc;
 	}
-	(void)platform_fg_ops_get_error_state(FG_IC_MASTER, &fg_err);
-	if (fg_err) {
-		mca_log_err("fg work abnormal, fg_err %d\n", fg_err);
-		return -1;
-	}
-
-	return 0;
+	if (ret)
+		return ret;
+	return fg_err || fg_err_slave ? -EIO : 0;
 }
 
 static int
 mca_qc_quick_charge_is_charge_abnormal(struct mca_quick_charge_info *info)
 {
 	bool chg_enable = false;
+	int ret;
 
-	(void)platform_class_cp_get_charging_enabled(CP_ROLE_MASTER,
-						     &chg_enable);
+	ret = platform_class_cp_get_charging_enabled(CP_ROLE_MASTER, &chg_enable);
+	if (ret)
+		return ret;
 	if (!chg_enable) {
-		mca_log_err("cp work abnormal, enbale %d\n", chg_enable);
 		info->proc_data.total_err++;
 		info->proc_data.error_num[MCA_QUICK_CHG_CP_MASTER]++;
-		return -1;
+		return -EIO;
 	}
-
 	return 0;
 }
 
@@ -3574,6 +3576,11 @@ static void mca_quick_charge_monitor_work(struct work_struct *work)
 	int ret;
 	bool need_goto_taper = false;
 
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+	if (info->stop_pending)
+		goto out;
+
 	if (!strategy_class_fg_is_chip_ok()) {
 		mca_log_info("fg i2c error, exit quick charging\n");
 		goto out;
@@ -3662,25 +3669,30 @@ static void mca_quick_charge_vfc_work(struct work_struct *work)
 			      msecs_to_jiffies(MCA_QUICK_CHG_VFC_INTERVAL));
 }
 
-static void
+static int
 mca_quick_charge_force_stop_charging(struct mca_quick_charge_info *info)
 {
 	cancel_delayed_work_sync(&info->monitor_work);
-	mca_quick_charge_stop_charging(info);
+	return mca_quick_charge_stop_charging(info);
 }
 
-static void mca_quick_charge_exit_charging(struct mca_quick_charge_info *info)
+static int mca_quick_charge_exit_charging(struct mca_quick_charge_info *info)
 {
+	int ret;
+
 	mca_eu_pps_anti_disconnection_strategy(info);
 	mca_log_err("exit quick charge\n");
-	mca_quick_charge_force_stop_charging(info);
+	ret = mca_quick_charge_force_stop_charging(info);
+	if (ret)
+		return ret;
 	memset(&info->proc_data, 0, sizeof(info->proc_data));
+	return 0;
 }
 
 static int mca_quick_charge_process_event(int event, int value, void *data)
 {
 	struct mca_quick_charge_info *info = data;
-	int ret;
+	int ret = 0;
 
 	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
@@ -3715,11 +3727,10 @@ static int mca_quick_charge_process_event(int event, int value, void *data)
 		update_batt_para(info);
 		break;
 	case MCA_EVENT_USB_DISCONNECT:
-		mca_quick_charge_reset_charge_para(info);
-		mca_quick_charge_exit_charging(info);
-		ret = strategy_class_fg_set_fastcharge(false);
-		if (ret)
-			mca_log_err("disconnect gauge fastcharge failed: %d\n", ret);
+		info->online = 0;
+		ret = mca_quick_charge_exit_charging(info);
+		if (!ret)
+			mca_quick_charge_reset_charge_para(info);
 		return ret;
 	case MCA_EVENT_BATT_AUTH_PASS:
 		info->batt_auth = 1;
@@ -3761,66 +3772,67 @@ static int mca_quick_charge_process_event(int event, int value, void *data)
 		info->proc_data.type_chg = 1;
 		mutex_lock(&info->data_lock);
 		mca_log_info("Acquire mutex_lock\n");
-		mca_quick_charge_force_stop_charging(info);
+		ret = mca_quick_charge_force_stop_charging(info);
 		mutex_unlock(&info->data_lock);
 		mca_log_info("Release mutex_lock\n");
 		info->proc_data.type_chg = 0;
 		break;
 	case MCA_EVENT_SINK_PWR_SUSPEND_CHANGE:
 		if (value) {
-			platform_class_cp_set_charging_enable(CP_ROLE_MASTER,
-							      false);
-			platform_class_cp_set_charging_enable(CP_ROLE_SLAVE,
-							      false);
+			mca_quick_charge_record_error(&ret,
+				platform_class_cp_set_charging_enable(CP_ROLE_MASTER, false));
+			if (info->cp_type == MCA_CP_TYPE_PARALLEL)
+				mca_quick_charge_record_error(&ret,
+					platform_class_cp_set_charging_enable(CP_ROLE_SLAVE, false));
 			mca_log_info("Enter bSinkPowerSuspend\n");
 		}
-		mca_vote(info->chg_disable_voter, "bSinkPowerSuspend", true,
-			 value);
+		mca_quick_charge_record_error(&ret, mca_vote(info->chg_disable_voter, "bSinkPowerSuspend", true,
+			 value));
 		break;
 	case MCA_EVENT_CONN_ANTIBURN_CHANGE:
 		info->trigger_antr_burn = value;
 		mca_log_info("anti-burn change event %d\n", value);
-		mca_vote(info->chg_disable_voter, "antiburn", true, value);
+		mca_quick_charge_record_error(&ret, mca_vote(info->chg_disable_voter, "antiburn", true, value));
 		break;
 	case MCA_EVENT_BATT_BTB_CHANGE:
 		mca_log_info("batt-btb change event %d\n", value);
-		mca_vote(info->chg_disable_voter, "batt_miss", true, value);
+		mca_quick_charge_record_error(&ret, mca_vote(info->chg_disable_voter, "batt_miss", true, value));
 		break;
 	case MCA_EVENT_BATTERY_DTPT:
 		info->dtpt_status = value;
 		break;
 	case MCA_EVENT_CHARGE_ABNORMAL:
-		mca_quick_charge_force_stop_charging(info);
+		ret = mca_quick_charge_force_stop_charging(info);
 		break;
 	case MCA_EVENT_LPD_STATUS_CHANGE:
 		if (value)
-			mca_vote(info->chg_en_voter, "lpd", true, 0);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "lpd", true, 0));
 		else
-			mca_vote(info->chg_en_voter, "lpd", false, 1);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "lpd", false, 1));
 		mca_log_info(
 			"check lpd status to determine whether to exit quick charge");
 		break;
 	case MCA_EVENT_WIRELESS_REVCHG:
 		mca_log_info("wireless revchg event %d\n", value);
-		mca_vote(info->chg_disable_voter, "wireless_revchg", true,
-			 value);
+		mca_quick_charge_record_error(&ret, mca_vote(info->chg_disable_voter, "wireless_revchg", true,
+			 value));
 		break;
 	case MCA_EVENT_CHARGE_ACTION:
 		mca_quick_charge_pre_charge_check(info);
 		break;
 	case MCA_EVENT_CC_SHORT_VBUS:
 		if (value)
-			mca_vote(info->chg_en_voter, "cc_short_vbus", true, 0);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "cc_short_vbus", true, 0));
 		else
-			mca_vote(info->chg_en_voter, "cc_short_vbus", false, 1);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "cc_short_vbus", false, 1));
 		mca_log_info(
 			"check cc short vbus to determine whether to exit quick charge");
 		break;
 	case MCA_EVENT_VBAT_OVP_CHANGE:
 		if (value)
-			mca_vote(info->chg_en_voter, "vbat_ovp", true, 0);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "vbat_ovp", true, 0));
 		else
-			mca_vote(info->chg_en_voter, "vbat_ovp", false, 1);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "vbat_ovp", false, 1));
 		break;
 	case MCA_EVENT_IBAT_OCP_CHANGE:
 		if (value == 0x03)
@@ -3838,10 +3850,10 @@ static int mca_quick_charge_process_event(int event, int value, void *data)
 		break;
 	case MCA_EVENT_CP_CBOOT_FAIL:
 		if (value)
-			mca_vote(info->chg_en_voter, "cp_cboot_short", true, 0);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "cp_cboot_short", true, 0));
 		else
-			mca_vote(info->chg_en_voter, "cp_cboot_short", false,
-				 1);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "cp_cboot_short", false,
+				 1));
 		mca_log_info(
 			"check cp cboot short to determine whether to exit quick charge");
 		break;
@@ -3853,9 +3865,9 @@ static int mca_quick_charge_process_event(int event, int value, void *data)
 			mca_log_info(
 				"exit quick charge when PPS_PTF too high %d\n",
 				value);
-			mca_vote(info->chg_en_voter, "ptf", true, 0);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "ptf", true, 0));
 		} else {
-			mca_vote(info->chg_en_voter, "ptf", false, 1);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "ptf", false, 1));
 		}
 		break;
 	case MCA_EVENT_IS_EU_MODEL:
@@ -3864,19 +3876,19 @@ static int mca_quick_charge_process_event(int event, int value, void *data)
 		break;
 	case MCA_EVENT_PLATE_SHOCK:
 		if (value)
-			mca_vote(info->chg_en_voter, "plate_shock", true, 0);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "plate_shock", true, 0));
 		else
-			mca_vote(info->chg_en_voter, "plate_shock", false, 0);
+			mca_quick_charge_record_error(&ret, mca_vote(info->chg_en_voter, "plate_shock", false, 0));
 		break;
 	case MCA_EVENT_CSD_SEND_PULSE:
 		mca_log_info("csd pulse event %d\n", value);
-		mca_vote(info->chg_disable_voter, "csd_pulse", true, value);
+		mca_quick_charge_record_error(&ret, mca_vote(info->chg_disable_voter, "csd_pulse", true, value));
 		break;
 	default:
 		break;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int mca_quick_charge_get_status(int status, void *value, void *data)
@@ -5367,7 +5379,7 @@ static int mca_quick_charge_chg_disable_voter_cb(struct mca_votable *votable,
 	mca_log_info("force_stop: %d\n", info->force_stop);
 
 	if (info->force_stop)
-		mca_quick_charge_force_stop_charging(info);
+		return mca_quick_charge_force_stop_charging(info);
 
 	return 0;
 }
@@ -5383,7 +5395,7 @@ static int mca_quick_charge_chg_en_voter_cb(struct mca_votable *votable,
 
 	info->sysfs_data.chg_enable = effective_result;
 	if (!info->sysfs_data.chg_enable)
-		mca_quick_charge_force_stop_charging(info);
+		return mca_quick_charge_force_stop_charging(info);
 
 	return 0;
 }
