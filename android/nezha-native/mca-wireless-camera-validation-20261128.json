@@ -1,0 +1,565 @@
+{
+  "date": "2026-11-28",
+  "scope": "wireless basic/quick/reverse lifecycle, failure recovery and Nezha OIS/actuator protocol integration",
+  "baseline": {
+    "kernel": "e21e7372fd37c7e420271564abec713de9596379",
+    "modules": "e1864d663b34f9d683895e7ebd0a3a388f404c31",
+    "devicetrees": "91998b30926ec6750803c45fbf25402268aa692e"
+  },
+  "official_camera_reference": "MiCode/vendor_qcom_opensource_camera-kernel@798f548761f381b056f2e1fe615f9db930aa5c7e",
+  "host_tests": [
+    {
+      "test": "tools/test-mca-bmd-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.46,
+      "output": [
+        "PASS: actual BMD supplier errors, managed GPIO, callback publication/unwind, stop ordering and conservative samples"
+      ]
+    },
+    {
+      "test": "tools/test-mca-charge-interface.py",
+      "result": "PASS",
+      "seconds": 0.52,
+      "output": [
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)",
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)"
+      ]
+    },
+    {
+      "test": "tools/test-mca-dtpt-route.py",
+      "result": "PASS",
+      "seconds": 0.2,
+      "output": [
+        "PASS: actual FG/business/JEITA DTPT route, failed sample preserves protection, unrelated event rejected"
+      ]
+    },
+    {
+      "test": "tools/test-mca-jeita-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.8,
+      "output": [
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe",
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe"
+      ]
+    },
+    {
+      "test": "tools/test-mca-limit-fanout.py",
+      "result": "PASS",
+      "seconds": 0.39,
+      "output": [
+        "PASS: actual Buck/QC nested errors, all fanout destinations, first errno, retries, exact sub-1500mA limits and unsupported multi-buck"
+      ]
+    },
+    {
+      "test": "tools/test-mca-log-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.21,
+      "output": [
+        "PASS: log NULL/missing callbacks, invalid slot, negative/oversized returns, newline bounds and synchronized unregister"
+      ]
+    },
+    {
+      "test": "tools/test-mca-owned-voter.py",
+      "result": "PASS",
+      "seconds": 0.61,
+      "output": [
+        "PASS: actual owned voter stable handles, callback drain, duplicate/legacy rejection, rebind, allocation failures and module cleanup"
+      ]
+    },
+    {
+      "test": "tools/test-mca-parallel-buck.py",
+      "result": "PASS",
+      "seconds": 0.58,
+      "output": [
+        "PASS: actual Buck transitions, MIN caps, 12 enable failures, 5 cleanup failures, rollback retry, instance isolation and pthread serialization",
+        "PASS: actual complete-current samples, invalid/overflow input, single/dual CP transitions, rollback and failure state"
+      ]
+    },
+    {
+      "test": "tools/test-mca-protection-errors.py",
+      "result": "PASS",
+      "seconds": 0.35,
+      "output": [
+        "PASS: ibat wired-only sampling, provider failures, fault preservation, per-instance state, topology and stop ordering",
+        "PASS: vbat wired-only sampling, provider failures, fault preservation, per-instance state, topology and stop ordering"
+      ]
+    },
+    {
+      "test": "tools/test-mca-provider-batch.py",
+      "result": "PASS",
+      "seconds": 0.75,
+      "output": [
+        "PASS: actual buck probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe",
+        "PASS: actual qc probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe"
+      ]
+    },
+    {
+      "test": "tools/test-mca-qc-battery-selection.py",
+      "result": "PASS",
+      "seconds": 0.25,
+      "output": [
+        "PASS: actual QC battery selector, mode/role bounds, supplier errors, read failures, selected table and OF reference release"
+      ]
+    },
+    {
+      "test": "tools/test-mca-sic-power.py",
+      "result": "PASS",
+      "seconds": 0.28,
+      "output": [
+        "PASS: actual SIC query errors, retained limits, both rating APIs, all rating boundaries, retry, source changes and independent wireless replay"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.5,
+      "output": [
+        "PASS: actual smartchg probe faults, 3 owned voters, all global exports/SRCU drain, dual-source events, overflow/errors and 20 rebinds"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-policy.py",
+      "result": "PASS",
+      "seconds": 0.44,
+      "output": [
+        "PASS: actual smartchg 1/2-row DT bounds, invalid fields, gauge failures, vote retry and stopped worker",
+        "PASS: actual QC rejects unverified BAA without reading input; non-foldable events do not reparse battery tables"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-registry.py",
+      "result": "PASS",
+      "seconds": 0.38,
+      "output": [
+        "PASS: actual smartchg copied registry, allocation failure, identity, seven dispatchers, backend failures and concurrent unregister/cleanup drain model"
+      ]
+    },
+    {
+      "test": "tools/test-mca-strategy-build.py",
+      "result": "PASS",
+      "seconds": 0.07,
+      "output": [
+        "PASS: generic registry-only, legacy SERVICES-only and COMPLETE Makefile selection; Nezha policy remains gated"
+      ]
+    },
+    {
+      "test": "tools/test-mca-strategy-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.23,
+      "output": [
+        "PASS: actual strategy dispatch errors, duplicate registration, allocation failure, synchronized unregister and concurrent replacement"
+      ]
+    },
+    {
+      "test": "tools/test-mca-thermal-errors.py",
+      "result": "PASS",
+      "seconds": 0.69,
+      "output": [
+        "PASS: actual thermal 30 apply failure points, first errors, retry/new requests, release retry, independent suppliers, sysfs/cooling bounds and disconnect cleanup"
+      ]
+    },
+    {
+      "test": "tools/test-mca-thermal-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.78,
+      "output": [
+        "PASS: actual thermal SRCU drain, ownership, all probe failures, cooling/wireless bounds and wired supplier retry"
+      ]
+    },
+    {
+      "test": "tools/test-mca-usb-ownership.py",
+      "result": "PASS",
+      "seconds": 0.47,
+      "output": [
+        "PASS: USB owned/borrowed lifetime, descriptor isolation, deferral, allocation/register/action failure and repeated cleanup",
+        "PASS: USB owned/borrowed lifetime, descriptor isolation, deferral, allocation/register/action failure and repeated cleanup"
+      ]
+    },
+    {
+      "test": "tools/test-mca-voter-errors.py",
+      "result": "PASS",
+      "seconds": 0.62,
+      "output": [
+        "PASS: actual MCA voter callback retry, override/force error state, no-callback votes and invalid-type unlock"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wired-stop.py",
+      "result": "PASS",
+      "seconds": 0.8,
+      "output": [
+        "PASS: actual single/dual CP and gauge read errors; dual-CP path no longer skips gauge checks",
+        "PASS: actual protection events propagate vote/stop errors, attempt both CPs and preserve the first failure",
+        "PASS: actual wired CP/FG/adapter/readback stop ordering, blocked release, retry state, detach preservation, single/dual CP, voter errors and PD/PPS/QC request failures"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-jeita-events.py",
+      "result": "PASS",
+      "seconds": 0.16,
+      "output": [
+        "PASS: actual Nezha JEITA wired/wireless handover, repeated events, final disconnect and shared OSS DTPT event (no OEM ID alias)"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-jeita-parser.py",
+      "result": "PASS",
+      "seconds": 0.39,
+      "output": [
+        "PASS: JEITA table, 3 allocation failures, 28 read failures and malformed fields"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-thermal-format.py",
+      "result": "PASS",
+      "seconds": 0.49,
+      "output": [
+        "PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures, flip table bounds and unchanged error outputs"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wired-controls.py",
+      "result": "PASS",
+      "seconds": 0.61,
+      "output": [
+        "PASS: production-layout PPS start fault injection, timeout/abort, UCP restoration, PMIC/VTERM MIN caps and rollback, VFC writes/readback/bounds, transactional mode/path parsing"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wired-concurrency.py",
+      "result": "PASS",
+      "seconds": 0.52,
+      "output": [
+        "PASS: actual event/worker/status entry locks, voter trylock/deferred retry, handled errno, disconnect abort before lock, 100 concurrent entries and stopping gate (pthread model)"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wired-quiesce.py",
+      "result": "PASS",
+      "seconds": 0.25,
+      "output": [
+        "PASS: actual QC/Buck final quiesce across 14 failing operations, independent shutdown attempts, first errno, failed-pump ADC retained, single topology and Buck enable rollback"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wired-mode-samples.py",
+      "result": "PASS",
+      "seconds": 0.66,
+      "output": [
+        "PASS: actual CP mode stop-before-open and six faults, fixed-PDO flag reset, unsupported modes, complete sample publication, INT_MIN conversion, end-stage bounds with/without skip tables"
+      ]
+    },
+    {
+      "test": "tools/test-mca-qc-start.py",
+      "result": "PASS",
+      "seconds": 0.44,
+      "output": [
+        "PASS: actual QC tuning/start I/O faults, sleep errno, zero-FCC before voltage, enabled-but-no-current timeout, abort, voltage overflow and tuner read failure"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wireless-queues.py",
+      "result": "PASS",
+      "seconds": 0.33,
+      "output": [
+        "PASS: distinct IRQ/TX queues, FIFO, 4 producers/12000 nodes, bit31, allocation failure, paused/offline TX, late enqueue and drain"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wireless-lifetime.py",
+      "result": "PASS",
+      "seconds": 0.95,
+      "output": [
+        "PASS: basic wireless probe/unwind/reprobe, 22 failure steps, 20 work drains, stable owned handles",
+        "PASS: quick wireless probe/unwind/reprobe, 10 failure steps, 1 work drains, stable owned handles",
+        "PASS: revchg wireless probe/unwind/reprobe, 7 failure steps, 16 work drains, stable owned handles"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wireless-controls.py",
+      "result": "PASS",
+      "seconds": 0.47,
+      "output": [
+        "PASS: 5 allocations/25 table reads faulted, transactional replacement, stage/current bounds, nine stop I/O failures and retry",
+        "PASS: checked boost start/rollback, I2C retry, firmware PMIC route, runtime OVP restore and shutdown rejection",
+        "PASS: reverse TX and all attempted boost rails, five independent failures, first-error retention, retry, idle ownership"
+      ]
+    },
+    {
+      "test": "tools/test-mca-wireless-concurrency.py",
+      "result": "PASS",
+      "seconds": 0.19,
+      "output": [
+        "PASS: 12000 serialized reverse entries, stopped worker/event rejection, SRCU drain of blocked global caller and NULL output"
+      ]
+    }
+  ],
+  "camera_tests": [
+    {
+      "test": "test-nezha-actuator-voltage.py",
+      "result": "PASS",
+      "output": "PASS: 8-byte voltage ABI, exact descriptor bounds, buffer/allocation ownership, full prevalidation, regulator rollback and original errno\n"
+    },
+    {
+      "test": "test-nezha-camera-command-paths.py",
+      "result": "PASS",
+      "output": "PASS: generic/Nezha flash ABI, OIS table truncation, partial/unaligned firmware chunks, I/O/allocation errors and download cleanup\nPASS: generic/Nezha flash ABI, OIS table truncation, partial/unaligned firmware chunks, I/O/allocation errors and download cleanup\n"
+    },
+    {
+      "test": "test-nezha-csi.py",
+      "result": "PASS",
+      "output": "PASS: parser/ranges, backup priority/clamp, retry wrap, invalid PHY, 8 concurrent PHYs x 10000 retries, allocation cleanup, CSID disjoint policy and IRQ-mask mapping\n"
+    },
+    {
+      "test": "test-nezha-ois-abi.py",
+      "result": "PASS",
+      "output": "PASS: actual generic/OEM OIS UAPI sizes, field offsets, park and voltage command values\n"
+    },
+    {
+      "test": "test-nezha-ois-sem1218s.py",
+      "result": "PASS",
+      "output": "PASS: unchanged 56-byte generic OIS ABI, 32-byte names, every truncated command rejected\nPASS: 101-byte OEM OIS ABI, 64-byte names, 196 SEM1218S I/O failures, golden CRC, device/version errors, allocation and bounds\n"
+    },
+    {
+      "test": "test-nezha-parklens.py",
+      "result": "PASS",
+      "output": "PASS: OEM OIS/actuator park, partial parse cleanup, movement/power errors, state acknowledgment, generic park completion and retained retry resources\n"
+    },
+    {
+      "test": "test-nezha-zoom.py",
+      "result": "PASS",
+      "output": "PASS: generic 40-byte / Nezha 44-byte query and stock 93-byte zoom ABI\nPASS: 200 firmware IO failure points, allocation failures, missing/short firmware, CRC/version errors, success and skip paths\n"
+    }
+  ],
+  "build": {
+    "toolchain": "Clang/LLVM/LLD 19.1.7",
+    "kernel_release": "6.12.118-ge21e7372fd37-dirty",
+    "commands": [
+      "make -C kernel O=$PWD/out-nezha-check ARCH=arm64 LLVM=-19 -j4 Image modules",
+      "make -C kernel O=$PWD/out-nezha-check ARCH=arm64 LLVM=-19 -j4 M=$PWD/sm8850-modules/qcom/opensource/mm-drivers/hw_fence CONFIG_ARCH_CANOE=y CONFIG_TARGET_PRODUCT_NEZHA=y modules",
+      "make -C kernel O=$PWD/out-nezha-check ARCH=arm64 LLVM=-19 -j4 M=$PWD/sm8850-modules/qcom/opensource/synx-kernel CONFIG_ARCH_CANOE=y CONFIG_TARGET_PRODUCT_NEZHA=y modules",
+      "make -C kernel O=$PWD/out-nezha-check ARCH=arm64 LLVM=-19 -j4 M=$PWD/sm8850-modules/qcom/opensource/securemsm-kernel CONFIG_ARCH_CANOE=y CONFIG_TARGET_PRODUCT_NEZHA=y modules",
+      "make -C kernel O=$PWD/out-nezha-check ARCH=arm64 LLVM=-19 -j4 M=$PWD/sm8850-modules/qcom/opensource/mmrm-driver CONFIG_ARCH_CANOE=y CONFIG_TARGET_PRODUCT_NEZHA=y modules",
+      "make -C kernel O=$PWD/out-nezha-check ARCH=arm64 LLVM=-19 -j4 M=$PWD/sm8850-modules/qcom/opensource/camera-kernel CONFIG_ARCH_CANOE=y CONFIG_TARGET_PRODUCT_NEZHA=y modules"
+    ],
+    "strict_modpost": true,
+    "config_sha256": "d28df2640bb0dd44ecb04aa1be8cfa1b8037e7f5dd008bcc5d45d259bc9b5c72",
+    "enabled": [
+      "WERROR",
+      "CFI_CLANG",
+      "MODVERSIONS",
+      "GENDWARFKSYMS",
+      "MYRON_MCA_BASE=m",
+      "MYRON_MCA_INTERFACE=m",
+      "MYRON_MCA_PLATFORM=m",
+      "MYRON_MCA_SERVICES=m",
+      "MYRON_MCA_COMPLETE_SERVICES=m"
+    ],
+    "local_validation_only_disabled": [
+      "RUST",
+      "DEBUG_INFO_BTF",
+      "DEBUG_INFO_BTF_MODULES",
+      "MODULE_SIG_ALL"
+    ],
+    "production_config_changed": false,
+    "image_bytes": 34580992,
+    "image_sha256": "e3fa0dc3e1ba365d3c42c36b766ca79176838f91930216ebc3585489dcad1c55",
+    "module_symvers_sha256": "be898a3242dd4ae1d3ba2539255bd05d909f82f61b7b5291c5b53c99665fd440",
+    "in_tree_modules": 401,
+    "mca_modules": 46,
+    "external_modules": [
+      {
+        "path": "qcom/opensource/mm-drivers/hw_fence/msm_hw_fence.ko",
+        "bytes": 1780192,
+        "sha256": "249b7af0872a0a9789be22ab50ba6a6e4650e9da638aece3f178ce21a1123931"
+      },
+      {
+        "path": "qcom/opensource/synx-kernel/ipclite.ko",
+        "bytes": 467352,
+        "sha256": "5ed85c0918aec088453b177b8ad72911392c62906e9c7bda7ae37dbad39092a8"
+      },
+      {
+        "path": "qcom/opensource/synx-kernel/synx-driver.ko",
+        "bytes": 1572672,
+        "sha256": "1f47dedce6ebb19aa50040add9ff990b903bff18c7cd60972177dfd83545a680"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/smmu_proxy_dlkm.ko",
+        "bytes": 353200,
+        "sha256": "7f9065a290c1a60c91e24685ec92dc24c95d07437227b69a53222c9487c753fb"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/tz_log_dlkm.ko",
+        "bytes": 313240,
+        "sha256": "f7ef6e5620961d20e97bdf0f22cf2872c7abc3c3701045ee77ee7fb5311ddac9"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/smcinvoke_dlkm.ko",
+        "bytes": 694592,
+        "sha256": "1db99a658320739f856dd1838788963ba97ecc59ddd2305694a2e8193fe61cea"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/tmecom-intf_dlkm.ko",
+        "bytes": 293672,
+        "sha256": "ce47bb4922800d4c88162cad94d98db797561255072eb6b70748f13dd40d0699"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/qcedev-mod_dlkm.ko",
+        "bytes": 918720,
+        "sha256": "85e9350ea8caa3120f3d5d018992403979067adbf038d7773c9f73bd9117ce11"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/qce50_dlkm.ko",
+        "bytes": 495520,
+        "sha256": "72e6cf45ec8a58532a2ea935f266ec00bbd6e3ad3d608ef525bbd52698ea4535"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/qrng_dlkm.ko",
+        "bytes": 230288,
+        "sha256": "5a31a39c27508f2cd73df54daa378e70de73a57a5395a547b8143795ce3e3323"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/hdcp_qseecom_dlkm.ko",
+        "bytes": 505928,
+        "sha256": "692f322cb844779a7a6c3b61afb3bdca572e9298ddaf4218e70892a09239e29c"
+      },
+      {
+        "path": "qcom/opensource/securemsm-kernel/qcrypto-msm_dlkm.ko",
+        "bytes": 574120,
+        "sha256": "6dff102047987c97d9ecec5b11329b4299b5b932a07dedd87a95f479e3690cb0"
+      },
+      {
+        "path": "qcom/opensource/mmrm-driver/msm-mmrm.ko",
+        "bytes": 821952,
+        "sha256": "c65ef27a21dd6c32dd6fe4f6c16ef675bc9772e4b6bb0e36a1f227d2d1526923"
+      },
+      {
+        "path": "qcom/opensource/camera-kernel/camera.ko",
+        "bytes": 34886552,
+        "sha256": "7625b3d8c021c9e2d2e63b89f6d634049761ec0b8ff42825ed65c8760d56d1b0"
+      }
+    ],
+    "logs": {
+      "remaining-full-build2.log": {
+        "sha256": "12e44a394717c9f986071c74c2eb6a9ed6e0920c00f20730ea77e70ac20fba85",
+        "tail": [
+          "  LD [M]  net/mac802154/mac802154.ko",
+          "  LD [M]  net/nfc/nfc.ko",
+          "  LD [M]  net/qrtr/qrtr.ko",
+          "  LD [M]  net/qrtr/qrtr-mhi.ko",
+          "  LD [M]  net/qrtr/qrtr-smd.ko",
+          "make[1]: Leaving directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+          "make: Leaving directory '/workspace/scratch/d0800c08afb2/kernel'"
+        ]
+      },
+      "remaining-full-build-final4.log": {
+        "sha256": "df4f6faa380e07faebf5fcd9ff00022849ae29e0ac0b85389eed1fa5e3894b51",
+        "tail": [
+          "  GEN     vmlinux.symvers",
+          "  LD [M]  drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.ko",
+          "  LD [M]  drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_quick_wireless.ko",
+          "  CC [M]  drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_wireless_revchg.mod.o",
+          "  LD [M]  drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_wireless_revchg.ko",
+          "make[1]: Leaving directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+          "make: Leaving directory '/workspace/scratch/d0800c08afb2/kernel'"
+        ]
+      },
+      "camera-dep-mm-drivers-hw_fence.log": {
+        "sha256": "55620c475fed3c4f1b175ab819a70c5e59055f6f64105085b5396cce1f139911",
+        "tail": [
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mm-drivers/hw_fence/msm_hw_fence.o",
+          "  MODPOST /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mm-drivers/hw_fence/Module.symvers",
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mm-drivers/hw_fence/msm_hw_fence.mod.o",
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mm-drivers/hw_fence/.module-common.o",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mm-drivers/hw_fence/msm_hw_fence.ko",
+          "make[1]: Leaving directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+          "make: Leaving directory '/workspace/scratch/d0800c08afb2/kernel'"
+        ]
+      },
+      "camera-dep-synx-kernel.log": {
+        "sha256": "c76440fd228f44f0347a4f6e3829d14b1ef88cff44a7f522553beeb3e0bcd3ba",
+        "tail": [
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/synx-kernel/synx-driver.mod.o",
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/synx-kernel/.module-common.o",
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/synx-kernel/ipclite.mod.o",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/synx-kernel/ipclite.ko",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/synx-kernel/synx-driver.ko",
+          "make[1]: Leaving directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+          "make: Leaving directory '/workspace/scratch/d0800c08afb2/kernel'"
+        ]
+      },
+      "camera-dep-securemsm-kernel.log": {
+        "sha256": "0976d0f27fd761b8709f33740e67ea4c85696a02a0329ae2af0f05a00db93d6c",
+        "tail": [
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/securemsm-kernel/qcedev-mod_dlkm.ko",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/securemsm-kernel/qrng_dlkm.ko",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/securemsm-kernel/qcrypto-msm_dlkm.ko",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/securemsm-kernel/tmecom-intf_dlkm.ko",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/securemsm-kernel/tz_log_dlkm.ko",
+          "make[1]: Leaving directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+          "make: Leaving directory '/workspace/scratch/d0800c08afb2/kernel'"
+        ]
+      },
+      "camera-dep-mmrm-driver.log": {
+        "sha256": "61c0aef5b45954c37da17b173d9a0b8a9f3666bbf9f26bc978c75a138dfb7344",
+        "tail": [
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mmrm-driver/msm-mmrm.o",
+          "  MODPOST /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mmrm-driver/Module.symvers",
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mmrm-driver/msm-mmrm.mod.o",
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mmrm-driver/.module-common.o",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/mmrm-driver/msm-mmrm.ko",
+          "make[1]: Leaving directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+          "make: Leaving directory '/workspace/scratch/d0800c08afb2/kernel'"
+        ]
+      },
+      "camera-final-build.log": {
+        "sha256": "8ebc4d9ff65a6b4d7a4bd96faebadc3a83c94a89344d9aa37ac20d75719b931b",
+        "tail": [
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/camera-kernel/camera.o",
+          "  MODPOST /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/camera-kernel/Module.symvers",
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/camera-kernel/camera.mod.o",
+          "  CC [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/camera-kernel/.module-common.o",
+          "  LD [M]  /workspace/scratch/d0800c08afb2/sm8850-modules/qcom/opensource/camera-kernel/camera.ko",
+          "make[1]: Leaving directory '/workspace/scratch/d0800c08afb2/out-nezha-check'",
+          "make: Leaving directory '/workspace/scratch/d0800c08afb2/kernel'"
+        ]
+      }
+    },
+    "warnings": "Four pre-existing qseecom header deprecation notices in securemsm; no warnings/errors in final kernel/camera logs"
+  },
+  "source_sha256": {
+    "kernel": {
+      "drivers/power/supply/mca/mca_strategy/strategy_wireless/inc/mca_basic_wireless.h": "91545e5b16e9df6e5e5701a016bdce92e77ac7cfc724153ead22151905dafaca",
+      "drivers/power/supply/mca/mca_strategy/strategy_wireless/inc/mca_quick_wireless.h": "14282900b6e8e3f53bddef32bece0572dd2b24086d413c9f9f96bb65f8d74227",
+      "drivers/power/supply/mca/mca_strategy/strategy_wireless/inc/mca_wireless_revchg.h": "c7033358fae1e89ee769d450d689aa5788a9cf3bd45e510873ed95d5845ce1d8",
+      "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_basic_wireless.c": "03eb56c368e0c8c57432fd08ff035a1467839fb4a91f14cb21b5fc2b7a4f6730",
+      "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_quick_wireless.c": "7356e6c9b2ae4365c4619819af11d16116602584ccb976105248c6ba19e77f60",
+      "drivers/power/supply/mca/mca_strategy/strategy_wireless/mca_wireless_revchg.c": "089911a27aa1a621246c872ce11872dbe9ac8f8b8e5c9ab66f71b5f71e98ee45",
+      "tools/test-mca-wireless-concurrency.py": "2e6ec07b34e7d9ec6b51e3eb3830ccf1c9d40bee769db19159c34d3d01c07d99",
+      "tools/test-mca-wireless-controls.py": "e8b1bbff366113c07173b3e796fa28c0de006cca03284fd779867bdb1b7a62c3",
+      "tools/test-mca-wireless-lifetime.py": "e5c6e6732b05ca65eed104b83fd7c3dc4e42bcc6d0b91f466d2913e86b78ba8b",
+      "tools/test-mca-wireless-queues.py": "6032c8e89ee257d1cb9e439240051b3db1c1b27c90296c55f8de5cd58bcf79e1"
+    },
+    "sm8850-modules": {
+      "qcom/opensource/camera-kernel/drivers/cam_sensor_module/cam_actuator/cam_actuator_core.c": "0d75b39f61cbc533a21b6f0ad876e6d54bd78691f701b83a61586808ac760db9",
+      "qcom/opensource/camera-kernel/drivers/cam_sensor_module/cam_ois/cam_ois_core.c": "3c759ab0682cd37ab7460fb4a027262efc817ea4fb0ca8200bb2e652423b91f1",
+      "qcom/opensource/camera-kernel/drivers/cam_sensor_module/cam_ois/cam_ois_core.h": "68c757105e9ba0fa18ca96b6301edf517644656f633713fd518f32a81a55de9e",
+      "qcom/opensource/camera-kernel/drivers/cam_sensor_module/cam_ois/cam_ois_dev.h": "f9f699394a8ec7e46311b09aff8238061b357bf52d3e2a4275e8bbd3dedb5d1c",
+      "qcom/opensource/camera-kernel/include/uapi/camera/media/cam_sensor.h": "77bfaa9daecefe08703787bf59cd6ad45b1b19f3e7590c7810df60b6d15b079a",
+      "qcom/opensource/camera-kernel/tools/test-nezha-camera-command-paths.py": "80515d1bd2669a5019d6bba2b1d6f69b093ffbd06dc30e1a554aff0d44d5aece",
+      "qcom/opensource/camera-kernel/tools/test-nezha-actuator-voltage.py": "d9bcdb17fc489d415d54c0f3bfafa4ef7f971a15a1753d53fa17b1672ad56ed6",
+      "qcom/opensource/camera-kernel/tools/test-nezha-ois-abi.py": "574b3a184498ccb220030dab4f308fb0c434417abededa02ca8430c7a0ed6996",
+      "qcom/opensource/camera-kernel/tools/test-nezha-ois-sem1218s.py": "71132ed0b77ecd867f51f39c6b6c65ec3e5e68e8bdfdd35d468125447a5ddf2f",
+      "qcom/opensource/camera-kernel/tools/test-nezha-parklens.py": "9e414841d8916a0ed4108546f917f89351b1299aaa2f2f90e98e55b660466d8e"
+    }
+  },
+  "limitations": [
+    "Host hardware, workqueue, SRCU and regulator services are models; no kernel lockdep/KCSAN proof.",
+    "Full MCA remains disabled in production; GLINK ownership, notification/protection chain and SC96281 FOD integration unqualified.",
+    "OEM parking is synchronous instead of the official private thread; matching HAL timeout/shared CCI/rail close-reopen behavior requires hardware verification.",
+    "No added firmware binaries, no actual firmware programming, camera streaming or optical movement.",
+    "No production Rust/BTF/signature qualification, final DTB/DLKM/boot image or flashable package.",
+    "No physical charging, reverse charging, plug/replug, camera switching or standby acceptance."
+  ],
+  "module_commit": "fb53ae9fb9a29d85d182a393c7a6f823438971e7"
+}

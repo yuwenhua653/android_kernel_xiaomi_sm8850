@@ -23,6 +23,8 @@
 #ifndef __WIRELESS_REVCHG_H__
 #define __WIRELESS_REVCHG_H__
 
+#include <linux/mutex.h>
+
 #define MCA_WLS_REV_CHG_VOLTAGE_DEFAULT 9000
 
 #define REVERSE_PING_TIMEOUT_TIMER (20 * 1000)
@@ -125,6 +127,14 @@ struct mca_wireless_rev_proc_data {
 };
 
 struct mca_wireless_revchg {
+	int full_soc_count;
+	struct mutex data_lock;
+	bool ready, stopping, strategy_registered, notifier_registered;
+	bool ovp_blocked;
+	bool sysfs_created, wakeup_enabled, tx_attempted;
+	unsigned long boost_attempted, pmic_boost_attempted;
+	bool external_boost_attempted;
+
 	struct device *dev;
 	struct mca_votable *usbin_rev_disable_voter;
 
@@ -160,6 +170,7 @@ struct mca_wireless_revchg {
 	bool is_switching;
 	bool wait_for_reverse_test;
 	int force_stop;
+	bool stop_pending;
 	bool tx_timeout_flag;
 };
 

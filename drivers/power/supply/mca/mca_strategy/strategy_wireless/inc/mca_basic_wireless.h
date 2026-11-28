@@ -20,6 +20,8 @@
 #ifndef __MCA_BASIC_WIRELESS_H__
 #define __MCA_BASIC_WIRELESS_H__
 
+#include <mca/common/mca_charge_interface.h>
+
 #include <linux/wait.h>
 #include <mca/strategy/strategy_wireless_class.h>
 
@@ -386,6 +388,11 @@ struct strategy_wireless_irq_node {
 };
 
 struct strategy_wireless_dev {
+	bool ready, stopping, hardware_ready;
+	bool strategy_registered, charge_if_registered, smartchg_registered;
+	bool sysfs_created, wakeup_enabled;
+	struct mca_charge_if_ops charge_if_ops;
+	struct list_head irq_header;
 	struct device *dev;
 	int strategy_init_done;
 	struct power_supply *batt_psy;

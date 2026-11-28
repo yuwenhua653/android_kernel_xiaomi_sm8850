@@ -77,8 +77,6 @@ static const int batt_para_cc_thr_list[] = { 0, 50, 100, 150, 300, 800 };
 static void
 update_batt_para(struct mca_wireless_quick_charge_info *info)
 {
-	static int curr_batt_index[FG_SITE_MAX];
-	static int last_batt_index[FG_SITE_MAX];
 	int cc[FG_SITE_MAX] = { 0 };
 	int i, j;
 
@@ -90,24 +88,28 @@ update_batt_para(struct mca_wireless_quick_charge_info *info)
 	for (i = 0; i < FG_SITE_MAX; i++) {
 		for (j = 0; j < ARRAY_SIZE(batt_para_cc_thr_list); j++) {
 			if (cc[i] > batt_para_cc_thr_list[j]) {
-				curr_batt_index[i] = j;
+				info->curr_batt_index[i] = j;
 				info->batt_para_cc_thr[i] =
 					batt_para_cc_thr_list[j];
 			}
 		}
 	}
 
-	if (last_batt_index[FG_IC_MASTER] != curr_batt_index[FG_IC_MASTER] ||
-	    last_batt_index[FG_IC_SLAVE] != curr_batt_index[FG_IC_SLAVE]) {
-		(void)mca_wireless_quick_charge_parse_batt_info(info,
-							       info->batt_type);
+	if (info->last_batt_index[FG_IC_MASTER] !=
+		    info->curr_batt_index[FG_IC_MASTER] ||
+	    info->last_batt_index[FG_IC_SLAVE] !=
+		    info->curr_batt_index[FG_IC_SLAVE]) {
+		(void)mca_wireless_quick_charge_parse_batt_info(info, 0);
 		mca_log_err("base_flip_cc, update cc data\n");
-		last_batt_index[FG_IC_MASTER] = curr_batt_index[FG_IC_MASTER];
-		last_batt_index[FG_IC_SLAVE] = curr_batt_index[FG_IC_SLAVE];
+		info->last_batt_index[FG_IC_MASTER] =
+			info->curr_batt_index[FG_IC_MASTER];
+		info->last_batt_index[FG_IC_SLAVE] =
+			info->curr_batt_index[FG_IC_SLAVE];
 	}
 	mca_log_err(
 		"base_flip_cc, curr_batt_index_master:%d, curr_batt_index_slave:%d\n",
-		curr_batt_index[FG_IC_MASTER], curr_batt_index[FG_IC_SLAVE]);
+		info->curr_batt_index[FG_IC_MASTER],
+		info->curr_batt_index[FG_IC_SLAVE]);
 }
 
 static void mca_wireless_quick_charge_icl_setting(
@@ -154,7 +156,8 @@ mca_wireless_quick_charge_msleep(int ms,
 	count = ms / 10;
 
 	for (i = 0; i < count; i++) {
-		if (!info->online || info->force_stop ||
+		if (READ_ONCE(info->stopping) || !info->online ||
+		    READ_ONCE(info->force_stop) ||
 		    (info->proc_data.magnet_limit && info->audio_phone_sts &&
 		     info->support_hall))
 			return -1;
@@ -167,20 +170,25 @@ mca_wireless_quick_charge_msleep(int ms,
 static int mca_wireless_quickchg_if_set_chg_cur(const char *user, char *value,
 						void *data)
 {
-	int single_cur = 0, multi_cur = 0;
+	int single_cur = 0, multi_cur = 0, ret;
+	char tail;
 	struct mca_wireless_quick_charge_info *info = data;
 
-	if (!user || !value || !data)
-		return -1;
+	if (!user || !value || !info || !READ_ONCE(info->ready) ||
+	    READ_ONCE(info->stopping))
+		return -EINVAL;
 
-	if (sscanf(value, "%d#%d", &single_cur, &multi_cur) != 2)
-		return -1;
+	if (sscanf(value, "%d#%d %c", &single_cur, &multi_cur, &tail) != 2 ||
+	    single_cur < 0 || multi_cur < 0)
+		return -EINVAL;
 
 	mca_log_err("single: %d, multi: %d\n", single_cur, multi_cur);
-	(void)mca_vote(info->single_chg_cur_voter, user, true, single_cur);
-	(void)mca_vote(info->multi_chg_cur_voter, user, true, multi_cur);
-
-	return 0;
+	ret = mca_vote(info->single_chg_cur_voter, user, single_cur != 0,
+		       single_cur);
+	if (ret)
+		return ret;
+	return mca_vote(info->multi_chg_cur_voter, user, multi_cur != 0,
+			multi_cur);
 }
 
 static int mca_wireless_quickchg_if_get_chg_cur(char *buf, void *data)
@@ -210,7 +218,7 @@ static int mca_wireless_quickchg_if_get_chg_cur(char *buf, void *data)
 	return 0;
 }
 
-static struct mca_charge_if_ops g_quick_wireless_if_ops = {
+static const struct mca_charge_if_ops g_quick_wireless_if_ops = {
 	.type_name = "wl_quick",
 	.set_charge_current_limit = mca_wireless_quickchg_if_set_chg_cur,
 	.get_charge_current_limit = mca_wireless_quickchg_if_get_chg_cur,
@@ -316,22 +324,22 @@ static int mca_wireless_quick_charge_get_secure_cur(
 			       ->volt_para[volt_para_size - 1]
 			       .current_min;
 	int delta_fv = info->smartchg_data.delta_fv;
-	static int over_volt_count;
+
 	int secure_cur = 0;
 	int max_vbat = vbat_th - delta_fv;
 
 	if (vbat >= max_vbat)
-		over_volt_count++;
+		info->over_volt_count++;
 	else
-		over_volt_count = 0;
+		info->over_volt_count = 0;
 
-	if (over_volt_count > OVER_VOLATGE_COUNT) {
+	if (info->over_volt_count > OVER_VOLATGE_COUNT) {
 		if (!info->proc_data.secure_cur)
 			info->proc_data.secure_cur = ibat;
 		info->proc_data.secure_cur -= OVER_VOLATGE_DEC_FCC_MA;
 		info->proc_data.secure_cur =
 			max(info->proc_data.secure_cur, ibat_min);
-		over_volt_count = 0;
+		info->over_volt_count = 0;
 		mca_log_err("trigger over voltage secure_cur %d\n",
 			    info->proc_data.secure_cur);
 	}
@@ -342,60 +350,7 @@ static int mca_wireless_quick_charge_get_secure_cur(
 	return secure_cur;
 }
 
-static int mca_wireless_quick_charge_smartchg_baa_update_volt_info(
-	struct mca_wireless_quick_charge_temp_para_info *qc_temp_para,
-	struct smart_batt_spec *pbatt_spec)
-{
-	struct mca_wireless_quick_charge_volt_para_info *volt_info = NULL;
-	struct mca_wireless_quick_charge_volt_para *old_volt_para = NULL,
-						   *new_volt_para = NULL;
 
-	if (pbatt_spec->ffc)
-		volt_info = &qc_temp_para->volt_ffc_info;
-	else
-		volt_info = &qc_temp_para->volt_info;
-
-	mca_log_info(
-		"wireless para type: %d, ffc: %d, idx: %d, size: %d => %d, temp: %d:%d => %d:%d\n",
-		pbatt_spec->type, pbatt_spec->ffc, pbatt_spec->t_range.idx,
-		volt_info->volt_para_size, pbatt_spec->step_size,
-		qc_temp_para->temp_para.temp_low,
-		qc_temp_para->temp_para.temp_high, pbatt_spec->t_range.min,
-		pbatt_spec->t_range.max);
-
-	new_volt_para = kcalloc(pbatt_spec->step_size, sizeof(*new_volt_para),
-				GFP_KERNEL);
-	if (!new_volt_para) {
-		mca_log_err("volt para no mem\n");
-		return -ENOMEM;
-	}
-
-	for (int i = 0; i < volt_info->volt_para_size; i++) {
-		mca_log_debug(
-			"volt_para[%d] voltage: %d, current_max: %d, current_min: %d\n",
-			i, volt_info->volt_para[i].voltage,
-			volt_info->volt_para[i].current_max,
-			volt_info->volt_para[i].current_min);
-	}
-
-	for (int i = 0; i < pbatt_spec->step_size; i++) {
-		new_volt_para[i].voltage = pbatt_spec->steps[i].mv;
-		new_volt_para[i].current_max = pbatt_spec->steps[i].ma_h;
-		new_volt_para[i].current_min = pbatt_spec->steps[i].ma_l;
-		mca_log_info(
-			"new_volt_para[%d] voltage: %d, current_max: %d, current_min: %d\n",
-			i, new_volt_para[i].voltage,
-			new_volt_para[i].current_max,
-			new_volt_para[i].current_min);
-	}
-
-	old_volt_para = volt_info->volt_para;
-	volt_info->volt_para = new_volt_para;
-	volt_info->volt_para_size = pbatt_spec->step_size;
-	kfree(old_volt_para);
-
-	return 0;
-}
 
 #define MCA_QUICK_CHARGE_MAX_VOLT_STEP_SIZE 8
 static int mca_wireless_quick_charge_smartchg_update_baa_para(void *data,
@@ -403,130 +358,67 @@ static int mca_wireless_quick_charge_smartchg_update_baa_para(void *data,
 							      int ffc_size,
 							      int normal_size)
 {
-	struct mca_wireless_quick_charge_info *info =
-		(struct mca_wireless_quick_charge_info *)data;
-	struct smart_batt_spec *pbatt_spec = NULL;
-	struct smart_batt_spec_curve
-		curve[MCA_QUICK_CHARGE_MAX_VOLT_STEP_SIZE] = { 0 };
-	int offset = 0;
-
-	if (!data || !baa_para) {
-		mca_log_err("data or baa_para is NULL\n");
-		return -1;
-	}
-
-	for (int i = 0; i < ffc_size + normal_size; i++) {
-		pbatt_spec = (struct smart_batt_spec *)(baa_para + offset);
-		offset += offsetof(struct smart_batt_spec, steps);
-
-		memset(curve, 0, sizeof(curve));
-		memcpy(curve, baa_para + offset,
-		       pbatt_spec->step_size *
-			       sizeof(struct smart_batt_spec_curve));
-		pbatt_spec->steps = curve;
-		offset += pbatt_spec->step_size *
-			  sizeof(struct smart_batt_spec_curve);
-
-		if (pbatt_spec->t_range.idx < 0 ||
-		    pbatt_spec->t_range.idx >=
-			    info->batt_para[FG_IC_MASTER].temp_para_size) {
-			mca_log_err(
-				"temp_para_size: %d, temp_range.idx: %d is invalid\n",
-				pbatt_spec->t_range.idx >=
-					info->batt_para[FG_IC_MASTER]
-						.temp_para_size,
-				pbatt_spec->t_range.idx);
-		} else {
-			mca_wireless_quick_charge_smartchg_baa_update_volt_info(
-				&(info->batt_para[FG_IC_MASTER]
-					  .temp_info[pbatt_spec->t_range.idx]),
-				pbatt_spec);
-		}
-	}
-
-	return 0;
+	return -EOPNOTSUPP;
 }
 
 static void mca_wireless_quick_change_bridge(
 	struct mca_wireless_quick_charge_info *info, unsigned int mode);
 
-static void mca_wireless_quick_charge_stop_charging(
+static int mca_wireless_quick_charge_stop_charging(
 	struct mca_wireless_quick_charge_info *info)
 {
-	int wls_plugin = 0;
-	int chgr_stat = MCA_BATT_CHGR_STATUS_CHARGING_DISABLED;
-	int effective_fcc_val = 0;
-	int vbat_bq_mv = 0;
-	int pmic_icl_target = 0, pmic_icl_temp = 0, temp = 0;
-	int cp_mode = 0;
-
+	int ret = 0, rc, role, count;
+	if (!info->hardware_active && !info->stop_pending)
+		return 0;
+	count = info->cp_type == MCA_CP_TYPE_PARALLEL ? 2 : 1;
+	for (role = 0; role < count; role++) {
+		rc = platform_class_cp_set_charging_enable(role, false);
+		if (!ret)
+			ret = rc;
+		if (rc)
+			continue;
+		rc = platform_class_cp_enable_busucp(role, true);
+		if (!ret)
+			ret = rc;
+		rc = platform_class_cp_enable_adc(role, false);
+		if (!ret)
+			ret = rc;
+	}
+	rc = strategy_class_wireless_ops_set_parallel_charge(false);
+	if (!ret)
+		ret = rc;
+	if (info->online) {
+		rc = platform_class_wireless_set_vout(
+			WIRELESS_ROLE_MASTER, MCA_WLS_QUICK_CHG_EXIT_VOUT);
+		if (!ret)
+			ret = rc;
+	}
+	rc = strategy_class_fg_set_fastcharge(false);
+	if (!ret)
+		ret = rc;
+	info->stop_pending = ret != 0;
+	if (ret) {
+		mca_log_err("wireless QC stop failed: %d\n", ret);
+		if (!READ_ONCE(info->stopping))
+			mod_delayed_work(system_wq, &info->monitor_work,
+					 msecs_to_jiffies(500));
+		return ret;
+	}
+	info->hardware_active = false;
 	info->proc_data.enable_quickchg = 0;
-
-	platform_class_cp_get_battery_voltage(info->proc_data.cur_work_cp,
-					      &vbat_bq_mv);
-	platform_class_cp_get_mode(CP_ROLE_MASTER, &cp_mode);
-	if (!(cp_mode & 0x4)) {
-		platform_class_cp_set_charging_enable(CP_ROLE_MASTER, false);
-		platform_class_cp_set_charging_enable(CP_ROLE_SLAVE, false);
-	}
-	strategy_class_wireless_ops_set_parallel_charge(false);
-	platform_class_wireless_is_present(WIRELESS_ROLE_MASTER, &wls_plugin);
-	if (wls_plugin) {
-		mca_wireless_quick_charge_vout_setting(
-			info, MCA_WLS_QUICK_CHG_EXIT_VOUT);
-		msleep(200);
-
-		if (info->thermal_phone_flag && vbat_bq_mv) {
-			effective_fcc_val = mca_get_effective_result(
-				info->charge_limit_voter);
-			pmic_icl_target = (effective_fcc_val + 100) *
-					  vbat_bq_mv /
-					  MCA_WLS_QUICK_CHG_EXIT_VOUT;
-
-			for (pmic_icl_temp = MCA_WLS_QUICK_CHG_EXIT_ICL;
-			     pmic_icl_temp < pmic_icl_target;) {
-				(void)mca_vote(info->input_limit_voter,
-					       "thermal_phone", true,
-					       pmic_icl_temp);
-				msleep(100);
-				pmic_icl_temp += 100;
-			}
-			(void)mca_vote(info->input_limit_voter, "thermal_phone",
-				       true, pmic_icl_target);
-		}
-	}
-
-	platform_class_cp_set_mode(CP_ROLE_MASTER, CP_MODE_FORWARD_2_1);
-	if (info->cp_type == MCA_CP_TYPE_PARALLEL)
-		platform_class_cp_set_mode(CP_ROLE_SLAVE, CP_MODE_FORWARD_2_1);
-
-	(void)mca_vote(info->input_limit_voter, "wireless_qc", false, 0);
-	strategy_wireless_enable_cp_error_irq(false);
-	mca_wireless_quick_change_bridge(info, 0);
-	(void)platform_class_cp_enable_adc(CP_ROLE_MASTER, false);
-	(void)platform_class_cp_enable_adc(CP_ROLE_SLAVE, false);
+	info->proc_data.charge_flag =
+		info->proc_data.charge_flag_pre ==
+				MCA_QUICK_CHG_STS_CHARGE_DONE ?
+			MCA_QUICK_CHG_STS_CHARGE_DONE :
+			MCA_QUICK_CHG_STS_NO_CHARGING;
 	memset(info->proc_data.cur_stage, 0, sizeof(info->proc_data.cur_stage));
-
-	strategy_class_fg_ops_get_temperature(&temp);
-	temp /= 10;
-	(void)platform_class_buckchg_ops_get_chg_status(MAIN_BUCK_CHARGER,
-							&chgr_stat);
-	if (wls_plugin &&
-	    (chgr_stat == MCA_BATT_CHGR_STATUS_TERMINATION ||
-	     chgr_stat == MCA_BATT_CHGR_STATUS_CHARGING_DISABLED)) {
-		mca_log_info("chgr_stat: %d, disable/enable pmic\n", chgr_stat);
-		(void)mca_vote(info->chg_enable_voter, "quickchg", true, 0);
-		msleep(200);
-		(void)mca_vote(info->chg_enable_voter, "quickchg", true, 1);
+	strategy_wireless_enable_cp_error_irq(false);
+	if (!READ_ONCE(info->stopping)) {
+		rc = mca_vote(info->input_limit_voter, "wireless_qc", false, 0);
+		if (!ret)
+			ret = rc;
 	}
-	if (info->proc_data.charge_flag_pre == MCA_QUICK_CHG_STS_CHARGE_DONE) {
-		info->proc_data.charge_flag = info->proc_data.charge_flag_pre;
-		info->proc_data.charge_flag_pre = MCA_QUICK_CHG_STS_NO_CHARGING;
-	} else
-		info->proc_data.charge_flag = MCA_QUICK_CHG_STS_NO_CHARGING;
-	if (info->support_base_flip)
-		(void)mca_rerun_election(info->flip_charge_curr_voter);
-	mca_log_info("stop quick charge\n");
+	return ret;
 }
 
 #define OVER_CURRENT_COUNT 3
@@ -545,6 +437,7 @@ static int mca_wireless_quick_get_parallel_volt_para(
 	ret = platform_fg_ops_get_temp(fg_index, &temp);
 	if (ret) {
 		mca_log_err("get flip batt temp fail\n");
+		return ret;
 	}
 	temp /= 10;
 	mca_log_info("fg[%d]_temp = %d\n", fg_index, temp);
@@ -580,8 +473,6 @@ static int mca_wireless_quick_charger_get_base_limit_cur(
 	int ibat = info->proc_data.parall_ibat[FG_IC_MASTER];
 	int base_cur_max;
 	int final_curr = cur_max;
-	static int over_curr_count;
-	static bool runSwOcp;
 
 	if (!proc_data->cur_volt_paraller[FG_IC_MASTER]->volt_para)
 		return 0;
@@ -590,21 +481,21 @@ static int mca_wireless_quick_charger_get_base_limit_cur(
 			       ->volt_para[cur_stage / 2]
 			       .current_max;
 	if (ibat >= base_cur_max)
-		over_curr_count++;
+		info->over_curr_count++;
 
-	if (over_curr_count > OVER_CURRENT_COUNT && final_curr) {
+	if (info->over_curr_count > OVER_CURRENT_COUNT && final_curr) {
 		final_curr -= BASE_FCC_MA_HYS;
-		over_curr_count = 0;
-		runSwOcp = true;
-	} else if (ibat < base_cur_max - 500 && runSwOcp) {
+		info->over_curr_count = 0;
+		info->runSwOcp = true;
+	} else if (ibat < base_cur_max - 500 && info->runSwOcp) {
 		final_curr = 0;
-		runSwOcp = false;
+		info->runSwOcp = false;
 	}
 
 	mca_log_err(
-		"runSwOcp:%d cur_base_stage:%d base_ibat:%d base_cur_max:%d over_curr_count:%d cur_max:%d final_cur:%d\n",
-		runSwOcp, cur_stage, ibat, base_cur_max, over_curr_count,
-		cur_max, final_curr);
+		"info->runSwOcp:%d cur_base_stage:%d base_ibat:%d base_cur_max:%d info->over_curr_count:%d cur_max:%d final_cur:%d\n",
+		info->runSwOcp, cur_stage, ibat, base_cur_max,
+		info->over_curr_count, cur_max, final_curr);
 	return final_curr;
 }
 
@@ -633,27 +524,27 @@ static int mca_wireless_quick_charge_select_max_ibat(
 	struct mca_wireless_quick_charge_info *info)
 {
 	int cur_stage = info->proc_data.cur_stage[FG_IC_MASTER];
-	int cur_max = info->proc_data.cur_volt_para[FG_IC_MASTER]
-			      ->volt_para[cur_stage / 2]
-			      .current_max;
+	struct mca_wireless_quick_charge_volt_para_info *volt =
+		info->proc_data.cur_volt_para[FG_IC_MASTER];
+	int cur_max;
+	int limit;
 	int tx_adapter_max = info->proc_data.wls_power.max_fcc;
 	int channel_cur;
 	int delta_cur = info->smartchg_data.delta_ichg;
-	int secure_cur = mca_wireless_quick_charge_get_secure_cur(info);
+	int secure_cur;
 	int base_limit_curr;
+
+	if (!volt || !volt->volt_para || cur_stage < 0 ||
+	    cur_stage / 2 >= volt->volt_para_size)
+		return 0;
+	cur_max = volt->volt_para[cur_stage / 2].current_max;
+	secure_cur = mca_wireless_quick_charge_get_secure_cur(info);
 
 	mca_log_err("cur_max:[a] %d delta_cur %d\n", cur_max, delta_cur);
 	if (info->proc_data.debug_qc_ichg > 0 &&
 	    info->proc_data.debug_qc_ichg <= tx_adapter_max) {
-		cur_max = info->proc_data.debug_qc_ichg;
+		cur_max = min(cur_max, info->proc_data.debug_qc_ichg);
 		mca_log_err("wls debug fcc = %d\n", cur_max);
-		if (cur_max <= MCA_WLS_QUICK_CHG_EXIT_FCC) {
-			mca_log_err(
-				"fcc less than 2.2A, stop quick charging = %d\n",
-				cur_max);
-			mca_wireless_quick_charge_stop_charging(info);
-		}
-		return cur_max;
 	}
 
 	if (info->dtpt_status)
@@ -679,6 +570,13 @@ static int mca_wireless_quick_charge_select_max_ibat(
 
 	mca_log_info("cur_max:[c]: %d\n", cur_max);
 
+	limit = READ_ONCE(
+		info->channel_limit[info->proc_data.cur_work_cp ==
+						    MCA_WLS_QUICK_CHG_CP_DUAL ?
+					    MCA_WLS_QUICK_CHG_CH_MULTI :
+					    MCA_WLS_QUICK_CHG_CH_SINGLE]);
+	if (limit)
+		channel_cur = min(channel_cur, limit);
 	cur_max = min(cur_max, channel_cur);
 	cur_max = min(cur_max, info->proc_data.temp_max_cur[FG_IC_MASTER]);
 	cur_max = min(cur_max, tx_adapter_max);
@@ -701,30 +599,32 @@ static int mca_wireless_quick_charge_select_max_ibat(
 		tx_adapter_max, info->proc_data.sw_qc_ichg,
 		info->proc_data.sw_thermal_ichg);
 	mca_log_info("cur_max:[Final]: %d\n", cur_max);
-	return cur_max;
+	return max(cur_max, 0);
 }
 
 static void mca_wireless_quick_charge_exit_charging(
 	struct mca_wireless_quick_charge_info *info)
 {
 	mca_wireless_quick_charge_force_stop_charging(info);
-	memset(&info->proc_data, 0, sizeof(info->proc_data));
+	if (!info->stop_pending)
+		memset(&info->proc_data, 0, sizeof(info->proc_data));
 }
 
-static int mca_wireless_quick_charge_process_event(int event, int value,
-						   void *data)
+static int mca_wireless_quick_charge_process_event_locked(int event, int value,
+							  void *data)
 {
 	struct mca_wireless_quick_charge_info *info =
 		(struct mca_wireless_quick_charge_info *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("receive event %d, value %d\n", event, value);
 	switch (event) {
 	case MCA_EVENT_WIRELESS_CONNECT:
 		info->online = 1;
-		if (info->support_base_flip)
+		if (info->support_base_flip && !info->hardware_active &&
+		    !info->stop_pending)
 			update_batt_para(info);
 		break;
 	case MCA_EVENT_WIRELESS_DISCONNECT:
@@ -771,37 +671,29 @@ static int mca_wireless_quick_charge_process_event(int event, int value,
 	case MCA_EVENT_CP_MODE_CHANGE:
 		if (info->proc_data.enable_quickchg) {
 			mca_log_info("new CP mode, stop quick charge\n");
-			cancel_delayed_work_sync(&info->monitor_work);
+			cancel_delayed_work(&info->monitor_work);
 			mca_wireless_quick_charge_stop_charging(info);
 		}
 		break;
 	case MCA_EVENT_WIRELESS_MAGNETIC_QUIT_QC:
 		if (info->proc_data.enable_quickchg) {
-			cancel_delayed_work_sync(&info->monitor_work);
+			cancel_delayed_work(&info->monitor_work);
 			mca_wireless_quick_charge_stop_charging(info);
 			mca_log_info("magnet tx at f2, exit quick charge\n");
 		}
 		break;
 	case MCA_EVENT_VBAT_OVP_CHANGE:
-		if (value) {
-			info->charge_abnormal = true;
-			mca_log_info("vbat ovp triggered, stop quick charge\n");
-			if (info->proc_data.enable_quickchg)
-				mca_wireless_quick_charge_force_stop_charging(
-					info);
-		} else {
-			mca_log_info("vbat ovp cleared, going quick charge\n");
-			info->charge_abnormal = false;
-		}
-		break;
+		return mca_vote(info->chg_disable_voter, "vbat_ovp", true,
+				!!value);
 	case MCA_EVENT_IBAT_OCP_CHANGE:
-		break;
+		return mca_vote(info->chg_disable_voter, "ibat_ocp", true,
+				!!value);
 	case MCA_EVENT_WIRELESS_AUDIO_PHONE_STS:
 		info->audio_phone_sts = value;
 		if (info->proc_data.enable_quickchg) {
 			if (info->proc_data.magnet_limit &&
 			    info->audio_phone_sts && info->support_hall) {
-				cancel_delayed_work_sync(&info->monitor_work);
+				cancel_delayed_work(&info->monitor_work);
 				mca_wireless_quick_charge_stop_charging(info);
 				mca_log_info(
 					"magnet tx with phone, exit quick charge %d\n",
@@ -818,20 +710,34 @@ static int mca_wireless_quick_charge_process_event(int event, int value,
 	}
 	return 0;
 }
+static int mca_wireless_quick_charge_process_event(int event, int value,
+						   void *data)
+{
+	struct mca_wireless_quick_charge_info *info = data;
+	int ret;
+	if (!info)
+		return -EINVAL;
+	mutex_lock(&info->data_lock);
+	ret = !READ_ONCE(info->ready) || READ_ONCE(info->stopping) ?
+		      -ENODEV :
+		      mca_wireless_quick_charge_process_event_locked(
+			      event, value, data);
+	mutex_unlock(&info->data_lock);
+	return ret;
+}
 
 static int mca_wireless_quick_charge_jump_stage(
 	int stage, struct mca_wireless_quick_charge_volt_para_info *volt_info)
 {
-	if (!volt_info->stage_para)
-		return stage;
-
-	if (stage >= volt_info->volt_para_size * 2)
-		return stage - 1;
-
-	if (volt_info->stage_para[stage])
-		return mca_wireless_quick_charge_jump_stage(stage + 1,
-							    volt_info);
-
+	int last;
+	if (!volt_info || !volt_info->volt_para ||
+	    volt_info->volt_para_size <= 0)
+		return -EINVAL;
+	last = volt_info->volt_para_size * 2 - 1;
+	stage = clamp(stage, 0, last);
+	while (volt_info->stage_para && stage < last &&
+	       volt_info->stage_para[stage])
+		stage++;
 	return stage;
 }
 
@@ -916,8 +822,7 @@ static int mca_wireless_quick_charge_get_vbus_tune_status(
 {
 	int ret = 0;
 	int vbus_cp_mv = 0;
-	static int vbus_cp_mv_before;
-	static int vbus_counts;
+
 	int cp_vbus_hl = 0;
 
 	*stat = MCA_VBUS_TUNE_INIT;
@@ -926,14 +831,14 @@ static int mca_wireless_quick_charge_get_vbus_tune_status(
 	ret = platform_class_cp_get_bus_voltage(info->proc_data.cur_work_cp,
 						&vbus_cp_mv);
 
-	if (vbus_cp_mv == vbus_cp_mv_before && vbus_counts++ < 5) {
+	if (vbus_cp_mv == info->vbus_cp_mv_before && info->vbus_counts++ < 5) {
 		*stat = MCA_VBUS_TUNE_WAIT;
 		mca_log_info("MCA_VBUS_TUNE_WAIT\n");
 		return ret;
 	}
 
-	vbus_cp_mv_before = vbus_cp_mv;
-	vbus_counts = 0;
+	info->vbus_cp_mv_before = vbus_cp_mv;
+	info->vbus_counts = 0;
 
 	if (vbus_cp_mv < MCA_WLS_QUICK_CHG_VOUT_ERROR_EXIT_CV_MV) {
 		*stat = MCA_VBUS_TUNE_VBUS_LOW;
@@ -1201,10 +1106,10 @@ out:
 	return ret;
 }
 
-static void mca_wireless_quick_charge_select_stage(
+static int mca_wireless_quick_charge_select_stage(
 	struct mca_wireless_quick_charge_info *info)
 {
-	int i = 0;
+	int i = 0, ret;
 	int j, k;
 	int stage = 0;
 	struct mca_wireless_quick_charge_volt_para *volt_para;
@@ -1213,12 +1118,22 @@ static void mca_wireless_quick_charge_select_stage(
 	int cv_min_current;
 	struct mca_wireless_quick_charge_batt_para_info *base_flip_para;
 
-	mca_wireless_quick_charge_update_vbat(info);
-	mca_wireless_quick_charge_update_ibat(info);
-	mca_wireless_quick_charge_update_ibus(info);
+	ret = mca_wireless_quick_charge_update_vbat(info);
+	if (ret)
+		return ret;
+	ret = mca_wireless_quick_charge_update_ibat(info);
+	if (ret)
+		return ret;
+	ret = mca_wireless_quick_charge_update_ibus(info);
+	if (ret)
+		return ret;
 
-	while (info->proc_data.cur_volt_para[i]) {
+	while (i < ARRAY_SIZE(info->proc_data.cur_volt_para) &&
+	       info->proc_data.cur_volt_para[i]) {
 		volt_para = info->proc_data.cur_volt_para[i]->volt_para;
+		if (!volt_para ||
+		    info->proc_data.cur_volt_para[i]->volt_para_size <= 0)
+			return -EINVAL;
 		for (j = info->proc_data.cur_volt_para[i]->volt_para_size - 1;
 		     j >= 0; --j) {
 			/*solve decrease fv logic for */
@@ -1254,6 +1169,10 @@ static void mca_wireless_quick_charge_select_stage(
 		if (stage > info->proc_data.cur_stage[i] ||
 		    (ffc_flag != info->proc_data.ffc_flag))
 			info->proc_data.cur_stage[i] = stage;
+		info->proc_data.cur_stage[i] = min(
+			info->proc_data.cur_stage[i],
+			info->proc_data.cur_volt_para[i]->volt_para_size * 2 -
+				1);
 		i++;
 	};
 
@@ -1261,7 +1180,10 @@ static void mca_wireless_quick_charge_select_stage(
 		mca_log_info("get base and flip stage for ocp");
 		for (j = 0; j < FG_SITE_MAX; j++) {
 			base_flip_para = &info->base_flip_para[j];
-			mca_wireless_quick_get_parallel_volt_para(info, j);
+			ret = mca_wireless_quick_get_parallel_volt_para(info,
+									j);
+			if (ret)
+				return ret;
 
 			volt_para =
 				info->proc_data.cur_volt_paraller[j]->volt_para;
@@ -1309,6 +1231,8 @@ static void mca_wireless_quick_charge_select_stage(
 				    info->proc_data.parall_cur_stage[j]);
 		}
 	}
+
+	return 0;
 }
 
 static int
@@ -1515,7 +1439,9 @@ static void mca_wireless_quick_charge_start_charging(
 		goto out;
 	}
 
-	mca_wireless_quick_charge_select_stage(info);
+	ret = mca_wireless_quick_charge_select_stage(info);
+	if (ret)
+		goto out;
 
 	cur_max = mca_wireless_quick_charge_select_max_ibat(info);
 	if (cur_max <= MCA_WLS_QUICK_CHG_EXIT_FCC) {
@@ -1662,16 +1588,19 @@ static int mca_wireless_quick_charge_adjust_adapter_mode(
 static bool mca_wireless_quick_charge_check_chg_done(
 	struct mca_wireless_quick_charge_info *info)
 {
-	if (info->proc_data.charge_flag_pre != MCA_QUICK_CHG_STS_CHARGE_DONE)
+	if (info->proc_data.charge_flag != MCA_QUICK_CHG_STS_CHARGE_DONE &&
+	    info->proc_data.charge_flag_pre != MCA_QUICK_CHG_STS_CHARGE_DONE)
 		return false;
 
-	mca_wireless_quick_charge_update_vbat(info);
+	if (mca_wireless_quick_charge_update_vbat(info))
+		return true;
 	if (info->batt_type == MCA_BATTERY_TYPE_SINGLE)
-		return (info->proc_data.vbat[FG_IC_MASTER] <
-			info->recharge_vbat);
+		return info->proc_data.vbat[FG_IC_MASTER] >=
+		       info->recharge_vbat;
 
-	return ((info->proc_data.vbat[FG_IC_MASTER] < info->recharge_vbat) &&
-		(info->proc_data.vbat[FG_IC_SLAVE] < info->recharge_vbat));
+	return info->proc_data.parall_vbat[FG_IC_MASTER] >=
+		       info->recharge_vbat ||
+	       info->proc_data.parall_vbat[FG_IC_SLAVE] >= info->recharge_vbat;
 }
 
 static void
@@ -1679,10 +1608,15 @@ mca_wireless_quick_charge_startup(struct mca_wireless_quick_charge_info *info)
 {
 	int ret = 0;
 
+	if (info->stop_pending || READ_ONCE(info->stopping) ||
+	    READ_ONCE(info->force_stop) || !info->online)
+		return;
+
 	mca_log_info("quick charge pre check\n");
 
 	info->proc_data.soc = strategy_class_fg_ops_get_soc();
-	if (info->proc_data.soc > MCA_WLS_QUICK_CHG_ENABLE_CP_SOC_TH) {
+	if (info->proc_data.soc < 0 ||
+	    info->proc_data.soc > MCA_WLS_QUICK_CHG_ENABLE_CP_SOC_TH) {
 		mca_log_info("soc = %d, exit quick charge\n",
 			     info->proc_data.soc);
 		mca_wireless_quick_change_bridge(info, 0);
@@ -1709,6 +1643,7 @@ mca_wireless_quick_charge_startup(struct mca_wireless_quick_charge_info *info)
 	}
 
 	info->proc_data.icl_target_ma = MCA_WLS_QUICK_CHG_ICL_AFTER_BQ_SMALL_MA;
+	info->hardware_active = true;
 	info->proc_data.enable_quickchg = 1;
 
 	ret = mca_wireless_quick_charge_adjust_adapter_mode(info);
@@ -1949,7 +1884,7 @@ static int mca_wireless_quick_charge_check_charge_done(
 			      ->volt_para[last_volt_stage]
 			      .current_min;
 	int delta_fv = info->smartchg_data.delta_fv;
-	static int taper_cnt;
+
 	int cur_max = mca_wireless_quick_charge_select_max_ibat(info);
 	int ret = 0;
 
@@ -1960,15 +1895,15 @@ static int mca_wireless_quick_charge_check_charge_done(
 	}
 
 	mca_log_info(
-		"[vbat: %d],[ibat: %d],[vbat_th: %d],[ibat_th: %d],[cur_max: %d],[delta_fv: %d],[taper_cnt: %d],[reduce_cv: %d]\n",
+		"[vbat: %d],[ibat: %d],[vbat_th: %d],[ibat_th: %d],[cur_max: %d],[delta_fv: %d],[info->taper_cnt: %d],[reduce_cv: %d]\n",
 		info->proc_data.vbat[FG_IC_MASTER],
 		info->proc_data.ibat[FG_IC_MASTER], vbat_th, ibat_th, cur_max,
-		delta_fv, taper_cnt, info->sw_cv_taper_reduce_cv);
+		delta_fv, info->taper_cnt, info->sw_cv_taper_reduce_cv);
 
 	if (info->proc_data.vbat[FG_IC_MASTER] >
 	    vbat_th - delta_fv - info->sw_cv_taper_reduce_cv) {
 		if (info->proc_data.ibat[FG_IC_MASTER] >= ibat_th)
-			taper_cnt = 0;
+			info->taper_cnt = 0;
 		else {
 			if (info->proc_data.ibat[FG_IC_MASTER] >
 			    ibat_th -
@@ -1976,17 +1911,17 @@ static int mca_wireless_quick_charge_check_charge_done(
 				if (info->proc_data.vbat[FG_IC_MASTER] >
 				    vbat_th - delta_fv +
 					    HALF_TAPER_REDUNDANCY_MV)
-					taper_cnt++;
+					info->taper_cnt++;
 				else
-					taper_cnt = 0;
+					info->taper_cnt = 0;
 			} else
-				taper_cnt++;
+				info->taper_cnt++;
 
-			if (taper_cnt > MCA_WLS_QUICK_CHG_TAPER_TIMEOUT) {
+			if (info->taper_cnt > MCA_WLS_QUICK_CHG_TAPER_TIMEOUT) {
 				info->proc_data.charge_flag_pre =
 					MCA_QUICK_CHG_STS_CHARGE_DONE;
 				mca_log_info("quick charge done exit\n");
-				taper_cnt = 0;
+				info->taper_cnt = 0;
 			}
 		}
 
@@ -2009,7 +1944,7 @@ static int mca_wireless_quick_charge_check_charge_done(
 				info->proc_data.sw_cv_cur);
 		}
 	} else
-		taper_cnt = 0;
+		info->taper_cnt = 0;
 
 	return ret;
 }
@@ -2036,7 +1971,7 @@ static int mca_wireless_quick_charge_is_charge_abnormal(
 	if (info->proc_data.cur_work_cp == MCA_WLS_QUICK_CHG_CP_DUAL) {
 		(void)platform_class_cp_get_charging_enabled(CP_ROLE_MASTER,
 							     &chg_enable);
-		(void)platform_class_cp_get_charging_enabled(CP_ROLE_MASTER,
+		(void)platform_class_cp_get_charging_enabled(CP_ROLE_SLAVE,
 							     &chg_enable_slave);
 		if (chg_enable && chg_enable_slave)
 			return 0;
@@ -2166,13 +2101,18 @@ static void mca_wireless_quick_charge_change_path(
 		mca_wireless_quick_charge_try2_multi_path(info);
 }
 
-static void mca_wireless_quick_charge_monitor_work(struct work_struct *work)
+static void
+mca_wireless_quick_charge_monitor_work_locked(struct work_struct *work)
 {
 	struct mca_wireless_quick_charge_info *info = container_of(
 		work, struct mca_wireless_quick_charge_info, monitor_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+
 	int ret;
 
-	if (!info->proc_data.qc_enable)
+	if (info->stop_pending || READ_ONCE(info->force_stop) ||
+	    !info->online || !info->proc_data.qc_enable)
 		goto out;
 
 	ret = mca_wireless_quick_charge_is_charge_abnormal(info);
@@ -2205,7 +2145,9 @@ static void mca_wireless_quick_charge_monitor_work(struct work_struct *work)
 		goto out;
 	}
 
-	mca_wireless_quick_charge_select_stage(info);
+	ret = mca_wireless_quick_charge_select_stage(info);
+	if (ret)
+		goto out;
 	if (info->proc_data.ffc_flag)
 		strategy_class_fg_set_fastcharge(true);
 	else
@@ -2233,16 +2175,25 @@ static void mca_wireless_quick_charge_monitor_work(struct work_struct *work)
 out:
 	mca_wireless_quick_charge_stop_charging(info);
 }
+static void mca_wireless_quick_charge_monitor_work(struct work_struct *work)
+{
+	struct mca_wireless_quick_charge_info *info = container_of(
+		work, struct mca_wireless_quick_charge_info, monitor_work.work);
+	mutex_lock(&info->data_lock);
+	if (READ_ONCE(info->ready) && !READ_ONCE(info->stopping))
+		mca_wireless_quick_charge_monitor_work_locked(work);
+	mutex_unlock(&info->data_lock);
+}
 
-static int mca_wireless_quick_charge_get_status(int status, void *value,
-						void *data)
+static int mca_wireless_quick_charge_get_status_locked(int status, void *value,
+						       void *data)
 {
 	struct mca_wireless_quick_charge_info *info =
 		(struct mca_wireless_quick_charge_info *)data;
 	int *cur_val = (int *)value;
 	int last_volt_stage = -1;
 
-	if (!info)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	switch (status) {
@@ -2268,6 +2219,9 @@ static int mca_wireless_quick_charge_get_status(int status, void *value,
 		*cur_val = info->proc_data.ibus;
 		break;
 	case STRATEGY_STATUS_TYPE_JEITA_FFC_ITERM:
+		if (!info->proc_data.cur_volt_para[FG_IC_MASTER] ||
+		    !info->proc_data.cur_volt_para[FG_IC_MASTER]->volt_para)
+			return -ENODATA;
 		last_volt_stage = info->proc_data.cur_volt_para[FG_IC_MASTER]
 					  ->volt_para_size -
 				  1;
@@ -2285,31 +2239,57 @@ static int mca_wireless_quick_charge_get_status(int status, void *value,
 
 	return 0;
 }
+static int mca_wireless_quick_charge_get_status(int status, void *value,
+						void *data)
+{
+	struct mca_wireless_quick_charge_info *info = data;
+	int ret;
+	if (!info || !value)
+		return -EINVAL;
+	mutex_lock(&info->data_lock);
+	ret = !READ_ONCE(info->ready) || READ_ONCE(info->stopping) ?
+		      -ENODEV :
+		      mca_wireless_quick_charge_get_status_locked(status, value,
+								  data);
+	mutex_unlock(&info->data_lock);
+	return ret;
+}
 
-static void mca_wireless_quick_charge_parse_stage_para(
+static void mca_wireless_quick_free_batt(
+	struct mca_wireless_quick_charge_batt_para_info *batt)
+{
+	int i;
+	for (i = 0; batt->temp_info && i < batt->temp_para_size; i++) {
+		kfree(batt->temp_info[i].volt_info.volt_para);
+		kfree(batt->temp_info[i].volt_info.stage_para);
+		kfree(batt->temp_info[i].volt_ffc_info.volt_para);
+		kfree(batt->temp_info[i].volt_ffc_info.stage_para);
+	}
+	kfree(batt->temp_info);
+	memset(batt, 0, sizeof(*batt));
+}
+
+static int mca_wireless_quick_charge_parse_stage_para(
 	struct device_node *node, const char *name,
 	struct mca_wireless_quick_charge_volt_para_info *volt_info)
 {
-	int i;
-
-	if (strcmp(name, "null") == 0) {
-		mca_log_info("no need parse stage para\n");
-		return;
-	}
-
+	int ret;
+	if (!strcmp(name, "null"))
+		return 0;
+	if (!volt_info->volt_para || volt_info->volt_para_size <= 0 ||
+	    volt_info->volt_para_size > VOLT_PARA_MAX_GROUP)
+		return -EINVAL;
 	volt_info->stage_para =
 		kcalloc(volt_info->volt_para_size * 2, sizeof(int), GFP_KERNEL);
-	if (!volt_info->volt_para) {
-		mca_log_err("volt para no mem\n");
-		return;
+	if (!volt_info->stage_para)
+		return -ENOMEM;
+	ret = mca_parse_dts_u32_array(node, name, volt_info->stage_para,
+				      volt_info->volt_para_size * 2);
+	if (ret) {
+		kfree(volt_info->stage_para);
+		volt_info->stage_para = NULL;
 	}
-
-	mca_parse_dts_u32_array(node, name, volt_info->stage_para,
-				volt_info->volt_para_size * 2);
-
-	for (i = 0; i < volt_info->volt_para_size * 2; i++)
-		mca_log_debug("[%d]stage_para %d\n", i,
-			      volt_info->stage_para[i]);
+	return ret;
 }
 
 static int mca_wireless_quick_charge_parse_volt_para(
@@ -2327,7 +2307,7 @@ static int mca_wireless_quick_charge_parse_volt_para(
 	array_len =
 		mca_parse_dts_count_strings(node, name, VOLT_PARA_MAX_GROUP,
 					    MCA_WLS_QUICK_CHG_VOLT_PARA_MAX);
-	if (array_len < 0) {
+	if (array_len <= 0 || array_len % MCA_WLS_QUICK_CHG_VOLT_PARA_MAX) {
 		mca_log_err("parse %s failed\n", name);
 		return -1;
 	}
@@ -2342,7 +2322,7 @@ static int mca_wireless_quick_charge_parse_volt_para(
 	volt_para = volt_info->volt_para;
 	for (i = 0; i < array_len; i++) {
 		if (mca_parse_dts_string_index(node, name, i, &tmp_string))
-			return -1;
+			goto error;
 
 		mca_log_debug("[%d]volt_para %s\n", i, tmp_string);
 		row = i / MCA_WLS_QUICK_CHG_VOLT_PARA_MAX;
@@ -2373,7 +2353,8 @@ static int mca_wireless_quick_charge_parse_volt_para(
 	return 0;
 error:
 	kfree(volt_para);
-	volt_para = NULL;
+	volt_info->volt_para = NULL;
+	volt_info->volt_para_size = 0;
 	return -1;
 }
 
@@ -2381,16 +2362,20 @@ static int mca_wireless_quick_charge_parse_temp_para(
 	struct device_node *node, int batt_role, const char *name,
 	struct mca_wireless_quick_charge_info *info, int mode)
 {
-	struct mca_wireless_quick_charge_batt_para_info *batt_para_info =
-		&(info->batt_para[batt_role]);
-	int array_len, row, col, i;
+	struct mca_wireless_quick_charge_batt_para_info *batt_para_info;
+	int array_len, row, col, i, rc;
+	struct mca_wireless_quick_charge_batt_para_info candidate = { 0 },
+							*target;
 	const char *tmp_string = NULL;
 	struct mca_wireless_quick_charge_temp_para_info *temp_info = NULL;
+
+	if (batt_role < 0 || batt_role >= FG_SITE_MAX || mode < 0 || mode > 1)
+		return -EINVAL;
 
 	array_len =
 		mca_parse_dts_count_strings(node, name, TEMP_PARA_MAX_GROUP,
 					    MCA_WLS_QUICK_CHG_TEMP_PARA_MAX);
-	if (array_len < 0) {
+	if (array_len <= 0 || array_len % MCA_WLS_QUICK_CHG_TEMP_PARA_MAX) {
 		mca_log_err("parse %s failed\n", name);
 		return -1;
 	}
@@ -2398,6 +2383,9 @@ static int mca_wireless_quick_charge_parse_temp_para(
 		batt_para_info = &(info->batt_para[batt_role]);
 	else
 		batt_para_info = &(info->base_flip_para[batt_role]);
+
+	target = batt_para_info;
+	batt_para_info = &candidate;
 
 	batt_para_info->temp_para_size =
 		array_len / MCA_WLS_QUICK_CHG_TEMP_PARA_MAX;
@@ -2410,7 +2398,7 @@ static int mca_wireless_quick_charge_parse_temp_para(
 	temp_info = batt_para_info->temp_info;
 	for (i = 0; i < array_len; i++) {
 		if (mca_parse_dts_string_index(node, name, i, &tmp_string))
-			return -1;
+			goto error;
 
 		row = i / MCA_WLS_QUICK_CHG_TEMP_PARA_MAX;
 		col = i % MCA_WLS_QUICK_CHG_TEMP_PARA_MAX;
@@ -2462,7 +2450,7 @@ static int mca_wireless_quick_charge_parse_temp_para(
 		case MCA_WLS_QUICK_CHG_VOLT_FFC_PARA_NAME: {
 			const char *ffc_name = tmp_string;
 			struct device_node *ffc_node = node;
-			struct device_node *cc_node;
+			struct device_node *cc_node = NULL;
 			char cc_name[BATT_PARA_CC_NAME_LEN] = { 0 };
 			if (info->support_base_flip &&
 			    (temp_info[row].temp_para.temp_low ==
@@ -2485,20 +2473,25 @@ static int mca_wireless_quick_charge_parse_temp_para(
 					ffc_node = cc_node;
 				}
 			}
-			if (mca_wireless_quick_charge_parse_volt_para(
-				    ffc_node, ffc_name,
-				    &temp_info[row].volt_ffc_info))
+			rc = mca_wireless_quick_charge_parse_volt_para(
+				ffc_node, ffc_name,
+				&temp_info[row].volt_ffc_info);
+			of_node_put(cc_node);
+			if (rc)
 				goto error;
 			break;
 		}
 		case MCA_WLS_QUICK_CHG_STAGE_PARA_NAME:
-			mca_wireless_quick_charge_parse_stage_para(
-				node, tmp_string, &temp_info[row].volt_info);
+			if (mca_wireless_quick_charge_parse_stage_para(
+				    node, tmp_string,
+				    &temp_info[row].volt_info))
+				goto error;
 			break;
 		case MCA_WLS_QUICK_CHG_FFC_STAGE_PARA_NAME:
-			mca_wireless_quick_charge_parse_stage_para(
-				node, tmp_string,
-				&temp_info[row].volt_ffc_info);
+			if (mca_wireless_quick_charge_parse_stage_para(
+				    node, tmp_string,
+				    &temp_info[row].volt_ffc_info))
+				goto error;
 			break;
 		default:
 			break;
@@ -2515,10 +2508,15 @@ static int mca_wireless_quick_charge_parse_temp_para(
 			    temp_info[i].temp_para.ffc_max_fv,
 			    temp_info[i].volt_info.volt_para_size,
 			    temp_info[i].volt_ffc_info.volt_para_size);
+	mca_wireless_quick_free_batt(target);
+	*target = candidate;
+	if (mode)
+		info->proc_data.cur_volt_paraller[batt_role] = NULL;
+	else
+		info->proc_data.cur_volt_para[batt_role] = NULL;
 	return 0;
 error:
-	kfree(temp_info);
-	temp_info = NULL;
+	mca_wireless_quick_free_batt(&candidate);
 	return -1;
 }
 
@@ -2540,7 +2538,7 @@ static void mca_wireless_quick_charge_check_model_name(const char **name)
 static int mca_wireless_quick_charge_parse_batt_info(
 	struct mca_wireless_quick_charge_info *info, int mode)
 {
-	struct device_node *node = info->dev->of_node;
+	struct device_node *node = of_node_get(info->dev->of_node);
 	int array_len, row, col, i;
 	int batt_role = 0;
 	const char *tmp_string = NULL;
@@ -2549,14 +2547,20 @@ static int mca_wireless_quick_charge_parse_batt_info(
 	const struct mca_hwid *hwid = mca_get_hwid_info();
 	char *battpara[] = { "batt_para", "base_flip_para" };
 
+	if (mode < 0 || mode > 1) {
+		of_node_put(node);
+		return -EINVAL;
+	}
 	if (hwid && info->has_gbl_batt_para &&
-	    hwid->country_version != CountryCN)
+	    hwid->country_version != CountryCN) {
+		of_node_put(node);
 		node = of_find_node_by_name(NULL,
 					    "mca_quick_wireless_batt_para_gbl");
+	}
 
 	if (!node) {
 		mca_log_err("node in null\n");
-		return -1;
+		goto error;
 	}
 
 	array_len = mca_parse_dts_count_strings(
@@ -2564,13 +2568,13 @@ static int mca_wireless_quick_charge_parse_batt_info(
 		MCA_WLS_QUICK_CHG_BATT_PARA_MAX);
 	if (array_len < 0) {
 		mca_log_err("parse batt_para failed\n");
-		return -1;
+		goto error;
 	}
 
 	(void)platform_fg_ops_get_batt_cell_info(FG_IC_MASTER, &main_cell_name);
 	if (!main_cell_name) {
 		mca_log_err("get main cell name fail\n");
-		return -1;
+		goto error;
 	}
 	mca_wireless_quick_charge_check_model_name(&main_cell_name);
 	mca_log_info("main_cell_name %s\n", main_cell_name);
@@ -2579,14 +2583,14 @@ static int mca_wireless_quick_charge_parse_batt_info(
 							 &slave_cell_name);
 		if (!slave_cell_name) {
 			mca_log_err("get slave cell name fail\n");
-			return -1;
+			goto error;
 		}
 		mca_log_info("slave_cell_name %s\n", slave_cell_name);
 	}
 	for (i = 0; i < array_len; i++) {
 		if (mca_parse_dts_string_index(node, battpara[mode], i,
 					       &tmp_string))
-			return -1;
+			goto error;
 
 		row = i / MCA_WLS_QUICK_CHG_BATT_PARA_MAX;
 		col = i % MCA_WLS_QUICK_CHG_BATT_PARA_MAX;
@@ -2594,9 +2598,9 @@ static int mca_wireless_quick_charge_parse_batt_info(
 		switch (col) {
 		case MCA_WLS_QUICK_CHG_BATT_ROLE:
 			if (kstrtoint(tmp_string, 10, &batt_role))
-				return -1;
-			if (batt_role > FG_IC_SLAVE)
-				i += 2;
+				goto error;
+			if (batt_role < 0 || batt_role > FG_IC_SLAVE)
+				goto error;
 			break;
 		case MCA_WLS_QUICK_CHG_BATT_ID:
 			/* find same batt info */
@@ -2611,24 +2615,29 @@ static int mca_wireless_quick_charge_parse_batt_info(
 		case MCA_WLS_QUICK_CHG_TEMP_PARA_NAME:
 			if (mca_wireless_quick_charge_parse_temp_para(
 				    node, batt_role, tmp_string, info, mode))
-				return -1;
+				goto error;
 			break;
 		default:
 			break;
 		}
 	}
 
-	if (!info->batt_para[FG_IC_MASTER].temp_info) {
+	if (!(mode ? info->base_flip_para : info->batt_para)[FG_IC_MASTER]
+		     .temp_info) {
 		mca_log_err("parse master batt para failed\n");
-		return -1;
+		goto error;
 	}
 
 	// if (!info->batt_para[FG_IC_SLAVE].temp_info &&
 	// 	info->batt_type > MCA_BATTERY_TYPE_SINGLE) {
 	// 	mca_log_err("parse slave batt para failed\n");
-	// 	return -1;
+	// 	goto error;
 	// }
+	of_node_put(node);
 	return 0;
+error:
+	of_node_put(node);
+	return -EINVAL;
 }
 
 static void mca_wireless_quick_charge_parse_vstep_para(
@@ -2823,7 +2832,7 @@ mca_wireless_quick_charge_parse_dt(struct mca_wireless_quick_charge_info *info)
 static void mca_wireless_quick_charge_force_stop_charging(
 	struct mca_wireless_quick_charge_info *info)
 {
-	cancel_delayed_work_sync(&info->monitor_work);
+	cancel_delayed_work(&info->monitor_work);
 	mca_wireless_quick_charge_stop_charging(info);
 }
 
@@ -2834,15 +2843,18 @@ mca_wireless_quick_charge_chg_disable_voter_cb(struct mca_votable *votable,
 {
 	struct mca_wireless_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
-	info->force_stop = effective_result;
-	mca_log_info("force_stop %d\n", info->force_stop);
-	if (info->force_stop &&
-	    info->proc_data.charge_flag == MCA_QUICK_CHG_STS_CHARGING)
-		mca_wireless_quick_charge_force_stop_charging(info);
-
+	WRITE_ONCE(info->force_stop, effective_result);
+	if (effective_result) {
+		if (mutex_trylock(&info->data_lock)) {
+			int ret = mca_wireless_quick_charge_stop_charging(info);
+			mutex_unlock(&info->data_lock);
+			return ret;
+		}
+		mod_delayed_work(system_wq, &info->monitor_work, 0);
+	}
 	return 0;
 }
 
@@ -2851,20 +2863,12 @@ static int mca_wireless_quick_charge_single_chg_cur_voter_cb(
 	const char *effective_client)
 {
 	struct mca_wireless_quick_charge_info *info = data;
-	int i;
-
-	if (!data)
-		return -1;
-
-	//info->sysfs_data.chg_limit[MCA_QUICK_CHG_CH_SINGLE] = effective_result;
-	for (i = 0; i < MCA_WLS_QUICK_CHG_CH_MAX * CHG_MODE_MAX; i = i + 2) {
-		if (effective_result)
-			(void)mca_vote(info->voter[i], "if_ops", true,
-				       effective_result);
-		else
-			(void)mca_vote(info->voter[i], "if_ops", false, 0);
-	}
-
+	if (!info || READ_ONCE(info->stopping))
+		return -ENODEV;
+	if (effective_result < 0)
+		return -EINVAL;
+	WRITE_ONCE(info->channel_limit[MCA_WLS_QUICK_CHG_CH_SINGLE],
+		   effective_result);
 	return 0;
 }
 
@@ -2873,20 +2877,12 @@ static int mca_wireless_quick_charge_multi_chg_cur_voter_cb(
 	const char *effective_client)
 {
 	struct mca_wireless_quick_charge_info *info = data;
-	int i;
-
-	if (!data)
-		return -1;
-
-	//info->sysfs_data.chg_limit[MCA_QUICK_CHG_CH_MULTI] = effective_result;
-	for (i = 1; i < MCA_WLS_QUICK_CHG_CH_MAX * CHG_MODE_MAX; i = i + 2) {
-		if (effective_result)
-			(void)mca_vote(info->voter[i], "if_ops", true,
-				       effective_result);
-		else
-			(void)mca_vote(info->voter[i], "if_ops", false, 0);
-	}
-
+	if (!info || READ_ONCE(info->stopping))
+		return -ENODEV;
+	if (effective_result < 0)
+		return -EINVAL;
+	WRITE_ONCE(info->channel_limit[MCA_WLS_QUICK_CHG_CH_MULTI],
+		   effective_result);
 	return 0;
 }
 
@@ -2896,12 +2892,12 @@ static int mca_wireless_quick_charge_thermal_flip_voter_cb(
 {
 	struct mca_wireless_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("target wls thermal flip effective_result :%d\n",
 		     effective_result);
-	info->thermal_flip_current = effective_result;
+	WRITE_ONCE(info->thermal_flip_current, effective_result);
 	return 0;
 }
 
@@ -2927,22 +2923,22 @@ static int mca_wireless_quick_charge_create_voter(
 	info->charge_limit_voter = mca_find_votable("buck_charge_curr");
 	if (!info->charge_limit_voter)
 		goto error;
-	info->chg_disable_voter = mca_create_votable(
+	info->chg_disable_voter = mca_create_owned_votable(
 		"wls_quick_chg_disable", MCA_VOTE_OR,
 		mca_wireless_quick_charge_chg_disable_voter_cb, 0, info);
 	if (IS_ERR(info->chg_disable_voter))
 		goto error;
-	info->single_chg_cur_voter = mca_create_votable(
+	info->single_chg_cur_voter = mca_create_owned_votable(
 		"wls_single_chg_cur", MCA_VOTE_MIN,
 		mca_wireless_quick_charge_single_chg_cur_voter_cb, 0, info);
 	if (IS_ERR(info->single_chg_cur_voter))
 		goto error;
-	info->multi_chg_cur_voter = mca_create_votable(
+	info->multi_chg_cur_voter = mca_create_owned_votable(
 		"wls_multi_chg_cur", MCA_VOTE_MIN,
 		mca_wireless_quick_charge_multi_chg_cur_voter_cb, 0, info);
 	if (IS_ERR(info->multi_chg_cur_voter))
 		goto error;
-	info->thermal_flip_voter = mca_create_votable(
+	info->thermal_flip_voter = mca_create_owned_votable(
 		"wls_thermal_flip", MCA_VOTE_MIN,
 		mca_wireless_quick_charge_thermal_flip_voter_cb, 0, info);
 	if (IS_ERR(info->thermal_flip_voter))
@@ -2958,7 +2954,7 @@ static int mca_wireless_quick_charge_create_voter(
 
 error:
 	mca_log_err("init voter failed\n");
-	return -1;
+	return -EPROBE_DEFER;
 }
 
 static int
@@ -2968,11 +2964,11 @@ mca_wireless_quick_charge_smartchg_delta_fv_callback(void *data,
 	struct mca_wireless_quick_charge_info *info =
 		(struct mca_wireless_quick_charge_info *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_err("effective_result: %d\n", effective_result);
-	info->smartchg_data.delta_fv = effective_result;
+	WRITE_ONCE(info->smartchg_data.delta_fv, effective_result);
 	return 0;
 }
 
@@ -2983,11 +2979,11 @@ mca_wireless_quick_charge_smartchg_delta_ichg_callback(void *data,
 	struct mca_wireless_quick_charge_info *info =
 		(struct mca_wireless_quick_charge_info *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_err("effective_result: %d\n", effective_result);
-	info->smartchg_data.delta_ichg = effective_result;
+	WRITE_ONCE(info->smartchg_data.delta_ichg, effective_result);
 	return 0;
 }
 
@@ -2998,7 +2994,7 @@ mca_wireless_quick_charge_smartchg_soc_limit_callback(void *data,
 	struct mca_wireless_quick_charge_info *info =
 		(struct mca_wireless_quick_charge_info *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_err("effective_result: %d\n", effective_result);
@@ -3007,7 +3003,7 @@ mca_wireless_quick_charge_smartchg_soc_limit_callback(void *data,
 	return 0;
 }
 
-static struct mca_smartchg_if_ops g_quick_wireless_smartchg_if_ops = {
+static const struct mca_smartchg_if_ops g_quick_wireless_smartchg_if_ops = {
 	.type = MCA_SMARTCHG_IF_CHG_TYPE_WL_QC,
 	.data = NULL,
 	.set_delta_fv = mca_wireless_quick_charge_smartchg_delta_fv_callback,
@@ -3018,64 +3014,114 @@ static struct mca_smartchg_if_ops g_quick_wireless_smartchg_if_ops = {
 	.update_baa_para = mca_wireless_quick_charge_smartchg_update_baa_para,
 };
 
+static void mca_wireless_quick_stop(struct mca_wireless_quick_charge_info *info)
+{
+	int i, ret;
+	if (!info)
+		return;
+	struct mca_votable **owned[] = { &info->chg_disable_voter,
+					 &info->single_chg_cur_voter,
+					 &info->multi_chg_cur_voter,
+					 &info->thermal_flip_voter };
+	if (READ_ONCE(info->stopping))
+		return;
+	WRITE_ONCE(info->stopping, true);
+	WRITE_ONCE(info->ready, false);
+	if (info->strategy_registered) {
+		mca_strategy_ops_unregister(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
+					    info);
+		info->strategy_registered = false;
+	}
+	if (info->charge_if_registered) {
+		mca_charge_if_ops_unregister(&info->charge_if_ops);
+		info->charge_if_registered = false;
+	}
+	if (info->smartchg_registered) {
+		mca_smartchg_if_ops_unregister(MCA_SMARTCHG_IF_CHG_TYPE_WL_QC,
+					       info);
+		info->smartchg_registered = false;
+	}
+	for (i = 0; i < ARRAY_SIZE(owned); i++) {
+		if (!IS_ERR_OR_NULL(*owned[i]))
+			mca_detach_owned_votable(*owned[i], info);
+		*owned[i] = NULL;
+	}
+	disable_delayed_work_sync(&info->monitor_work);
+	mutex_lock(&info->data_lock);
+	ret = mca_wireless_quick_charge_stop_charging(info);
+	if (ret)
+		mca_log_err("wireless QC exit incomplete: %d\n", ret);
+	for (i = 0; i < ARRAY_SIZE(info->batt_para); i++)
+		mca_wireless_quick_free_batt(&info->batt_para[i]);
+	for (i = 0; i < ARRAY_SIZE(info->base_flip_para); i++)
+		mca_wireless_quick_free_batt(&info->base_flip_para[i]);
+	mutex_unlock(&info->data_lock);
+}
+
 static int mca_wireless_quick_charge_probe(struct platform_device *pdev)
 {
-	int ret = 0;
-	static int probe_cnt;
 	struct mca_wireless_quick_charge_info *info;
-
-	mca_log_info("probe start probe_cnt: %d\n", ++probe_cnt);
-
-	if (strategy_class_fg_ops_is_init_ok() <= 0) {
-		mca_log_info("fg is not ready, wait for it\n");
+	struct mca_smartchg_if_ops smart = g_quick_wireless_smartchg_if_ops;
+	int ret, online;
+	if (strategy_class_fg_ops_is_init_ok() <= 0)
 		return -EPROBE_DEFER;
-	}
-
 	info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
-
 	info->dev = &pdev->dev;
 	platform_set_drvdata(pdev, info);
-	ret = mca_wireless_quick_charge_parse_dt(info);
-	if (ret) {
-		mca_log_err("parst dts failed\n");
-		return ret;
-	}
-
-	ret = mca_wireless_quick_charge_create_voter(info);
-	if (ret) {
-		mca_log_info("init voter fail, wait for it\n");
-		return -EPROBE_DEFER;
-	}
-
+	mutex_init(&info->data_lock);
 	INIT_DELAYED_WORK(&info->monitor_work,
 			  mca_wireless_quick_charge_monitor_work);
-
-	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
+	ret = mca_wireless_quick_charge_parse_dt(info);
+	if (ret)
+		goto fail;
+	ret = mca_wireless_quick_charge_create_voter(info);
+	if (ret)
+		goto fail;
+	info->proc_data.sw_qc_ichg = 15600;
+	info->proc_data.sw_thermal_ichg = 15600;
+	WRITE_ONCE(info->ready, true);
+	ret = mca_strategy_ops_register(STRATEGY_FUNC_TYPE_QUICK_WIRELESS,
 					mca_wireless_quick_charge_process_event,
 					mca_wireless_quick_charge_get_status,
 					NULL, info);
-
-	g_quick_wireless_if_ops.data = info;
-	(void)mca_charge_if_ops_register(&g_quick_wireless_if_ops);
-	g_quick_wireless_smartchg_if_ops.data = info;
-	mca_smartchg_if_ops_register(&g_quick_wireless_smartchg_if_ops);
-
-	info->proc_data.sw_qc_ichg = 15600;
-	info->proc_data.sw_thermal_ichg = 15600;
-
-	mca_log_err("probe End\n");
+	if (ret)
+		goto fail;
+	info->strategy_registered = true;
+	info->charge_if_ops = g_quick_wireless_if_ops;
+	info->charge_if_ops.data = info;
+	ret = mca_charge_if_ops_register(&info->charge_if_ops);
+	if (ret)
+		goto fail;
+	info->charge_if_registered = true;
+	smart.data = info;
+	ret = mca_smartchg_if_ops_register(&smart);
+	if (ret)
+		goto fail;
+	info->smartchg_registered = true;
+	mutex_lock(&info->data_lock);
+	ret = platform_class_wireless_is_present(WIRELESS_ROLE_MASTER, &online);
+	if (!ret)
+		WRITE_ONCE(info->online, !!online);
+	mutex_unlock(&info->data_lock);
+	if (ret)
+		goto fail;
 
 	return 0;
+fail:
+	mca_wireless_quick_stop(info);
+	return ret;
 }
 
 static void mca_wireless_quick_charge_remove(struct platform_device *pdev)
 {
+	mca_wireless_quick_stop(platform_get_drvdata(pdev));
 }
 
 static void mca_wireless_quick_charge_shutdown(struct platform_device *pdev)
 {
+	mca_wireless_quick_stop(platform_get_drvdata(pdev));
 }
 
 static const struct of_device_id match_table[] = {

@@ -20,6 +20,9 @@
 #ifndef __MCA_QUICK_WIRELESS_H__
 #define __MCA_QUICK_WIRELESS_H__
 
+#include <linux/mutex.h>
+#include <mca/common/mca_charge_interface.h>
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
@@ -318,6 +321,19 @@ struct mca_wireless_quick_charge_smartchg_data {
 };
 
 struct mca_wireless_quick_charge_info {
+	int taper_cnt;
+	int vbus_cp_mv_before;
+	int vbus_counts;
+	int over_curr_count;
+	bool runSwOcp;
+	int over_volt_count;
+	bool ready, stopping, hardware_active, stop_pending;
+	bool strategy_registered, charge_if_registered, smartchg_registered;
+	struct mutex data_lock;
+	struct mca_charge_if_ops charge_if_ops;
+	int channel_limit[MCA_WLS_QUICK_CHG_CH_MAX];
+	int curr_batt_index[FG_SITE_MAX], last_batt_index[FG_SITE_MAX];
+
 	struct device *dev;
 	struct mca_votable *input_limit_voter;
 	struct mca_votable *charge_limit_voter;
@@ -329,7 +345,6 @@ struct mca_wireless_quick_charge_info {
 	struct mca_votable *flip_charge_curr_voter;
 	int thermal_flip_current;
 	struct delayed_work monitor_work;
-	struct mca_votable *voter[MCA_WLS_QUICK_CHG_CH_MAX * CHG_MODE_MAX];
 
 	//dt_config
 	int batt_type;

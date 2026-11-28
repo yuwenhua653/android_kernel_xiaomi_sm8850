@@ -17,6 +17,7 @@
  *
  */
 
+#include <linux/srcu.h>
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -67,7 +68,9 @@ static void strategy_wireless_rx_fastcharge_work(struct work_struct *work);
 static void strategy_wireless_mutex_unlock_work(struct work_struct *work);
 static void strategy_wireless_sw_cv_stop(struct strategy_wireless_dev *info);
 
-static struct strategy_wireless_dev *g_basic_wls_info;
+static struct strategy_wireless_dev __rcu *g_basic_wls_info;
+static DEFINE_MUTEX(basic_wls_publish_lock);
+DEFINE_STATIC_SRCU(basic_wls_srcu);
 
 static int strategy_wireless_input_suspend(struct mca_votable *votable,
 					   void *data, int effective_result,
@@ -76,7 +79,7 @@ static int strategy_wireless_input_suspend(struct mca_votable *votable,
 	struct strategy_wireless_dev *info = data;
 	int ret;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	ret = platform_class_buckchg_ops_set_wls_hiz(MAIN_BUCK_CHARGER,
@@ -183,7 +186,7 @@ static int strategy_wireless_if_set_chg_cur(const char *user, char *value,
 	return 0;
 }
 
-static struct mca_charge_if_ops g_strategy_wireless_if_ops = {
+static const struct mca_charge_if_ops g_strategy_wireless_if_ops = {
 	.type_name = "wl_buck",
 	.set_input_suspend = strategy_wireless_if_set_input_suspend,
 	.get_input_suspend = strategy_wireless_if_get_input_suspend,
@@ -191,10 +194,10 @@ static struct mca_charge_if_ops g_strategy_wireless_if_ops = {
 	.get_charge_current_limit = strategy_wireless_if_get_chg_cur,
 };
 
-static int strategy_wireless_get_sys_op_mode(enum sys_op_mode *sys_mode_type)
+static int
+strategy_wireless_get_sys_op_mode_held(struct strategy_wireless_dev *info,
+				       enum sys_op_mode *sys_mode_type)
 {
-	struct strategy_wireless_dev *info = g_basic_wls_info;
-
 	if (!sys_mode_type)
 		return -1;
 
@@ -204,6 +207,22 @@ static int strategy_wireless_get_sys_op_mode(enum sys_op_mode *sys_mode_type)
 		*sys_mode_type = SYS_OP_MODE_BPP;
 	mca_log_info("%d\n", *sys_mode_type);
 	return 0;
+}
+
+static int strategy_wireless_get_sys_op_mode(enum sys_op_mode *sys_mode_type)
+{
+	struct strategy_wireless_dev *info;
+	int idx;
+	int ret = -ENODEV;
+	if (!sys_mode_type)
+		return -EINVAL;
+	idx = srcu_read_lock(&basic_wls_srcu);
+	info = srcu_dereference(g_basic_wls_info, &basic_wls_srcu);
+	if (info && READ_ONCE(info->ready) && !READ_ONCE(info->stopping))
+		ret = strategy_wireless_get_sys_op_mode_held(info,
+							     sys_mode_type);
+	srcu_read_unlock(&basic_wls_srcu, idx);
+	return ret;
 }
 
 static int
@@ -262,11 +281,10 @@ static int strategy_wireless_quiet_sts_func(struct strategy_wireless_dev *info)
 	return 0;
 }
 
-int strategy_class_wireless_ops_get_adapter_power(
+static int strategy_class_wireless_ops_get_adapter_power_held(
+	struct strategy_wireless_dev *info,
 	struct wls_adapter_power_cap *adapter_power)
 {
-	struct strategy_wireless_dev *info = g_basic_wls_info;
-
 	if (!info)
 		return -1;
 
@@ -275,11 +293,28 @@ int strategy_class_wireless_ops_get_adapter_power(
 
 	return 0;
 }
+
+int strategy_class_wireless_ops_get_adapter_power(
+	struct wls_adapter_power_cap *adapter_power)
+{
+	struct strategy_wireless_dev *info;
+	int idx;
+	int ret = -ENODEV;
+	if (!adapter_power)
+		return -EINVAL;
+	idx = srcu_read_lock(&basic_wls_srcu);
+	info = srcu_dereference(g_basic_wls_info, &basic_wls_srcu);
+	if (info && READ_ONCE(info->ready) && !READ_ONCE(info->stopping))
+		ret = strategy_class_wireless_ops_get_adapter_power_held(
+			info, adapter_power);
+	srcu_read_unlock(&basic_wls_srcu, idx);
+	return ret;
+}
 EXPORT_SYMBOL(strategy_class_wireless_ops_get_adapter_power);
 
-int strategy_class_wireless_ops_set_parallel_charge(bool parallel_charge_flag)
+static int strategy_class_wireless_ops_set_parallel_charge_held(
+	struct strategy_wireless_dev *info, bool parallel_charge_flag)
 {
-	struct strategy_wireless_dev *info = g_basic_wls_info;
 	int delay_ms;
 	int ret = 0;
 
@@ -288,6 +323,8 @@ int strategy_class_wireless_ops_set_parallel_charge(bool parallel_charge_flag)
 
 	ret = platform_class_wireless_set_parallel_charge(WIRELESS_ROLE_MASTER,
 							  parallel_charge_flag);
+	if (ret)
+		return ret;
 
 	if (info->project_vendor == WLS_CHIP_VENDOR_FUDA1665 ||
 	    info->project_vendor == WLS_CHIP_VENDOR_FUDA1661 ||
@@ -301,15 +338,29 @@ int strategy_class_wireless_ops_set_parallel_charge(bool parallel_charge_flag)
 			schedule_delayed_work(&info->max_power_control_work,
 					      msecs_to_jiffies(delay_ms));
 	} else
-		cancel_delayed_work_sync(&info->max_power_control_work);
+		cancel_delayed_work(&info->max_power_control_work);
 
+	return ret;
+}
+
+int strategy_class_wireless_ops_set_parallel_charge(bool parallel_charge_flag)
+{
+	struct strategy_wireless_dev *info;
+	int idx;
+	int ret = -ENODEV;
+	idx = srcu_read_lock(&basic_wls_srcu);
+	info = srcu_dereference(g_basic_wls_info, &basic_wls_srcu);
+	if (info && READ_ONCE(info->ready) && !READ_ONCE(info->stopping))
+		ret = strategy_class_wireless_ops_set_parallel_charge_held(
+			info, parallel_charge_flag);
+	srcu_read_unlock(&basic_wls_srcu, idx);
 	return ret;
 }
 EXPORT_SYMBOL(strategy_class_wireless_ops_set_parallel_charge);
 
-int strategy_class_wireless_ops_get_wls_type(int *wls_type)
+static int strategy_class_wireless_ops_get_wls_type_held(
+	struct strategy_wireless_dev *info, int *wls_type)
 {
-	struct strategy_wireless_dev *info = g_basic_wls_info;
 	enum sys_op_mode mode_type = SYS_OP_MODE_INVALID;
 	int ret = 0;
 
@@ -336,11 +387,27 @@ int strategy_class_wireless_ops_get_wls_type(int *wls_type)
 
 	return ret;
 }
+
+int strategy_class_wireless_ops_get_wls_type(int *wls_type)
+{
+	struct strategy_wireless_dev *info;
+	int idx;
+	int ret = -ENODEV;
+	if (!wls_type)
+		return -EINVAL;
+	idx = srcu_read_lock(&basic_wls_srcu);
+	info = srcu_dereference(g_basic_wls_info, &basic_wls_srcu);
+	if (info && READ_ONCE(info->ready) && !READ_ONCE(info->stopping))
+		ret = strategy_class_wireless_ops_get_wls_type_held(info,
+								    wls_type);
+	srcu_read_unlock(&basic_wls_srcu, idx);
+	return ret;
+}
 EXPORT_SYMBOL(strategy_class_wireless_ops_get_wls_type);
 
-int strategy_class_wireless_ops_get_adapter_charger_mode(int *cp_charger_mode)
+static int strategy_class_wireless_ops_get_adapter_charger_mode_held(
+	struct strategy_wireless_dev *info, int *cp_charger_mode)
 {
-	struct strategy_wireless_dev *info = g_basic_wls_info;
 	int num;
 
 	if (!info)
@@ -403,11 +470,28 @@ int strategy_class_wireless_ops_get_adapter_charger_mode(int *cp_charger_mode)
 		     info->proc_data.forward_charger_mode);
 	return 0;
 }
+
+int strategy_class_wireless_ops_get_adapter_charger_mode(int *cp_charger_mode)
+{
+	struct strategy_wireless_dev *info;
+	int idx;
+	int ret = -ENODEV;
+	if (!cp_charger_mode)
+		return -EINVAL;
+	idx = srcu_read_lock(&basic_wls_srcu);
+	info = srcu_dereference(g_basic_wls_info, &basic_wls_srcu);
+	if (info && READ_ONCE(info->ready) && !READ_ONCE(info->stopping))
+		ret = strategy_class_wireless_ops_get_adapter_charger_mode_held(
+			info, cp_charger_mode);
+	srcu_read_unlock(&basic_wls_srcu, idx);
+	return ret;
+}
 EXPORT_SYMBOL(strategy_class_wireless_ops_get_adapter_charger_mode);
 
-void strategy_wireless_enable_cp_error_irq(unsigned int enable)
+static void
+strategy_wireless_enable_cp_error_irq_held(struct strategy_wireless_dev *info,
+					   unsigned int enable)
 {
-	struct strategy_wireless_dev *info = g_basic_wls_info;
 	unsigned int en = enable & 1;
 	int ret1, ret2, ret3, ret4;
 
@@ -423,12 +507,22 @@ void strategy_wireless_enable_cp_error_irq(unsigned int enable)
 	if (ret1 || ret2 || ret3 || ret4)
 		mca_log_err("enable vbus_errorhi and errorlo irq fail\n");
 }
+
+void strategy_wireless_enable_cp_error_irq(unsigned int enable)
+{
+	struct strategy_wireless_dev *info;
+	int idx;
+	idx = srcu_read_lock(&basic_wls_srcu);
+	info = srcu_dereference(g_basic_wls_info, &basic_wls_srcu);
+	if (info && READ_ONCE(info->ready) && !READ_ONCE(info->stopping))
+		strategy_wireless_enable_cp_error_irq_held(info, enable);
+	srcu_read_unlock(&basic_wls_srcu, idx);
+}
 EXPORT_SYMBOL(strategy_wireless_enable_cp_error_irq);
 
-void strategy_class_wireless_op_get_rx_iout_limit(int *rx_iout_limit_ma)
+static void strategy_class_wireless_op_get_rx_iout_limit_held(
+	struct strategy_wireless_dev *info, int *rx_iout_limit_ma)
 {
-	struct strategy_wireless_dev *info = g_basic_wls_info;
-
 	if (!info)
 		return;
 
@@ -476,6 +570,20 @@ void strategy_class_wireless_op_get_rx_iout_limit(int *rx_iout_limit_ma)
 		break;
 	}
 	mca_log_info("rx_iout_limit: %d\n", *rx_iout_limit_ma);
+}
+
+void strategy_class_wireless_op_get_rx_iout_limit(int *rx_iout_limit_ma)
+{
+	struct strategy_wireless_dev *info;
+	int idx;
+	if (!rx_iout_limit_ma)
+		return;
+	idx = srcu_read_lock(&basic_wls_srcu);
+	info = srcu_dereference(g_basic_wls_info, &basic_wls_srcu);
+	if (info && READ_ONCE(info->ready) && !READ_ONCE(info->stopping))
+		strategy_class_wireless_op_get_rx_iout_limit_held(
+			info, rx_iout_limit_ma);
+	srcu_read_unlock(&basic_wls_srcu, idx);
 }
 EXPORT_SYMBOL(strategy_class_wireless_op_get_rx_iout_limit);
 
@@ -662,6 +770,8 @@ strategy_wireless_add_trans_task_to_queue(struct strategy_wireless_dev *info,
 {
 	struct trans_data_lis_node *node = NULL;
 
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 	node = kmalloc(sizeof(struct trans_data_lis_node), GFP_ATOMIC);
 	if (!node) {
 		mca_log_err("create node error, return\n");
@@ -677,7 +787,7 @@ strategy_wireless_add_trans_task_to_queue(struct strategy_wireless_dev *info,
 	info->head_cnt++;
 	spin_unlock(&info->list_lock);
 
-	wake_up_interruptible(&info->wait_que);
+	schedule_delayed_work(&info->trans_data_work, 0);
 }
 
 static void strategy_wireless_get_qc_enable(struct strategy_wireless_dev *info,
@@ -733,7 +843,7 @@ static int strategy_wireless_set_bpp_input(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result && !info->proc_data.epp &&
@@ -756,7 +866,7 @@ static int strategy_wireless_set_bppqc2_input(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result && !info->proc_data.epp &&
@@ -776,7 +886,7 @@ static int strategy_wireless_set_bppqc3_input(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result && !info->proc_data.epp &&
@@ -796,7 +906,7 @@ static int strategy_wireless_set_epp_input(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result && info->proc_data.epp &&
@@ -817,7 +927,7 @@ static int strategy_wireless_set_auth_20w_ichg(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result &&
@@ -840,7 +950,7 @@ static int strategy_wireless_set_auth_30w_ichg(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result &&
@@ -863,7 +973,7 @@ static int strategy_wireless_set_auth_50w_ichg(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result &&
@@ -886,7 +996,7 @@ static int strategy_wireless_set_auth_80w_ichg(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result &&
@@ -910,7 +1020,7 @@ strategy_wireless_set_auth_voice_box_ichg(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result &&
@@ -933,7 +1043,7 @@ strategy_wireless_set_auth_magnet_30w_ichg(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (effective_result && info->proc_data.magnet_tx_flag &&
@@ -955,7 +1065,7 @@ static int strategy_wireless_sw_set_qc_ichg(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->sw_qc_ichg = effective_result;
@@ -975,7 +1085,7 @@ static int strategy_wireless_sw_set_thermal_ichg(struct mca_votable *votable,
 {
 	struct strategy_wireless_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->sw_thermal_ichg = effective_result;
@@ -994,7 +1104,7 @@ static int strategy_wireless_force_set_vout_6v(struct mca_votable *votable,
 					       const char *effective_client)
 {
 	struct strategy_wireless_dev *info = data;
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->force_vout_6v = effective_result;
@@ -2414,7 +2524,7 @@ static void strategy_wireless_power_good_off(struct strategy_wireless_dev *info)
 	strategy_wireless_cmd_type_f5_func(info, false);
 	strategy_wireless_sw_cv_stop(info);
 	info->mutex_lock_sts = false;
-	wake_up_interruptible(&info->wait_que);
+	schedule_delayed_work(&info->trans_data_work, 0);
 
 	cancel_delayed_work_sync(&info->trans_data_work);
 	cancel_delayed_work_sync(&info->max_power_control_work);
@@ -2938,9 +3048,12 @@ strategy_wireless_split_irq_index(struct strategy_wireless_dev *info,
 {
 	struct strategy_wireless_irq_node *irq_node;
 	int bit = 0;
+	unsigned int pending = int_index;
 
-	for (; int_index >= 1; int_index >>= 1, bit++) {
-		if (!(int_index & 0x1))
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+	for (; pending; pending >>= 1, bit++) {
+		if (!(pending & 0x1))
 			continue;
 
 		irq_node = kmalloc(sizeof(*irq_node), GFP_KERNEL);
@@ -2949,17 +3062,17 @@ strategy_wireless_split_irq_index(struct strategy_wireless_dev *info,
 			continue;
 		}
 
-		irq_node->int_mask = 1 << bit;
+		irq_node->int_mask = 1U << bit;
 		mca_log_info("queue irq node, int_mask = 0x%x\n",
 			     irq_node->int_mask);
 
 		spin_lock(&info->list_lock);
-		list_add(&irq_node->node, &info->header);
+		list_add_tail(&irq_node->node, &info->irq_header);
 		info->irq_node_cnt++;
 		spin_unlock(&info->list_lock);
 	}
 
-	wake_up(&info->wait_que);
+	schedule_delayed_work(&info->process_irq_work, 0);
 }
 
 static int strategy_wireless_process_irq(struct strategy_wireless_dev *info)
@@ -2967,8 +3080,8 @@ static int strategy_wireless_process_irq(struct strategy_wireless_dev *info)
 	struct strategy_wireless_irq_node *irq_node;
 
 	spin_lock(&info->list_lock);
-	while (!list_empty(&info->header)) {
-		irq_node = list_first_entry(&info->header,
+	while (!list_empty(&info->irq_header) && !READ_ONCE(info->stopping)) {
+		irq_node = list_first_entry(&info->irq_header,
 					    struct strategy_wireless_irq_node,
 					    node);
 		list_del(&irq_node->node);
@@ -2990,10 +3103,11 @@ static void strategy_wireless_process_irq_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, process_irq_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
-	while (info->wl_irq_running)
-		wait_event(info->wait_que,
-			   strategy_wireless_process_irq(info));
+	if (READ_ONCE(info->wl_irq_running))
+		strategy_wireless_process_irq(info);
 }
 
 static void
@@ -3106,7 +3220,7 @@ static int strategy_wireless_process_event(int event, int value, void *data)
 	int ret = 0;
 	struct mca_votable *qcchg_disable_voter = NULL;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("receive event %d, value %d\n", event, value);
@@ -3479,6 +3593,9 @@ static void strategy_wireless_monitor_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, monitor_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+
 	static bool last_quick_enable;
 	int interval = MCA_WLS_CHG_MONITOR_WORK_NORMAL_INTERVAL;
 	int quick_charge_status = MCA_QUICK_CHG_STS_CHARGE_FAILED;
@@ -3575,6 +3692,9 @@ static void strategy_wireless_buckchg_sw_cv_workfunc(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, sw_cv_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+
 	static int sw_cv_volt_delta_map[][2] = { { 1000, 5 }, { 0, 2 } };
 	int interval = CHARGE_SW_CV_WORK_NORMAL_INTERVAL;
 	int vbat, ibat;
@@ -3628,6 +3748,9 @@ static void strategy_wireless_buckchg_base_flip_sw_cv_workfunc(
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, base_flip_sw_cv_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+
 	static int sw_cv_volt_delta_map[][2] = { { 1000, 7 }, { 0, 5 } };
 	int interval;
 	int vbat, ibat, ibat_ua;
@@ -3712,6 +3835,8 @@ static void strategy_wireless_get_adapter_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, get_adapter_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	strategy_wireless_pre_authen_process(info);
 }
@@ -3720,6 +3845,8 @@ static void strategy_wireless_change_cp_mode_workfunc(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, change_cp_mode_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	mca_log_info("wireless changing CP work mode\n");
 	info->changing_cp_mode = true;
@@ -3734,20 +3861,31 @@ static void strategy_wireless_find_voter_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, find_voter_work.work);
-	int ret = 0;
-
+	int ret, online;
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 	ret = strategy_wireless_find_voter(info);
-	if (ret) {
-		mca_log_err("find voter fail\n");
-		schedule_delayed_work(&info->find_voter_work,
-				      msecs_to_jiffies(500));
-	}
+	if (ret)
+		goto retry;
+	ret = platform_class_wireless_is_present(WIRELESS_ROLE_MASTER, &online);
+	if (ret)
+		goto retry;
+	if (online)
+		mca_event_block_notify(MCA_EVENT_TYPE_CHARGER_CONNECT,
+				       MCA_EVENT_WIRELESS_CONNECT, NULL);
+	return;
+retry:
+	schedule_delayed_work(&info->find_voter_work, msecs_to_jiffies(500));
 }
 
 static void strategy_wireless_update_soc_decimal_work(struct work_struct *work)
 {
-	//struct strategy_wireless_dev *info = container_of(work,
-	//	struct strategy_wireless_dev, report_soc_decimal_work.work);
+	struct strategy_wireless_dev *info =
+		container_of(work, struct strategy_wireless_dev,
+			     report_soc_decimal_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+
 	int len = 0;
 	int soc_decimal, rate;
 	char event[MCA_EVENT_NOTIFY_SIZE] = { 0 };
@@ -3774,6 +3912,8 @@ static void strategy_wireless_renegociation_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, renegociation_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	strategy_wireless_start_renego(info);
 
@@ -3789,6 +3929,8 @@ static void strategy_wireless_loop_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, wireless_loop_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	mca_log_info("wireless loop work\n");
 
@@ -3803,6 +3945,8 @@ static void strategy_wireless_rx_fastcharge_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, rx_fastcharge_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	strategy_wireless_set_fastchg_adapter(info);
 	if ((info->proc_data.adapter_type == ADAPTER_XIAOMI_QC3 ||
@@ -3830,6 +3974,8 @@ static void strategy_wireless_drawload_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, wls_drawload_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	int chgr_stat;
 	int cnt = 0;
@@ -3875,6 +4021,8 @@ static void strategy_wireless_rx_alarm_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, rx_alarm_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	bool ocp_flag = false, otp_flag = false, otp_recovery = false;
 	int current_fcc_val = 0;
@@ -3920,6 +4068,9 @@ static void strategy_wireless_max_power_control_work(struct work_struct *work)
 	struct strategy_wireless_dev *info =
 		container_of(work, struct strategy_wireless_dev,
 			     max_power_control_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+
 	int num;
 
 	num = strategy_wireless_get_compatible_info(info);
@@ -3966,6 +4117,9 @@ static void strategy_wireless_set_vdd_flag_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, set_vdd_flag_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+
 	int ret = 0;
 
 	ret = platform_class_buckchg_ops_set_wls_vdd_flag(
@@ -3982,6 +4136,8 @@ static void strategy_wireless_soc_limit_stepper_work(struct work_struct *work)
 	struct strategy_wireless_dev *info =
 		container_of(work, struct strategy_wireless_dev,
 			     soc_limit_stepper_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	strategy_wireless_process_soc_limit_change(info->soc_limit, info);
 }
@@ -3992,6 +4148,8 @@ strategy_wireless_update_wireless_thermal_work(struct work_struct *work)
 	struct strategy_wireless_dev *info =
 		container_of(work, struct strategy_wireless_dev,
 			     update_wireless_thermal_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	if (info->online)
 		mca_strategy_func_process(STRATEGY_FUNC_TYPE_THERMAL,
@@ -4002,10 +4160,12 @@ static void strategy_wireless_mutex_unlock_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, mutex_unlock_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	if (info->mutex_lock_sts) {
 		info->mutex_lock_sts = false;
-		wake_up_interruptible(&info->wait_que);
+		schedule_delayed_work(&info->trans_data_work, 0);
 	}
 }
 
@@ -4039,43 +4199,34 @@ strategy_wireless_process_trans_func(struct strategy_wireless_dev *info,
 
 static int strategy_wireless_process_trans(struct strategy_wireless_dev *info)
 {
-	struct trans_data_lis_node *cur_node, *temp_node;
-
-	while (!list_empty(&info->header) && !info->mutex_lock_sts) {
+	struct trans_data_lis_node *node;
+	for (;;) {
 		spin_lock(&info->list_lock);
-		list_for_each_entry_safe(cur_node, temp_node, &info->header,
-					 lnode) {
-			if (info->mutex_lock_sts)
-				break;
-			list_del(&cur_node->lnode);
+		if (list_empty(&info->header) ||
+		    READ_ONCE(info->mutex_lock_sts) ||
+		    !READ_ONCE(info->online) || READ_ONCE(info->stopping)) {
 			spin_unlock(&info->list_lock);
-
-			mca_log_info("cur_node: data_flag: %d, value: %d\n",
-				     cur_node->data_flag, cur_node->value);
-			strategy_wireless_process_trans_func(info, cur_node);
-
-			spin_lock(&info->list_lock);
-			kfree(cur_node);
-			info->head_cnt--;
+			break;
 		}
+		node = list_first_entry(&info->header,
+					struct trans_data_lis_node, lnode);
+		list_del(&node->lnode);
+		info->head_cnt--;
 		spin_unlock(&info->list_lock);
+		strategy_wireless_process_trans_func(info, node);
+		kfree(node);
 	}
-
-	if (!info->online)
-		return 1;
-
-	return 0;
+	return !READ_ONCE(info->online);
 }
 
 static void strategy_wireless_trans_data_work(struct work_struct *work)
 {
 	struct strategy_wireless_dev *info = container_of(
 		work, struct strategy_wireless_dev, trans_data_work.work);
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
-	while (info->online)
-		wait_event_interruptible(
-			info->wait_que,
-			(strategy_wireless_process_trans(info)));
+	strategy_wireless_process_trans(info);
 }
 
 /* Myron DT rows are wire IDs, not enum mca_adapter_type ordinals. */
@@ -4319,13 +4470,14 @@ static int strategy_wireless_get_status(int status, void *value, void *data)
 	int *cur_val = (int *)value;
 	bool enable = false;
 
-	if (!info || !value)
+	if (!info || !value || !READ_ONCE(info->ready) ||
+	    READ_ONCE(info->stopping))
 		return -1;
 
 	switch (status) {
 	case STRATEGY_STATUS_TYPE_ONLINE:
-		platform_class_wireless_is_present(WIRELESS_ROLE_MASTER,
-						   cur_val);
+		return platform_class_wireless_is_present(WIRELESS_ROLE_MASTER,
+							  cur_val);
 		break;
 	case STRATEGY_STATUS_TYPE_CHARGING:
 		*cur_val = info->strategy_init_done;
@@ -4763,9 +4915,8 @@ static struct mca_votable *strategy_wireless_create_voter(
 	int (*callback)(struct mca_votable *, void *, int, const char *),
 	int default_value, struct strategy_wireless_dev *info)
 {
-	if (mca_find_votable(name))
-		return ERR_PTR(-EBUSY);
-	return mca_create_votable(name, type, callback, default_value, info);
+	return mca_create_owned_votable(name, type, callback, default_value,
+					info);
 }
 
 static void strategy_wireless_destroy_voters(struct strategy_wireless_dev *info)
@@ -4791,7 +4942,7 @@ static void strategy_wireless_destroy_voters(struct strategy_wireless_dev *info)
 
 	for (i = ARRAY_SIZE(voters) - 1; i >= 0; i--) {
 		if (!IS_ERR_OR_NULL(*voters[i]))
-			mca_destroy_votable(*voters[i]);
+			mca_detach_owned_votable(*voters[i], info);
 		*voters[i] = NULL;
 	}
 }
@@ -4893,7 +5044,7 @@ static int strategy_wireless_soc_limit_sts_callback(void *data,
 	struct strategy_wireless_dev *info =
 		(struct strategy_wireless_dev *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->soc_limit = effective_result;
@@ -4918,7 +5069,7 @@ static int strategy_wireless_quiet_sts_callback(void *data,
 		(struct strategy_wireless_dev *)data;
 	int ret = 0;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->quiet_sts = effective_result;
@@ -4940,7 +5091,7 @@ static int strategy_wireless_smartchg_delta_fv_callback(void *data,
 	struct strategy_wireless_dev *info =
 		(struct strategy_wireless_dev *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_err("effective_result: %d\n", effective_result);
@@ -4948,7 +5099,7 @@ static int strategy_wireless_smartchg_delta_fv_callback(void *data,
 	return 0;
 }
 
-static struct mca_smartchg_if_ops g_basic_smartchg_if_ops = {
+static const struct mca_smartchg_if_ops g_basic_smartchg_if_ops = {
 	.type = MCA_SMARTCHG_IF_CHG_TYPE_WL_BUCK,
 	.data = NULL,
 	.set_soc_limit_sts = strategy_wireless_soc_limit_sts_callback,
@@ -4956,105 +5107,176 @@ static struct mca_smartchg_if_ops g_basic_smartchg_if_ops = {
 	.set_delta_fv = strategy_wireless_smartchg_delta_fv_callback,
 };
 
+static void strategy_wireless_free_queues(struct strategy_wireless_dev *info)
+{
+	struct strategy_wireless_irq_node *irq, *itmp;
+	struct trans_data_lis_node *tx, *ttmp;
+	list_for_each_entry_safe(irq, itmp, &info->irq_header, node) {
+		list_del(&irq->node);
+		kfree(irq);
+	}
+	list_for_each_entry_safe(tx, ttmp, &info->header, lnode) {
+		list_del(&tx->lnode);
+		kfree(tx);
+	}
+	info->head_cnt = info->irq_node_cnt = 0;
+}
+
+static void basic_wireless_stop(struct strategy_wireless_dev *info)
+{
+	int ret, rc;
+	if (!info || READ_ONCE(info->stopping))
+		return;
+	WRITE_ONCE(info->stopping, true);
+	WRITE_ONCE(info->ready, false);
+	WRITE_ONCE(info->wl_irq_running, false);
+	mutex_lock(&basic_wls_publish_lock);
+	if (rcu_access_pointer(g_basic_wls_info) == info)
+		RCU_INIT_POINTER(g_basic_wls_info, NULL);
+	mutex_unlock(&basic_wls_publish_lock);
+	synchronize_srcu(&basic_wls_srcu);
+	if (info->sysfs_created) {
+		strategy_wireless_remove_group(info->dev);
+		info->sysfs_created = false;
+	}
+	if (info->strategy_registered) {
+		mca_strategy_ops_unregister(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
+					    info);
+		info->strategy_registered = false;
+	}
+	if (info->charge_if_registered) {
+		mca_charge_if_ops_unregister(&info->charge_if_ops);
+		info->charge_if_registered = false;
+	}
+	if (info->smartchg_registered) {
+		mca_smartchg_if_ops_unregister(MCA_SMARTCHG_IF_CHG_TYPE_WL_BUCK,
+					       info);
+		info->smartchg_registered = false;
+	}
+	strategy_wireless_destroy_voters(info);
+	disable_delayed_work_sync(&info->trans_data_work);
+	disable_delayed_work_sync(&info->monitor_work);
+	disable_delayed_work_sync(&info->find_voter_work);
+	disable_delayed_work_sync(&info->report_soc_decimal_work);
+	disable_delayed_work_sync(&info->renegociation_work);
+	disable_delayed_work_sync(&info->wireless_loop_work);
+	disable_delayed_work_sync(&info->rx_fastcharge_work);
+	disable_delayed_work_sync(&info->wls_drawload_work);
+	disable_delayed_work_sync(&info->rx_alarm_work);
+	disable_delayed_work_sync(&info->max_power_control_work);
+	disable_delayed_work_sync(&info->wls_fw_state_work);
+	disable_delayed_work_sync(&info->set_vdd_flag_work);
+	disable_delayed_work_sync(&info->soc_limit_stepper_work);
+	disable_delayed_work_sync(&info->update_wireless_thermal_work);
+	disable_delayed_work_sync(&info->mutex_unlock_work);
+	disable_delayed_work_sync(&info->sw_cv_work);
+	disable_delayed_work_sync(&info->process_irq_work);
+	disable_delayed_work_sync(&info->base_flip_sw_cv_work);
+	disable_delayed_work_sync(&info->get_adapter_work);
+	disable_delayed_work_sync(&info->change_cp_mode_work);
+
+	if (info->hardware_ready) {
+		ret = platform_class_buckchg_ops_set_wls_hiz(MAIN_BUCK_CHARGER,
+							     true);
+		if (info->support_multi_buck) {
+			rc = platform_class_buckchg_ops_set_wls_hiz(
+				AUX_BUCK_CHARGER, true);
+			if (!ret)
+				ret = rc;
+		}
+		if (ret)
+			mca_log_err("wireless input quiesce failed: %d\n", ret);
+	}
+	strategy_wireless_free_queues(info);
+	strategy_wireless_free_cmd_tables(info);
+	if (info->batt_psy) {
+		power_supply_put(info->batt_psy);
+		info->batt_psy = NULL;
+	}
+	if (info->wakeup_enabled) {
+		device_init_wakeup(info->dev, false);
+		info->wakeup_enabled = false;
+	}
+}
+
 static int basic_wireless_class_probe(struct platform_device *pdev)
 {
-	int ret = 0;
-	static int probe_cnt;
 	struct strategy_wireless_dev *info;
-	int wls_online = 0;
-
-	mca_log_info("probe start probe_cnt: %d\n", ++probe_cnt);
-
-	if (strategy_class_fg_ops_is_init_ok() <= 0) {
-		mca_log_info("fg is not ready, wait for it\n");
+	struct mca_smartchg_if_ops smart = g_basic_smartchg_if_ops;
+	int ret;
+	if (strategy_class_fg_ops_is_init_ok() <= 0)
 		return -EPROBE_DEFER;
-	}
-
 	info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
-
-	info->batt_psy = power_supply_get_by_name("battery");
-	if (!info->batt_psy)
-		mca_log_err("batt_psy is not ready, wait for it\n");
-
 	info->dev = &pdev->dev;
 	platform_set_drvdata(pdev, info);
-	ret = strategy_wireless_parse_dt(info);
-	if (ret) {
-		strategy_wireless_free_cmd_tables(info);
-		return dev_err_probe(info->dev, ret, "wireless DT tables invalid\n");
-	}
-
 	INIT_LIST_HEAD(&info->header);
+	INIT_LIST_HEAD(&info->irq_header);
 	spin_lock_init(&info->list_lock);
 	init_waitqueue_head(&info->wait_que);
 	strategy_wireless_init_work(info);
-
-	/* No externally callable strategy or worker until all voters exist. */
+	info->batt_psy = power_supply_get_by_name("battery");
+	ret = strategy_wireless_parse_dt(info);
+	if (ret)
+		goto fail;
 	ret = strategy_wireless_init_voter(info);
 	if (ret)
-		goto err_voters;
+		goto fail;
 	ret = device_init_wakeup(info->dev, true);
 	if (ret)
-		goto err_voters;
-
-	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
+		goto fail;
+	info->wakeup_enabled = true;
+	info->hardware_ready = true;
+	WRITE_ONCE(info->ready, true);
+	ret = mca_strategy_ops_register(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
 					strategy_wireless_process_event,
 					strategy_wireless_get_status, NULL,
 					info);
-
-	strategy_wireless_create_group(info->dev);
-
-	g_basic_wls_info = info;
-	g_strategy_wireless_if_ops.data = info;
-	(void)mca_charge_if_ops_register(&g_strategy_wireless_if_ops);
-	g_basic_smartchg_if_ops.data = info;
-	(void)mca_smartchg_if_ops_register(&g_basic_smartchg_if_ops);
-
+	if (ret)
+		goto fail;
+	info->strategy_registered = true;
+	info->charge_if_ops = g_strategy_wireless_if_ops;
+	info->charge_if_ops.data = info;
+	ret = mca_charge_if_ops_register(&info->charge_if_ops);
+	if (ret)
+		goto fail;
+	info->charge_if_registered = true;
+	smart.data = info;
+	ret = mca_smartchg_if_ops_register(&smart);
+	if (ret)
+		goto fail;
+	info->smartchg_registered = true;
+	ret = strategy_wireless_create_group(info->dev);
+	if (ret)
+		goto fail;
+	info->sysfs_created = true;
+	mutex_lock(&basic_wls_publish_lock);
+	if (rcu_access_pointer(g_basic_wls_info))
+		ret = -EBUSY;
+	else
+		rcu_assign_pointer(g_basic_wls_info, info);
+	mutex_unlock(&basic_wls_publish_lock);
+	if (ret)
+		goto fail;
 	info->strategy_init_done = 1;
-	info->wl_irq_running = true;
-	schedule_delayed_work(&info->process_irq_work, 0);
+	WRITE_ONCE(info->wl_irq_running, true);
 	schedule_delayed_work(&info->find_voter_work, 0);
 
-	platform_class_wireless_is_present(WIRELESS_ROLE_MASTER, &wls_online);
-	if (wls_online) {
-		mca_log_err("avoid missing wls_online event in probe\n");
-		mca_event_block_notify(MCA_EVENT_TYPE_CHARGER_CONNECT,
-				       MCA_EVENT_WIRELESS_CONNECT, NULL);
-	}
-
-	mca_log_err("probe End\n");
-
 	return 0;
-
-err_voters:
-	strategy_wireless_destroy_voters(info);
-	strategy_wireless_free_cmd_tables(info);
-	return dev_err_probe(info->dev, ret, "wireless voter initialization failed\n");
-}
-
-static void strategy_wireless_stop_irq_worker(struct strategy_wireless_dev *info)
-{
-	if (!info)
-		return;
-
-	info->wl_irq_running = false;
-	wake_up(&info->wait_que);
-	cancel_delayed_work_sync(&info->process_irq_work);
+fail:
+	basic_wireless_stop(info);
+	return ret;
 }
 
 static void basic_wireless_class_remove(struct platform_device *pdev)
 {
-	struct strategy_wireless_dev *info = platform_get_drvdata(pdev);
-
-	strategy_wireless_stop_irq_worker(info);
-	strategy_wireless_remove_group(&pdev->dev);
+	basic_wireless_stop(platform_get_drvdata(pdev));
 }
 
 static void basic_wireless_class_shutdown(struct platform_device *pdev)
 {
-	strategy_wireless_stop_irq_worker(platform_get_drvdata(pdev));
+	basic_wireless_stop(platform_get_drvdata(pdev));
 }
 
 static const struct of_device_id match_table[] = {
