@@ -18,3 +18,13 @@ obj-$(CONFIG_QTI_CPU_PAUSE_COOLING_DEVICE) += thermal_pause.o
 obj-$(CONFIG_QTI_DDR_COOLING_DEVICE) += ddr_cdev.o
 
 obj-$(CONFIG_QTI_BCL_SOC_DRIVER) += bcl_soc.o
+
+obj-$(CONFIG_QTI_CPUFREQ_CDEV) += qti_cpufreq_cdev.o
+obj-$(CONFIG_QTI_DEVFREQ_CDEV) += qti_devfreq_cdev.o
+obj-$(CONFIG_QTI_DYNAMIC_HW_THERMAL_TRIP) += qti_dynamic_hw_trip.o
+obj-$(CONFIG_QTI_USERSPACE_CDEV) += qti_userspace_cdev.o
+obj-$(CONFIG_QTI_QMI_COOLING_DEVICE) += qti_qmi_cdev.o
+qti_qmi_cdev-y := qmi_cooling.o thermal_mitigation_device_service_v01.o
+obj-$(CONFIG_QTI_QMI_SENSOR_V2) += qti_qmi_sensor_v2.o
+qti_qmi_sensor_v2-y := qmi_sensors_v2.o thermal_sensor_service_v02.o
+obj-$(CONFIG_QTI_THERMAL_VENDOR_HOOK) += qti_thermal_vendor_hooks.o

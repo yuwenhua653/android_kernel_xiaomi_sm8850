@@ -135,6 +135,7 @@ debugcc-chora.ko
 debugcc-sm4450.ko
 gpucc-chora.ko
 gpucc-sm4450.ko
+qcom_lpm.ko
 qcom-rng.ko
 governor_gpubw_mon.ko
 governor_msm_adreno_tz.ko
@@ -238,6 +239,13 @@ spi-msm-geni.ko
 spi-geni-qcom.ko
 ddr_cdev.ko
 qcom-spmi-temp-alarm.ko
+qti_cpufreq_cdev.ko
+qti_devfreq_cdev.ko
+qti_qmi_cdev.ko
+qti_qmi_sensor_v2.ko
+qti_userspace_cdev.ko
+qti_thermal_vendor_hooks.ko
+qti_dynamic_hw_trip.ko
 msm_geni_serial.ko
 msm_sharedmem.ko
 dwc3-msm.ko
@@ -253,6 +261,8 @@ repeater-qti-pmic-eusb2.ko
 ucsi_qti_glink.ko
 qcom-spmi-wled.ko
 gh_irq_lend.ko
+nezha-ir-spi.ko
+stmvl53l5.ko
 msm_sysstats.ko
 zsmalloc.ko
 qrtr-mhi.ko

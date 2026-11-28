@@ -1,0 +1,795 @@
+{
+  "device": "Xiaomi 17 Ultra (China nezha), OS4.0.7.0.XPACNXM",
+  "date": "2026-11-28",
+  "branch": "nazha",
+  "baseline_kernel": "fdc0659bfa4126dc40324ac1d49b0336c180a85d",
+  "modules": "06d0e21c238e4e98dec57fb37d9c47834f55f534",
+  "devicetrees": "0021b282a43f6fa31bef3133fa86ae95f711e3cd",
+  "source_revisions": {
+    "MiCode/kernel_devicetree": "396596c6d1ec3c349402c50913f781efbf343d9c",
+    "MiCode/Xiaomi_Kernel_OpenSource": "da9af1b6d83e1f53e4b8e4f4421e3c4161d2133d",
+    "LineageOS/android_kernel_qcom_sm8850": "557159b6a0d06f1c6f07ec4c1f22bc9309a113e4"
+  },
+  "factory_ota": "https://bigota.d.miui.com/OS4.0.7.0.XPACNXM/nezha-ota_full-OS4.0.7.0.XPACNXM-user-17.0-5d0985edfa.zip",
+  "factory_partitions": {
+    "dtbo": "1b78a4cc5fe5ee46fcf1ea3af0ee5a1287c0b4a2ef78a30f4b62f745d31505ac",
+    "vendor_boot": "68a80b12e8210e0683fb0f275e0df2134db591113c9d6d91acbd34f54f4409cf",
+    "vendor_dlkm": "094b779c61c8b1736025230e545838001b0d4037ff2473dcbc413af128738cb4"
+  },
+  "build": {
+    "arch": "arm64",
+    "compiler": "LLVM 19.1.7",
+    "release": "6.12.118-gfdc0659bfa41-dirty",
+    "device_config": [
+      "gki_defconfig",
+      "vendor/canoe_GKI.config",
+      "vendor/nezha_GKI.config"
+    ],
+    "host_config": "C Binder; strict modpost, DWARF CRC and module BTF; pahole 1.25.",
+    "in_tree_modules": 391,
+    "external_build_groups": [
+      "qcom/opensource/mm-drivers/msm_ext_display",
+      "qcom/opensource/mm-drivers/sync_fence",
+      "qcom/opensource/mm-drivers/hfi_core",
+      "qcom/opensource/mm-drivers/hw_fence",
+      "qcom/opensource/securemsm-kernel",
+      "qcom/opensource/synx-kernel",
+      "qcom/opensource/display-drivers",
+      "xiaomi/nezha-touch",
+      "qcom/opensource/datarmnet-ext/mem",
+      "qcom/opensource/dataipa",
+      "qcom/opensource/datarmnet",
+      "qcom/opensource/datarmnet-ext/shs",
+      "qcom/opensource/datarmnet-ext/perf",
+      "qcom/opensource/datarmnet-ext/offload",
+      "qcom/opensource/datarmnet-ext/perf_tether",
+      "qcom/opensource/datarmnet-ext/wlan",
+      "qcom/opensource/datarmnet-ext/aps",
+      "qcom/opensource/datarmnet-ext/sch",
+      "qcom/opensource/data-kernel/drivers/smem-mailbox",
+      "qcom/opensource/mmrm-driver",
+      "qcom/opensource/video-driver",
+      "qcom/opensource/spu-kernel",
+      "qcom/opensource/graphics-kernel",
+      "nxp/opensource/driver",
+      "st/opensource/driver",
+      "qcom/opensource/dsp-kernel",
+      "qcom/opensource/audio-kernel",
+      "qcom/opensource/wlan/platform",
+      "qcom/opensource/bt-kernel",
+      "qcom/opensource/eva-kernel",
+      "qcom/opensource/camera-kernel",
+      "qcom/opensource/wlan/qcacld-3.0"
+    ],
+    "output_image_sha256": "b21e9ce8f21176a26c84200d6b93eed934a258b812a86b812a73701236521bd4",
+    "module_symvers_sha256": "5cf6324bbc2fcf995b8d93c2d50d8b5704779144d524cb435f1509fb162d13cc",
+    "module_audit": {
+      "scope": "build outputs only; not image/signature/runtime validation",
+      "modules": 479,
+      "kernel_modules": 391,
+      "external_directories": 32,
+      "crc_checks": 27244,
+      "modules_with_btf": 479,
+      "vermagic": [
+        "6.12.118-gfdc0659bfa41-dirty SMP preempt mod_unload modversions aarch64"
+      ],
+      "load_lists": {
+        "modules.list.ramdisk_deps": {
+          "entries": 2,
+          "missing": []
+        },
+        "modules.list.system_dlkm": {
+          "entries": 101,
+          "missing": []
+        },
+        "modules.load.recovery": {
+          "entries": 280,
+          "missing": []
+        },
+        "modules.load.system_dlkm": {
+          "entries": 80,
+          "missing": []
+        },
+        "modules.load.vendor_boot": {
+          "entries": 129,
+          "missing": []
+        },
+        "modules.load.vendor_dlkm": {
+          "entries": 233,
+          "missing": []
+        }
+      },
+      "explicit_host_exceptions": [
+        "modules.list.system_dlkm:rust_binder.ko",
+        "modules.load.system_dlkm:rust_binder.ko"
+      ],
+      "errors": []
+    },
+    "new_load_list_entries": [
+      "qcom_lpm.ko",
+      "qti_cpufreq_cdev.ko",
+      "qti_devfreq_cdev.ko",
+      "qti_qmi_cdev.ko",
+      "qti_qmi_sensor_v2.ko",
+      "qti_userspace_cdev.ko",
+      "qti_thermal_vendor_hooks.ko",
+      "qti_dynamic_hw_trip.ko",
+      "nezha-ir-spi.ko",
+      "stmvl53l5.ko"
+    ],
+    "load_lists": [
+      "modules.load.vendor_dlkm",
+      "modules.load.recovery"
+    ],
+    "complete_MCA_test_config": {
+      "in_tree_modules": 410,
+      "JEITA_sha256": "0e85ef999add4419de91206e6f30ec7d74070530659b8a031c847b081be6b6d2",
+      "ELF_audit": {
+        "modules": 410,
+        "crc_checks": 19821,
+        "vermagic": "6.12.118-gfdc0659bfa41-dirty SMP preempt mod_unload modversions aarch64"
+      },
+      "Image_sha256": "93ebc73f0a293885bbd075e5ff6a3d6b971ea84834da7fe39d302a8867bbc2fa",
+      "note": "Temporary host config, C Binder and strict modpost, without BTF."
+    }
+  },
+  "board": {
+    "matrix": [
+      {
+        "board": "canoe-tp-v2",
+        "base": "source",
+        "msm_id": [
+          "0x1000294",
+          "0x20000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 566,
+          "display": 8702,
+          "IPA": 104,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "3ea5d5677fe0d29485c1111475d804b7878bd128781d074cd000165d2634665f"
+      },
+      {
+        "board": "canoe-tp-v2",
+        "base": "factory",
+        "msm_id": [
+          "0x1000294",
+          "0x20000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 566,
+          "display": 8702,
+          "IPA": 104,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "48d4164c80df3d6eb663e72c6d52e950279d9749fed6c5bf6575c35f95c04040"
+      },
+      {
+        "board": "canoe-tp",
+        "base": "source",
+        "msm_id": [
+          "0x1000294",
+          "0x10000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 174,
+          "display": 8702,
+          "IPA": 104,
+          "DSP": 182,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "d09e54c79eb4ad52249518d4c4c4cc8adc2a61302a829b562d7a3806ec11793e"
+      },
+      {
+        "board": "canoe-tp",
+        "base": "factory",
+        "msm_id": [
+          "0x1000294",
+          "0x10000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 174,
+          "display": 8702,
+          "IPA": 104,
+          "DSP": 182,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "7f3a46d148b1b441c0f613bdbed315f63f9a8a62a11c436a20a0e71dea674d6e"
+      },
+      {
+        "board": "canoe-v2",
+        "base": "source",
+        "msm_id": [
+          "0x294",
+          "0x20000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 566,
+          "display": 8702,
+          "IPA": 104,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "938b7cee511f542c14c47ce94e520236855594839441261d32497ecb42d90576"
+      },
+      {
+        "board": "canoe-v2",
+        "base": "factory",
+        "msm_id": [
+          "0x294",
+          "0x20000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 566,
+          "display": 8702,
+          "IPA": 104,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "624ad72208422812cde907e4fecf351b309b258f78dee3278be2c085e4d21f7c"
+      },
+      {
+        "board": "canoe",
+        "base": "source",
+        "msm_id": [
+          "0x294",
+          "0x10000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 174,
+          "display": 8702,
+          "IPA": 104,
+          "DSP": 182,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "89e79ea3d0966a395cd13a9c0c8fc25db8b124658acb23c7edba9c9791de48c4"
+      },
+      {
+        "board": "canoe",
+        "base": "factory",
+        "msm_id": [
+          "0x294",
+          "0x10000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 174,
+          "display": 8702,
+          "IPA": 104,
+          "DSP": 182,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "409b10003f69274b48728ff99b3ce822bb09f714b4aac2b91c6a0a0d7a022365"
+      },
+      {
+        "board": "canoep-sg-v2",
+        "base": "source",
+        "msm_id": [
+          "0x2e7",
+          "0x20000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 113,
+          "GPU": 566,
+          "display": 736,
+          "IPA": 0,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 127,
+        "wireless": true,
+        "sha256": "a9934146fbb1fcc845e280fcd7300ecc37c7146d95da7b827affcc24851bb3df"
+      },
+      {
+        "board": "canoep-sg-v2",
+        "base": "factory",
+        "msm_id": [
+          "0x2e7",
+          "0x20000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 113,
+          "GPU": 566,
+          "display": 736,
+          "IPA": 0,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 127,
+        "wireless": true,
+        "sha256": "9ac52d0f8ef66b9e54f8a13caa34972bf9f75ae0a2255369e54b14e5d2e969be"
+      },
+      {
+        "board": "canoep-sg",
+        "base": "source",
+        "msm_id": [
+          "0x2e7",
+          "0x10000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 113,
+          "GPU": 174,
+          "display": 736,
+          "IPA": 0,
+          "DSP": 182,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 127,
+        "wireless": true,
+        "sha256": "b6abd26f97044c96d78ab5612715beaae615bee78f64d97c6b939f469a1d1581"
+      },
+      {
+        "board": "canoep-sg",
+        "base": "factory",
+        "msm_id": [
+          "0x2e7",
+          "0x10000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 113,
+          "GPU": 174,
+          "display": 736,
+          "IPA": 0,
+          "DSP": 182,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 127,
+        "wireless": true,
+        "sha256": "9949949ee249eab601ab6e8f4695717bbbd8d2ed22d2d413e7eb20ae3cb9dc33"
+      },
+      {
+        "board": "canoep-v2",
+        "base": "source",
+        "msm_id": [
+          "0x295",
+          "0x20000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 566,
+          "display": 8702,
+          "IPA": 0,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "86851321095e07e4ae8e45938eccd04aae691598a8bde5b6aaca92eca507c9ec"
+      },
+      {
+        "board": "canoep-v2",
+        "base": "factory",
+        "msm_id": [
+          "0x295",
+          "0x20000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 566,
+          "display": 8702,
+          "IPA": 0,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "b659aa5269e69ed5a703eafe9b51e1ffed69d1b11f87d61b417028cd539be079"
+      },
+      {
+        "board": "canoep",
+        "base": "source",
+        "msm_id": [
+          "0x295",
+          "0x10000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 174,
+          "display": 8702,
+          "IPA": 0,
+          "DSP": 182,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "5634cd29069520a850b3c76fbff338071ee0c6bfb5db07f391173999d597e3ae"
+      },
+      {
+        "board": "canoep",
+        "base": "factory",
+        "msm_id": [
+          "0x295",
+          "0x10000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 117,
+          "GPU": 174,
+          "display": 8702,
+          "IPA": 0,
+          "DSP": 182,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 1294,
+        "wireless": true,
+        "sha256": "7bfea38c55fadf85670dc641ed82cca38058cf1a0c21d51f50e370b1c995a33f"
+      },
+      {
+        "board": "whale",
+        "base": "source",
+        "msm_id": [
+          "0x2d2",
+          "0x30000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 114,
+          "GPU": 240,
+          "display": 736,
+          "IPA": 104,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 127,
+        "wireless": true,
+        "sha256": "b5dc7b11adb74b0774f0e5b9f2b831e429094e52f49026fc019d216ad4750c58"
+      },
+      {
+        "board": "whale",
+        "base": "factory",
+        "msm_id": [
+          "0x2d2",
+          "0x30000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 114,
+          "GPU": 240,
+          "display": 736,
+          "IPA": 104,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 127,
+        "wireless": true,
+        "sha256": "02aae3fe4df14d2eabc9528aa76bb7923b780c79235ffb4f94513bf0801e1c7d"
+      },
+      {
+        "board": "whalep",
+        "base": "source",
+        "msm_id": [
+          "0x2d3",
+          "0x30000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 114,
+          "GPU": 240,
+          "display": 736,
+          "IPA": 0,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 127,
+        "wireless": true,
+        "sha256": "56382bad48d4ca6ce00e133ee10570ce818f4ed3054c005d2157bfd580e4206f"
+      },
+      {
+        "board": "whalep",
+        "base": "factory",
+        "msm_id": [
+          "0x2d3",
+          "0x30000"
+        ],
+        "platform_properties": {
+          "UFS": 67,
+          "PMIC/keys": 95,
+          "USB": 114,
+          "GPU": 240,
+          "display": 736,
+          "IPA": 0,
+          "DSP": 184,
+          "video": 139,
+          "idle": 13,
+          "thermal": 1397,
+          "IR": 44,
+          "ToF": 107
+        },
+        "audio_haptic_properties": 127,
+        "wireless": true,
+        "sha256": "4639ea39cb75948850d2c38ded1b458f3321d0a0b4d911fa7f63312b3131efd5"
+      }
+    ],
+    "unmatched_base": [
+      "canoep-tp",
+      "canoep-tp-v2"
+    ],
+    "negative_control": "Disabling the matched UFS controller fails the comparison.",
+    "satellite": "SPI chip select 1 and GPIO13 remain outside the AOSP SE14 pin list. ToF uses chip select 0 and GPIO11.",
+    "display": {
+      "Canoe": {
+        "board_variants": 6,
+        "board_panels": 10,
+        "display_properties_or_references_per_merged_tree": 8702
+      },
+      "SG_Whale": {
+        "board_variants": 4,
+        "nodes_per_merged_tree": 94,
+        "display_properties_or_references_per_merged_tree": 736,
+        "whale_clock_compatible": "qcom,alor-dispcc"
+      }
+    },
+    "comparison_count": 161448,
+    "stock_only_enabled_compatible_strings": {
+      "scope": "Raw count of active factory compatible strings absent from each source board. Values include feature policy, alternate bindings and factory diagnostics. Device functionality cannot be inferred from the number.",
+      "counts_by_base": {
+        "canoe-tp-v2": 37,
+        "canoe-tp": 37,
+        "canoe-v2": 37,
+        "canoe": 37,
+        "canoep-sg-v2": 38,
+        "canoep-sg": 38,
+        "canoep-v2": 37,
+        "canoep": 37,
+        "whale": 38,
+        "whalep": 38
+      },
+      "common_to_all_matching_bases": [
+        "bootmonitor",
+        "etek,et5907mv",
+        "hl7606",
+        "mca,basic_wireless",
+        "mca,bmd",
+        "mca,buckchg_jeita",
+        "mca,business_battery",
+        "mca,business_charger",
+        "mca,lpd_detect",
+        "mca,path_control",
+        "mca,qcom_sysfs",
+        "mca,quick_charger",
+        "mca,quick_wireless",
+        "mca,strategy_buckchg",
+        "mca,strategy_pd_auth",
+        "mca,vbat_ovp_monitor",
+        "mca,wireless_revchg",
+        "mca_charger_thermal",
+        "mca_nu1671_fod_data",
+        "mdm,gpio-tiantong-dxs702",
+        "mdm,mi_t1_chip",
+        "mdm,mi_t2_jtag",
+        "mtdoops",
+        "qcom,spi-cnss",
+        "qcom,spmi-pmic-err-debug",
+        "ti,bq27z561_master",
+        "tiantong,dcdc",
+        "xiaomi,charger_partition",
+        "xiaomi,connector_antiburn",
+        "xiaomi,dump_display",
+        "xiaomi,mi_trace",
+        "xiaomi,millm",
+        "xiaomi,mitee",
+        "xiaomi,mitee-hlos-ipc",
+        "xiaomi,smart_charge",
+        "xiaomi,strategy_fg",
+        "xiaomi_rsmc"
+      ],
+      "additional_on_SG_Whale": [
+        "qcom,msm-geni-serial-hs"
+      ],
+      "SE6_SE15": "The two factory two-wire high-speed UARTs are not selected in this AOSP profile. Their clients have not been identified. Canoe Bluetooth uses SE18."
+    }
+  },
+  "weak_termination": {
+    "evidence_factory_module_sha256": "25fe746edbc37971b23debacb15eb9691590694d3ee2f92d87956b18372db609",
+    "factory_monitor_code": "0x9d0..0xa30; work offset 0x40. BC12 protocol 5 calls get_adapter_type. Factory real-type values 1 through 4 are SDP, CDP, DCP and FLOAT. Change only when the current JEITA row iterm exceeds the configured cap.",
+    "per_pack": [
+      "primary CN: 10 mV / 200 mA",
+      "second CN (LWN): no weak termination property",
+      "global: 10 mV / 200 mA"
+    ],
+    "unknown_wired_protocol": "On a BC1.2 read error with USB present the OSS policy keeps the reduced limits until a successful refresh. Vote failures remain pending for retry.",
+    "production": "Complete high-power MCA remains disabled pending pack authentication, gauge mode writes and hardware qualification."
+  },
+  "tof_firmware": {
+    "factory_path": "/odm/firmware/stmvl53l8.bin",
+    "bytes": 50172,
+    "sha256": "dfd20156b12bc3ee1c358bfc415e59e14e671a78497e016766b63bcb0366fd41",
+    "qualification": "Hash-verified factory OTA operations used for the EROFS reads. Actual firmware header, data and programming-window limits passed the driver parser. Hardware upload and ranging were not exercised. L5 path was tested with a fixture only."
+  },
+  "host_tests": [
+    "tools/test-mca-bmd-lifetime.py",
+    "tools/test-mca-charge-interface.py",
+    "tools/test-mca-dtpt-route.py",
+    "tools/test-mca-jeita-lifetime.py",
+    "tools/test-mca-limit-fanout.py",
+    "tools/test-mca-log-lifetime.py",
+    "tools/test-mca-owned-voter.py",
+    "tools/test-mca-parallel-buck.py",
+    "tools/test-mca-protection-errors.py",
+    "tools/test-mca-provider-batch.py",
+    "tools/test-mca-qc-battery-selection.py",
+    "tools/test-mca-sic-power.py",
+    "tools/test-mca-smartchg-lifetime.py",
+    "tools/test-mca-smartchg-policy.py",
+    "tools/test-mca-smartchg-registry.py",
+    "tools/test-mca-strategy-build.py",
+    "tools/test-mca-strategy-lifetime.py",
+    "tools/test-mca-thermal-errors.py",
+    "tools/test-mca-thermal-lifetime.py",
+    "tools/test-mca-usb-ownership.py",
+    "tools/test-mca-voter-errors.py",
+    "tools/test-mca-wired-stop.py",
+    "tools/test-nezha-jeita-events.py",
+    "tools/test-nezha-jeita-parser.py",
+    "tools/test-nezha-thermal-format.py",
+    "tools/test-mca-wired-controls.py",
+    "tools/test-mca-wired-concurrency.py",
+    "tools/test-mca-wired-quiesce.py",
+    "tools/test-mca-wired-mode-samples.py",
+    "tools/test-mca-qc-start.py",
+    "tools/test-mca-wireless-queues.py",
+    "tools/test-mca-wireless-lifetime.py",
+    "tools/test-mca-wireless-controls.py",
+    "tools/test-mca-wireless-concurrency.py",
+    "qcom/opensource/camera-kernel/tools/test-nezha-actuator-voltage.py",
+    "qcom/opensource/camera-kernel/tools/test-nezha-camera-command-paths.py",
+    "qcom/opensource/camera-kernel/tools/test-nezha-camera-release.py",
+    "qcom/opensource/camera-kernel/tools/test-nezha-csi.py",
+    "qcom/opensource/camera-kernel/tools/test-nezha-ois-abi.py",
+    "qcom/opensource/camera-kernel/tools/test-nezha-ois-sem1218s.py",
+    "qcom/opensource/camera-kernel/tools/test-nezha-parklens.py",
+    "qcom/opensource/camera-kernel/tools/test-nezha-zoom.py",
+    "tools/test-nezha-subpmic-wire.py",
+    "tools/test-nezha-glink-session.py",
+    "tools/test-nezha-jeita-cell.py",
+    "tools/test-nezha-wireless-provider.py",
+    "tools/test-sc96281-fod.py",
+    "tools/test-nezha-spi.py",
+    "tools/test-nezha-jeita-weak.py"
+  ],
+  "hardware_pending": [
+    "Physical UFS boot and first-stage mount",
+    "Button, RTC, USB host/device and suspend",
+    "GPU render, cellular data, DSP and video",
+    "Board thermals, protection and idle current",
+    "IR emission and ToF wake/ranging",
+    "Wired pack authentication/mode writing, high-power charge/exit, wireless positive battery energy",
+    "UWB SKU/transport identification; satellite excluded from the AOSP profile"
+  ]
+}

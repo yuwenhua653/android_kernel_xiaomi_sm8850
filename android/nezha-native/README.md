@@ -18,7 +18,7 @@ nezha device BoardConfig for a source build. This fragment builds the native ext
 The device tree still owns image assembly, first-stage fstab, vendor
 ramdisk and any FORCE_PREBUILT settings. The optional OS4 module split is described below.
 
-To build the kernel and its display/input subset in an Android kernel toolchain Bash shell, from kernel/xiaomi/sm8850:
+To build the kernel and its display/input subset from an Android kernel toolchain Bash shell in `kernel/xiaomi/sm8850`, use the following commands.
 
 ```sh
 out="$PWD/../../../out/nezha/kernel"
@@ -50,15 +50,23 @@ counts describe separate partitions and can include the same module name.
 
 ## Device trees
 
-Makefile.nezha orders the 12 source base targets like the vendor_boot DTB
-section. The two input/NFC overlays implement the board wiring common to
-the corresponding stock entries. Each reproduces 213 stock properties
-(compared after resolving phandles) and adds explicit SPI address/size
-cells and the DDIC strap GPIO descriptor. Both use Xiaomi board ID 5.
-Treat these overlays as components during bring-up: the two original
-entries include additional PMIC, charging, display, camera and audio data.
-The combined Canoe target includes the input wiring and panel references together. Panel firmware, trusted-touch VM, suspend
-and all input devices still require hardware testing.
+Kbuild emits the 12 vendor_boot base DTBs in factory order. Ten match one of the
+two China board entries by the full two-cell `qcom,msm-id`. Each of these ten
+base DTBs already includes its matching GPU, FastRPC, VIDC, CVP and MMRM
+configuration. The five modem variants also include IPA and the SMEM mailbox.
+The six Canoe bases include their display SoC layers and use the board's ten
+panel definitions. CanoeP SG and Whale also include SDE, IPCLite and the
+hardware fence. Both Whale variants select the Alor display clock provider.
+The dtbo partition contains the SG/Whale and Canoe board overlays in that
+order. Both use Xiaomi board ID 5.
+
+The board wiring covers the UFS host and PHY supplies, PMIC power key and RTC,
+USB-C role graph, eUSB2 repeater, board thermistors, infrared and the camera
+ranging sensor. Use the matching China OS4 vendor and ODM firmware with the
+paired kernel and DLKM modules. The infrared HAL opens `/dev/ir_spi`. The
+ranging HAL uses `/dev/stmvl53l5`; the driver identifies the sensor revision
+before requesting the DT-specified firmware. The optional satellite device on
+the other SE14 chip select stays disabled in this AOSP profile.
 
 OS4 base canoep-tp / canoep-tp-v2 use SoC ID 0x1010295; the larger stock
 overlay's list contains 0x1000295. Both original values are preserved.
@@ -98,21 +106,19 @@ definitions from the same directory. A clean checkout contains all ten
 panel configurations and their DSI commands and timings. The OTA extraction tool is optional for comparison with the factory
 image.
 
-For a **source** Canoe base, use this overlay order with the built
-`scripts/dtc/fdtoverlay`. Example from the kernel tree after setting
-`out` as above:
+Apply the board overlay once to a built Canoe base to inspect the final board.
+The matching factory base takes the same overlay. Run the example from the kernel tree.
 
 ```sh
 q="$out/arch/arm64/boot/dts/vendor/qcom"
-"$out/scripts/dtc/fdtoverlay" -i "$q/canoe.dtb" -o "$out/nezha-canoe-display.dtb" \
-    "$q/mm/hfi_core/canoe-hfi-core.dtbo" "$q/mm/hw_fence/canoe-hw-fence.dtbo" \
-    "$q/synx/synx/canoe-synx.dtbo" "$q/nezha-canoe-display-soc.dtbo" \
+"$out/scripts/dtc/fdtoverlay" -i "$q/canoe.dtb" -o "$out/nezha-canoe.dtb" \
     "$q/nezha-canoe-board-overlay.dtbo"
+../sm8850-devicetrees/tools/verify-nezha-platform.py "$factory_merged_canoe" "$out/nezha-canoe.dtb"
 ```
 
-For the corresponding **factory** base, apply just the combined board overlay.
-The six verified variants are canoe, canoe-v2, canoe-tp, canoe-tp-v2,
-canoep and canoep-v2. The smaller SG/Whale entry keeps its own input target.
+Canoe, Canoe v2 and their TP variants plus CanoeP and CanoeP v2 take the
+Canoe overlay. CanoeP SG, CanoeP SG v2, Whale and WhaleP take the SG/Whale
+board overlay.
 The SoC display layer preserves the factory-disabled HFI node and the two
 extra unsecure SMMU reservations. The generic Canoe HFI layer enables the
 node, which can make MSM DRM defer while waiting for HFI to probe.

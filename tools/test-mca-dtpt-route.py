@@ -29,7 +29,7 @@ pre=r'''
 #define MCA_FG_TYPE_SINGLE_NUM_MAX 0
 #define STRATEGY_FG_WORK_INTERVAL_DTPT 1000
 struct proc {int cur_jeita_index,temp_hys_en,max_chg_curr;};
-struct mca_buckchg_jeita_dev {bool stopping,usb_online,wireless_online;int event_lock,monitor_work,online,dtpt_status;struct proc proc_data,flip_proc_data,base_proc_data;};
+struct mca_buckchg_jeita_dev {bool stopping,usb_online,wireless_online;int event_lock,monitor_work,online,dtpt_status,weak_iterm_ma;struct proc proc_data,flip_proc_data,base_proc_data;};
 struct work_struct {int unused;};
 struct delayed_work {struct work_struct work;};
 struct strategy_fg {struct {int fg_type;} cfg;struct delayed_work dtpt_monitor_work;};
@@ -41,6 +41,8 @@ static void mutex_lock(int *p){assert(!*p);*p=1;}
 static void mutex_unlock(int *p){assert(*p);*p=0;}
 static void cancel_delayed_work_sync(void *w){}
 static void schedule_delayed_work(void *w,int delay){schedules++;}
+#define system_wq NULL
+#define mod_delayed_work(wq, work, delay) schedule_delayed_work(work, delay)
 static int msecs_to_jiffies(int n){return n;}
 static int platform_fg_ops_get_isc_alert_level(int id,int *v){if(bad_gauge)return -EIO;*v=alert;return 0;}
 static int platform_fg_ops_get_soa_alert_level(int id,int *v){if(bad_gauge)return -EIO;*v=0;return 0;}

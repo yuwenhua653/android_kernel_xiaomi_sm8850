@@ -12,8 +12,10 @@ pre=r'''
 /* Event values are taken from the production header below. */
 #define WRITE_ONCE(x,v) ((x)=(v))
 struct proc {int cur_jeita_index,temp_hys_en,max_chg_curr;};
-struct mca_buckchg_jeita_dev {bool usb_online,wireless_online,stopping;int event_lock,monitor_work,online,dtpt_status;struct proc proc_data,flip_proc_data,base_proc_data;};
-static int starts,cancels;
+struct mca_buckchg_jeita_dev {bool usb_online,wireless_online,stopping;int weak_iterm_ma,event_lock,monitor_work,online,dtpt_status;struct proc proc_data,flip_proc_data,base_proc_data;};
+static int starts,cancels,updates;
+#define system_wq NULL
+static void mod_delayed_work(void *q,int *w,int delay){assert(!delay);*w=1;updates++;}
 static void mutex_lock(int *p){assert(!*p);*p=1;}
 static void mutex_unlock(int *p){assert(*p);*p=0;}
 static void cancel_delayed_work_sync(int *w){cancels++;*w=0;}
@@ -23,6 +25,13 @@ events=(Path(__file__).resolve().parents[1]/'drivers/power/supply/mca/include/mc
 test=r'''
 int main(void){
  struct mca_buckchg_jeita_dev s={0};
+ struct mca_buckchg_jeita_dev plugged={.weak_iterm_ma=200};
+ mca_nezha_jeita_process_event(&plugged,MCA_EVENT_WIRELESS_CONNECT,0);
+ mca_nezha_jeita_process_event(&plugged,MCA_EVENT_USB_CONNECT,0);
+ mca_nezha_jeita_process_event(&plugged,MCA_EVENT_USB_CONNECT,0);
+ mca_nezha_jeita_process_event(&plugged,MCA_EVENT_USB_DISCONNECT,0);
+ assert(plugged.online && updates==2 && starts==1 && cancels==1);
+ starts=cancels=0;
  assert(!mca_nezha_jeita_process_event(&s,1,0));assert(s.online && s.monitor_work && starts==1);
  mca_nezha_jeita_process_event(&s,3,0);assert(starts==1 && cancels==1);
  mca_nezha_jeita_process_event(&s,0,0);assert(s.online && s.monitor_work && starts==1 && cancels==1);

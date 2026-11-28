@@ -8,7 +8,7 @@ from pathlib import Path
 import json, os, re, subprocess, sys, tempfile
 root = Path(__file__).resolve().parents[1]
 s = (root/'drivers/power/supply/mca/mca_strategy/strategy_charger/mca_buckchg_jeita.c').read_text()
-body = s[s.index('static bool mca_jeita_table_valid'):s.index('static int mca_buckchg_jeita_parse_dt')]
+body = s[s.index('static bool mca_jeita_table_valid'):s.index('static int mca_jeita_second_cell')]
 h = (root/'drivers/power/supply/mca/mca_strategy/strategy_charger/inc/mca_buckchg_jeita.h').read_text()
 h = h[h.index('#define JEITA_VOLT_DATA_MAX_GROUP'):h.index('struct mca_buckchg_jeita_proc_data')]
 pre = r'''
@@ -54,7 +54,7 @@ static int kstrtoint(const char *s,unsigned base,int *v) {
 fixtures = [dict(jeita_para=['-65535','18','0','2','0','4500','66','null','18','65535','1','0','2000','4500','328','volt'],volt=['4000','2000','4500','1000'],jeita_para_ffc=['18','65535','0','1','2000','4540','722','null'])]
 if len(sys.argv)>1:
     text=Path(sys.argv[1]).read_text()
-    for block in re.findall(r'&mca_buckchg_jeita(?:_\w+)?\s*\{(.*?)\};',text,re.S):
+    for block in re.findall(r'(?:^|[\n\t ])&?mca_buckchg_jeita(?:_\w+)?\s*\{(.*?)\};',text,re.S):
         props={}
         for name,val in re.findall(r'(\w+)\s*=\s*((?:"[^"]*"[\s,]*)+);',block):
             props[name]=re.findall(r'"([^"]*)"',val)

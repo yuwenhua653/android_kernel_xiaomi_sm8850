@@ -81,6 +81,8 @@ struct mca_buckchg_jeita_proc_data {
 	int cur_jeita_index;
 	int temp_hys_en;
 	int max_chg_curr;
+	int last_chg_curr;
+	int last_fastcharge_mode;
 };
 
 struct mca_buck_jeita_smartchg_data {
@@ -124,6 +126,11 @@ struct mca_buckchg_jeita_dev {
 	struct mca_buck_jeita_smartchg_data smartchg_data;
 	bool baacfg_update;
 	int vterm;
+	/* Optional OS4 weak-adapter termination limits for the selected pack. */
+	int weak_delta_mv;
+	int weak_iterm_ma;
+	unsigned int weak_adapter;
+	bool weak_vote_retry;
 	int jeita_hot_termination_hyst;
 	int cold_zone;
 };

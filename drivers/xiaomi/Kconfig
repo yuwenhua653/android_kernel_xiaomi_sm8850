@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config XIAOMI_NEZHA_IR_SPI
+	tristate "Xiaomi Nezha SPI infrared transmitter"
+	depends on SPI && OF
+	help
+	  Exposes the consumer infrared transmit interface used by the Nezha HAL.
+
+config STMVL53L5
+	tristate "ST VL53L5/L8 SPI ranging sensor on Nezha"
+	depends on SPI && OF && REGULATOR
+	select FW_LOADER
+	help
+	  Selects the ranging sensor used with the Nezha camera HAL.

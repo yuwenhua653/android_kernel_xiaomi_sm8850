@@ -62,6 +62,8 @@ struct delayed_work { struct work_struct work; bool initialized,pending; void (*
 #define INIT_DELAYED_WORK(w,f) do { (w)->initialized=true; (w)->fn=(f); } while(0)
 static int schedules,cancels,sequence,unreg_seq,cancel_seq,detach_seq;
 static int schedule_delayed_work(struct delayed_work *w,int delay) { (void)delay;assert(w->initialized);w->pending=true;schedules++;return 1; }
+#define system_wq NULL
+#define mod_delayed_work(wq, work, delay) schedule_delayed_work(work, delay)
 static int cancel_delayed_work_sync(struct delayed_work *w) { assert(w->initialized);w->pending=false;cancels++;cancel_seq=++sequence;return 1; }
 static void *allocations[32];static int nalloc;
 static void *devm_kzalloc(struct device *d,size_t n,int flags) { (void)d;(void)flags;void *p=calloc(1,n);assert(p&&nalloc<32);allocations[nalloc++]=p;return p; }

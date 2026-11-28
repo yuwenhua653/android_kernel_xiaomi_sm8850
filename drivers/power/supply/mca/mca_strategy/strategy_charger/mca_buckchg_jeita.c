@@ -30,6 +30,7 @@
 #include <linux/of.h>
 #include <linux/power_supply.h>
 #include <mca/common/mca_parse_dts.h>
+#include <mca/protocol/protocol_class.h>
 #include <mca/common/mca_voter.h>
 #include <mca/common/mca_event.h>
 #include <mca/common/mca_log.h>
@@ -61,6 +62,7 @@ static int mca_buckchg_jeita_get_curr(struct mca_buckchg_jeita_data *jeita_data,
 	int vbat = 0;
 	int min_cur = jeita_data->max_current;
 
+	*vbat_index = -1;
 	ret = strategy_class_fg_ops_get_voltage(&vbat);
 	if (ret) {
 		mca_log_err("get vbat failed\n");
@@ -86,6 +88,14 @@ static int mca_buckchg_jeita_get_curr(struct mca_buckchg_jeita_data *jeita_data,
 #define ABNORMAL_BATT_FV_MAX 4200
 #define JEITA_HOT_RECHARGE_VBAT_HYS 150
 
+static bool mca_jeita_above_lower_step(const struct mca_buckchg_jeita_data *row,
+				      int index, int vbat)
+{
+	if (index < 0 || index >= row->volt_para.size)
+		return false;
+	return !index || vbat > row->volt_para.volt_data[index - 1].voltage;
+}
+
 static void mca_buckchg_base_jeita_update(struct mca_buckchg_jeita_dev *info)
 {
 	int temp = 0;
@@ -95,8 +105,7 @@ static void mca_buckchg_base_jeita_update(struct mca_buckchg_jeita_dev *info)
 	int now_curr = 0, chg_curr = 0, effective_curr;
 	int hys_affect = 0;
 	int data_change = 0;
-	static int last_fastcharge_mode;
-	static int last_chg_curr;
+	struct mca_buckchg_jeita_proc_data *proc = &info->base_proc_data;
 	static bool runswocp;
 	static int base_over_curr_count;
 	int vbat_index = -1;
@@ -147,23 +156,23 @@ static void mca_buckchg_base_jeita_update(struct mca_buckchg_jeita_dev *info)
 	}
 
 	/* select cur jeita_data (temperature hysteresis) */
-	if (info->base_proc_data.cur_jeita_index == -1) {
+	if (proc->cur_jeita_index == -1) {
 		jeita_data = cur_jeita_data;
-		last_chg_curr =
+		proc->last_chg_curr =
 			mca_buckchg_jeita_get_curr(cur_jeita_data, &vbat_index);
 	} else {
-		if (info->base_proc_data.cur_jeita_index == i ||
-		    fastcharge_mode != last_fastcharge_mode)
+		if (proc->cur_jeita_index == i ||
+		    fastcharge_mode != proc->last_fastcharge_mode)
 			jeita_data = cur_jeita_data;
 		else {
 			if (!fastcharge_mode ||
 			    info->base_jeita_para.fcc_size == 0)
 				jeita_data = info->base_jeita_para.jeita_data +
-					     info->base_proc_data.cur_jeita_index;
+					     proc->cur_jeita_index;
 			else
 				jeita_data =
 					info->base_jeita_para.jeita_ffc_data +
-					info->base_proc_data.cur_jeita_index;
+					proc->cur_jeita_index;
 
 			mca_log_info("temp_low: %d, temp_high: %d, temp: %d\n",
 				     jeita_data->temp_low -
@@ -171,8 +180,8 @@ static void mca_buckchg_base_jeita_update(struct mca_buckchg_jeita_dev *info)
 				     jeita_data->temp_high +
 					     jeita_data->high_temp_hys,
 				     temp);
-			if (i > info->base_proc_data.cur_jeita_index) {
-				if (info->base_proc_data.cur_jeita_index == 0 &&
+			if (i > proc->cur_jeita_index) {
+				if (proc->cur_jeita_index == 0 &&
 				    mca_smartchg_is_extreme_cold_enabled())
 					jeita_data = cur_jeita_data;
 				else if (temp < jeita_data->temp_high +
@@ -189,48 +198,46 @@ static void mca_buckchg_base_jeita_update(struct mca_buckchg_jeita_dev *info)
 			}
 		}
 	}
-	last_fastcharge_mode = fastcharge_mode;
+	proc->last_fastcharge_mode = fastcharge_mode;
 
-	info->base_proc_data.max_chg_curr =
+	proc->max_chg_curr =
 		mca_buckchg_jeita_get_curr(jeita_data, &vbat_index);
-	if (info->base_proc_data.cur_jeita_index != i && !hys_affect) {
+	if (proc->cur_jeita_index != i && !hys_affect) {
 		data_change = 1;
 		mca_log_info(
 			"jeita_index: cur_jeita_index:%d, i:%d, hys_affect:%d\n",
-			info->base_proc_data.cur_jeita_index, i, hys_affect);
-		last_chg_curr = info->base_proc_data.max_chg_curr;
-	} else if (info->base_proc_data.max_chg_curr > last_chg_curr) {
+			proc->cur_jeita_index, i, hys_affect);
+		proc->last_chg_curr = proc->max_chg_curr;
+	} else if (proc->max_chg_curr > proc->last_chg_curr) {
 		if (vbat_index != -1 &&
 		    vbat < jeita_data->volt_para.volt_data[vbat_index].voltage -
 				   info->base_vbat_low_hyst) {
 			data_change = 1;
 			mca_log_info(
 				"vbat_thre[l->s]: max_chg_curr:%d, last_chg_curr:%d, vbat_index:%d, vbat:%d\n",
-				info->base_proc_data.max_chg_curr, last_chg_curr,
+				proc->max_chg_curr, proc->last_chg_curr,
 				vbat_index, vbat);
-			last_chg_curr = info->base_proc_data.max_chg_curr;
+			proc->last_chg_curr = proc->max_chg_curr;
 		}
-	} else if (info->base_proc_data.max_chg_curr < last_chg_curr) {
-		if (vbat_index != -1 &&
-		    vbat > jeita_data->volt_para.volt_data[vbat_index - 1]
-				   .voltage) {
+	} else if (proc->max_chg_curr < proc->last_chg_curr) {
+		if (mca_jeita_above_lower_step(jeita_data, vbat_index, vbat)) {
 			data_change = 1;
 			mca_log_info(
 				"vbat_thre[s->l]: max_chg_curr:%d, last_chg_curr:%d, vbat_index:%d\n",
-				info->base_proc_data.max_chg_curr, last_chg_curr,
+				proc->max_chg_curr, proc->last_chg_curr,
 				vbat_index);
-			last_chg_curr = info->base_proc_data.max_chg_curr;
+			proc->last_chg_curr = proc->max_chg_curr;
 		}
 	}
 
-	chg_curr = info->base_proc_data.max_chg_curr;
+	chg_curr = proc->max_chg_curr;
 	mca_log_info(
 		"cur index %d/%d max_chg_curr %d chg_curr %d hys_affect %d, now_curr %d, effective_curr %d\n",
-		i, info->base_proc_data.cur_jeita_index,
-		info->base_proc_data.max_chg_curr, chg_curr, hys_affect,
+		i, proc->cur_jeita_index,
+		proc->max_chg_curr, chg_curr, hys_affect,
 		now_curr, effective_curr);
 	if (data_change && !hys_affect)
-		info->base_proc_data.cur_jeita_index = i;
+		proc->cur_jeita_index = i;
 
 	if (effective_curr != 0 && now_curr / 1000 < -chg_curr)
 		base_over_curr_count++;
@@ -261,8 +268,7 @@ static void mca_buckchg_flip_jeita_update(struct mca_buckchg_jeita_dev *info)
 	int chg_curr = 0;
 	int hys_affect = 0;
 	int data_change = 0;
-	static int last_fastcharge_mode;
-	static int last_chg_curr;
+	struct mca_buckchg_jeita_proc_data *proc = &info->flip_proc_data;
 	int vbat_index = -1;
 	int vbat = 0;
 
@@ -309,23 +315,23 @@ static void mca_buckchg_flip_jeita_update(struct mca_buckchg_jeita_dev *info)
 	}
 
 	/* select cur jeita_data (temperature hysteresis) */
-	if (info->flip_proc_data.cur_jeita_index == -1) {
+	if (proc->cur_jeita_index == -1) {
 		jeita_data = cur_jeita_data;
-		last_chg_curr =
+		proc->last_chg_curr =
 			mca_buckchg_jeita_get_curr(cur_jeita_data, &vbat_index);
 	} else {
-		if (info->flip_proc_data.cur_jeita_index == i ||
-		    fastcharge_mode != last_fastcharge_mode)
+		if (proc->cur_jeita_index == i ||
+		    fastcharge_mode != proc->last_fastcharge_mode)
 			jeita_data = cur_jeita_data;
 		else {
 			if (!fastcharge_mode ||
 			    info->flip_jeita_para.fcc_size == 0)
 				jeita_data = info->flip_jeita_para.jeita_data +
-					     info->flip_proc_data.cur_jeita_index;
+					     proc->cur_jeita_index;
 			else
 				jeita_data =
 					info->flip_jeita_para.jeita_ffc_data +
-					info->flip_proc_data.cur_jeita_index;
+					proc->cur_jeita_index;
 
 			mca_log_info("temp_low: %d, temp_high: %d, temp: %d\n",
 				     jeita_data->temp_low -
@@ -333,8 +339,8 @@ static void mca_buckchg_flip_jeita_update(struct mca_buckchg_jeita_dev *info)
 				     jeita_data->temp_high +
 					     jeita_data->high_temp_hys,
 				     temp);
-			if (i > info->flip_proc_data.cur_jeita_index) {
-				if (info->flip_proc_data.cur_jeita_index == 0 &&
+			if (i > proc->cur_jeita_index) {
+				if (proc->cur_jeita_index == 0 &&
 				    mca_smartchg_is_extreme_cold_enabled())
 					jeita_data = cur_jeita_data;
 				else if (temp < jeita_data->temp_high +
@@ -351,62 +357,98 @@ static void mca_buckchg_flip_jeita_update(struct mca_buckchg_jeita_dev *info)
 			}
 		}
 	}
-	last_fastcharge_mode = fastcharge_mode;
+	proc->last_fastcharge_mode = fastcharge_mode;
 
-	info->flip_proc_data.max_chg_curr =
+	proc->max_chg_curr =
 		mca_buckchg_jeita_get_curr(jeita_data, &vbat_index);
-	if (info->flip_proc_data.cur_jeita_index != i && !hys_affect) {
+	if (proc->cur_jeita_index != i && !hys_affect) {
 		data_change = 1;
 		mca_log_info(
 			"jeita_index: cur_jeita_index:%d, i:%d, hys_affect:%d\n",
-			info->flip_proc_data.cur_jeita_index, i, hys_affect);
-		last_chg_curr = info->flip_proc_data.max_chg_curr;
-	} else if (info->flip_proc_data.max_chg_curr > last_chg_curr) {
+			proc->cur_jeita_index, i, hys_affect);
+		proc->last_chg_curr = proc->max_chg_curr;
+	} else if (proc->max_chg_curr > proc->last_chg_curr) {
 		if (vbat_index != -1 &&
 		    vbat < jeita_data->volt_para.volt_data[vbat_index].voltage -
 				   info->flip_vbat_low_hyst) {
 			data_change = 1;
 			mca_log_info(
 				"vbat_thre[l->s]: max_chg_curr:%d, last_chg_curr:%d, vbat_index:%d, vbat:%d\n",
-				info->flip_proc_data.max_chg_curr, last_chg_curr,
+				proc->max_chg_curr, proc->last_chg_curr,
 				vbat_index, vbat);
-			last_chg_curr = info->flip_proc_data.max_chg_curr;
+			proc->last_chg_curr = proc->max_chg_curr;
 		}
-	} else if (info->flip_proc_data.max_chg_curr < last_chg_curr) {
-		if (vbat_index != -1 &&
-		    vbat > jeita_data->volt_para.volt_data[vbat_index - 1]
-				   .voltage) {
+	} else if (proc->max_chg_curr < proc->last_chg_curr) {
+		if (mca_jeita_above_lower_step(jeita_data, vbat_index, vbat)) {
 			data_change = 1;
 			mca_log_info(
 				"vbat_thre[s->l]: max_chg_curr:%d, last_chg_curr:%d, vbat_index:%d\n",
-				info->flip_proc_data.max_chg_curr, last_chg_curr,
+				proc->max_chg_curr, proc->last_chg_curr,
 				vbat_index);
-			last_chg_curr = info->flip_proc_data.max_chg_curr;
+			proc->last_chg_curr = proc->max_chg_curr;
 		}
 	}
 
-	chg_curr = info->flip_proc_data.max_chg_curr;
+	chg_curr = proc->max_chg_curr;
 	mca_log_info("cur index %d/%d max_chg_curr %d chg_curr %d hys_affect %d\n",
-		     i, info->flip_proc_data.cur_jeita_index,
-		     info->flip_proc_data.max_chg_curr, chg_curr, hys_affect);
+		     i, proc->cur_jeita_index,
+		     proc->max_chg_curr, chg_curr, hys_affect);
 
 	if (data_change && !hys_affect) {
-		info->flip_proc_data.cur_jeita_index = i;
+		proc->cur_jeita_index = i;
 		mca_vote(info->flip_fcc_voter, "jeita", true, chg_curr);
 	}
 }
+/* The China OS4 tables specify the voltage delta and termination current in
+ * mV and mA. A wired session with unknown BC1.2 state keeps the weaker limit
+ * until the protocol provider can report the negotiated adapter.
+ */
+static unsigned int mca_jeita_weak_limits(struct mca_buckchg_jeita_dev *info,
+					int *vterm, int *iterm)
+{
+	unsigned int adapter = XM_CHARGER_TYPE_UNKNOW;
+
+	if (!info->weak_iterm_ma || !READ_ONCE(info->usb_online))
+		return adapter;
+	if (protocol_class_get_adapter_type(ADAPTER_PROTOCOL_BC12, &adapter))
+		adapter = UINT_MAX;
+
+	if ((adapter == UINT_MAX || (adapter >= XM_CHARGER_TYPE_SDP && adapter <= XM_CHARGER_TYPE_FLOAT)) &&
+	    *iterm > info->weak_iterm_ma) {
+		*vterm -= info->weak_delta_mv;
+		*iterm = info->weak_iterm_ma;
+	}
+	return adapter;
+}
+
+static void mca_jeita_vote_termination(struct mca_buckchg_jeita_dev *info, unsigned int adapter,
+				      int vterm, int iterm)
+{
+	int vret = mca_vote(info->vterm_voter, "jeita", true, vterm);
+	int iret;
+
+	if (info->support_base_flip || info->base_flip_same)
+		return;
+	iret = mca_vote(info->iterm_voter, "jeita", true, iterm);
+	if (info->weak_iterm_ma) {
+		info->weak_vote_retry = vret || iret;
+		if (!info->weak_vote_retry)
+			info->weak_adapter = adapter;
+	}
+}
+
 static void mca_buckchg_jeita_update(struct mca_buckchg_jeita_dev *info)
 {
 	int temp = 0;
 	int i, ret;
 	struct mca_buckchg_jeita_data *jeita_data, *cur_jeita_data;
 	int fastcharge_mode = 0;
-	int vterm = 0, chg_curr = 0;
+	int vterm, iterm, chg_curr = 0;
+	unsigned int adapter;
 	int hys_affect = 0;
 	int data_change = 0;
 	int vbat = 0;
-	static int last_fastcharge_mode;
-	static int last_chg_curr;
+	struct mca_buckchg_jeita_proc_data *proc = &info->proc_data;
 	int vbat_index = -1;
 
 	if (!info->jeita_para.jeita_data || !info->voter_ok) {
@@ -454,21 +496,21 @@ static void mca_buckchg_jeita_update(struct mca_buckchg_jeita_dev *info)
 	}
 
 	/* select cur jeita_data */
-	if (info->proc_data.cur_jeita_index == -1 || info->baacfg_update) {
+	if (proc->cur_jeita_index == -1 || info->baacfg_update) {
 		jeita_data = cur_jeita_data;
-		last_chg_curr =
+		proc->last_chg_curr =
 			mca_buckchg_jeita_get_curr(cur_jeita_data, &vbat_index);
 	} else {
-		if (info->proc_data.cur_jeita_index == i ||
-		    fastcharge_mode != last_fastcharge_mode)
+		if (proc->cur_jeita_index == i ||
+		    fastcharge_mode != proc->last_fastcharge_mode)
 			jeita_data = cur_jeita_data;
 		else {
 			if (!fastcharge_mode || info->jeita_para.fcc_size == 0)
 				jeita_data = info->jeita_para.jeita_data +
-					     info->proc_data.cur_jeita_index;
+					     proc->cur_jeita_index;
 			else
 				jeita_data = info->jeita_para.jeita_ffc_data +
-					     info->proc_data.cur_jeita_index;
+					     proc->cur_jeita_index;
 
 			mca_log_info("temp_low: %d, temp_high: %d, temp: %d\n",
 				     jeita_data->temp_low -
@@ -476,8 +518,8 @@ static void mca_buckchg_jeita_update(struct mca_buckchg_jeita_dev *info)
 				     jeita_data->temp_high +
 					     jeita_data->high_temp_hys,
 				     temp);
-			if (i > info->proc_data.cur_jeita_index) {
-				if (info->proc_data.cur_jeita_index == 0 &&
+			if (i > proc->cur_jeita_index) {
+				if (proc->cur_jeita_index == 0 &&
 				    mca_smartchg_is_extreme_cold_enabled())
 					jeita_data = cur_jeita_data;
 				else if (temp <
@@ -497,21 +539,21 @@ static void mca_buckchg_jeita_update(struct mca_buckchg_jeita_dev *info)
 	}
 
 	/* select whether vote */
-	info->proc_data.max_chg_curr =
+	proc->max_chg_curr =
 		mca_buckchg_jeita_get_curr(jeita_data, &vbat_index);
 	if (info->baacfg_update) {
 		data_change = 1;
 		info->baacfg_update = false;
 		mca_log_info("BAA config data update\n");
-	} else if (info->proc_data.cur_jeita_index != i &&
+	} else if (proc->cur_jeita_index != i &&
 		   !hys_affect) { //jeita_index change
 		data_change = 1;
 		mca_log_info(
 			"jeita_index: cur_jeita_index:%d, i:%d, hys_affect:%d\n",
-			info->proc_data.cur_jeita_index, i, hys_affect);
-		last_chg_curr = info->proc_data.max_chg_curr;
+			proc->cur_jeita_index, i, hys_affect);
+		proc->last_chg_curr = proc->max_chg_curr;
 	} else { //jeita_index not change, check vbat_thre
-		if (info->proc_data.max_chg_curr > last_chg_curr) {
+		if (proc->max_chg_curr > proc->last_chg_curr) {
 			bool in_cold_zone = (i == 1 || i == 2 ||
 					     (i == 3 && hys_affect));
 			int low_hyst = in_cold_zone ? info->vbat_low_cold_hyst :
@@ -524,33 +566,34 @@ static void mca_buckchg_jeita_update(struct mca_buckchg_jeita_dev *info)
 				data_change = 1;
 				mca_log_info(
 					"vbat_thre[l->s]: max_chg_curr:%d, last_chg_curr:%d, vbat_index:%d\n",
-					info->proc_data.max_chg_curr,
-					last_chg_curr, vbat_index);
-				last_chg_curr = info->proc_data.max_chg_curr;
+					proc->max_chg_curr,
+					proc->last_chg_curr, vbat_index);
+				proc->last_chg_curr = proc->max_chg_curr;
 			}
-		} else if (info->proc_data.max_chg_curr < last_chg_curr) {
-			if (vbat_index != -1 &&
-			    vbat > jeita_data->volt_para
-					    .volt_data[vbat_index - 1]
-					    .voltage) {
+		} else if (proc->max_chg_curr < proc->last_chg_curr) {
+			if (mca_jeita_above_lower_step(jeita_data, vbat_index, vbat)) {
 				data_change = 1;
 				mca_log_info(
 					"vbat_thre[s->l]: max_chg_curr:%d, last_chg_curr:%d, vbat_index:%d\n",
-					info->proc_data.max_chg_curr,
-					last_chg_curr, vbat_index);
-				last_chg_curr = info->proc_data.max_chg_curr;
+					proc->max_chg_curr,
+					proc->last_chg_curr, vbat_index);
+				proc->last_chg_curr = proc->max_chg_curr;
 			}
 		}
 	}
 
 	vterm = jeita_data->vterm;
+	iterm = jeita_data->iterm;
+	adapter = mca_jeita_weak_limits(info, &vterm, &iterm);
+	if (adapter != info->weak_adapter || info->weak_vote_retry)
+		data_change = 1;
 
 	if (vterm > ABNORMAL_BATT_FV_MAX) {
 		vterm -= info->smartchg_data.delta_fv;
 		mca_vote(info->en_voter, "jeita-hot", true, 1);
 		if (vterm != info->vterm) {
-			mca_vote(info->vterm_voter, "jeita", true, vterm);
-			info->vterm = vterm;
+			if (!mca_vote(info->vterm_voter, "jeita", true, vterm))
+				info->vterm = vterm;
 		}
 	} else {
 		if (vbat >= vterm - info->jeita_hot_termination_hyst)
@@ -560,19 +603,19 @@ static void mca_buckchg_jeita_update(struct mca_buckchg_jeita_dev *info)
 	}
 
 	if (info->dtpt_status)
-		chg_curr = info->proc_data.max_chg_curr *
+		chg_curr = proc->max_chg_curr *
 			   MCA_DTPT_MOLECULE_SCALE / MCA_DTPT_DENOM_SCALE;
 	else
-		chg_curr = info->proc_data.max_chg_curr;
+		chg_curr = proc->max_chg_curr;
 
 	mca_log_info(
 		"cur index %d/%d last_chg_curr %d chg_curr %d/%d fastcharge %d jeita_vterm %d jeita_iterm %d vterm %d delta_fv %d hys_affect %d\n",
-		i, info->proc_data.cur_jeita_index, last_chg_curr,
-		info->proc_data.max_chg_curr, chg_curr, fastcharge_mode,
+		i, proc->cur_jeita_index, proc->last_chg_curr,
+		proc->max_chg_curr, chg_curr, fastcharge_mode,
 		jeita_data->vterm, jeita_data->iterm, vterm,
 		info->smartchg_data.delta_fv, hys_affect);
 
-	last_fastcharge_mode = fastcharge_mode;
+	proc->last_fastcharge_mode = fastcharge_mode;
 	if (chg_curr)
 		mca_vote(info->en_voter, "jeita", true, 1);
 	else
@@ -580,20 +623,17 @@ static void mca_buckchg_jeita_update(struct mca_buckchg_jeita_dev *info)
 
 	if (data_change) {
 		if (!hys_affect)
-			info->proc_data.cur_jeita_index = i;
+			proc->cur_jeita_index = i;
 		mca_vote(info->fcc_voter, "jeita", true, chg_curr);
-		mca_vote(info->vterm_voter, "jeita", true, vterm);
-		if (!info->support_base_flip && !info->base_flip_same)
-			mca_vote(info->iterm_voter, "jeita", true,
-				 jeita_data->iterm);
+		mca_jeita_vote_termination(info, adapter, vterm, iterm);
 	}
 
 	if (!fastcharge_mode && info->base_flip_same) {
 		info->cold_zone =
-			(info->proc_data.cur_jeita_index == JEITA_COLD_ZONE_INDEX);
+			(proc->cur_jeita_index == JEITA_COLD_ZONE_INDEX);
 		mca_log_info(
 			"cur index %d/%d last_chg_curr %d cold_zone %d\n", i,
-			info->proc_data.cur_jeita_index, last_chg_curr,
+			proc->cur_jeita_index, proc->last_chg_curr,
 			info->cold_zone);
 	}
 }
@@ -963,6 +1003,43 @@ static int mca_jeita_second_cell(struct device_node *node, bool *second)
 	return ret;
 }
 
+static bool mca_jeita_delta_valid(const struct mca_buckchg_jeita_data *rows, int count,
+				 u32 delta, u32 limit)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+		if (rows[i].iterm > limit && rows[i].vterm <= delta)
+			return false;
+	return true;
+}
+
+static int mca_jeita_parse_weak(struct device_node *node, struct mca_buckchg_jeita_dev *info)
+{
+	const struct mca_buckchg_jeita_para *table = &info->jeita_para;
+	u32 enabled, cfg[2];
+	int ret;
+
+	if (!IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA) ||
+	    !of_find_property(node, "support_weak_chg_vterm", NULL))
+		return 0;
+	ret = of_property_read_u32(node, "support_weak_chg_vterm", &enabled);
+	if (ret || !enabled)
+		return ret;
+	if (of_property_count_u32_elems(node, "weak_chg_vterm_cfg") != ARRAY_SIZE(cfg))
+		return -EINVAL;
+	ret = of_property_read_u32_array(node, "weak_chg_vterm_cfg", cfg, ARRAY_SIZE(cfg));
+	if (ret)
+		return ret;
+	if (cfg[0] > INT_MAX || !cfg[1] || cfg[1] > INT_MAX ||
+	    !mca_jeita_delta_valid(table->jeita_data, table->size, cfg[0], cfg[1]) ||
+	    !mca_jeita_delta_valid(table->jeita_ffc_data, table->fcc_size, cfg[0], cfg[1]))
+		return -EINVAL;
+	info->weak_delta_mv = cfg[0];
+	info->weak_iterm_ma = cfg[1];
+	return 0;
+}
+
 static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
 {
 	struct mca_buckchg_jeita_para *jeita_info = &info->jeita_para;
@@ -1053,6 +1130,8 @@ static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
 	}
 
 	ret = mca_buckchg_jeita_parse_para(info->dev, node, "jeita_para", jeita_info);
+	if (!ret)
+		ret = mca_jeita_parse_weak(node, info);
 	if (ret)
 		goto out;
 	info->support_base_flip =
@@ -1078,7 +1157,7 @@ out:
 static int mca_nezha_jeita_process_event(struct mca_buckchg_jeita_dev *info,
 	int event, int value)
 {
-	bool online;
+	bool online, old_usb;
 
 	mutex_lock(&info->event_lock);
 	if (READ_ONCE(info->stopping)) {
@@ -1091,12 +1170,13 @@ static int mca_nezha_jeita_process_event(struct mca_buckchg_jeita_dev *info,
 		info->dtpt_status = value;
 		goto out;
 	}
+	old_usb = info->usb_online;
 	switch (event) {
 	case MCA_EVENT_USB_CONNECT:
-		info->usb_online = true;
+		WRITE_ONCE(info->usb_online, true);
 		break;
 	case MCA_EVENT_USB_DISCONNECT:
-		info->usb_online = false;
+		WRITE_ONCE(info->usb_online, false);
 		break;
 	case MCA_EVENT_WIRELESS_CONNECT:
 		info->wireless_online = true;
@@ -1108,8 +1188,11 @@ static int mca_nezha_jeita_process_event(struct mca_buckchg_jeita_dev *info,
 		goto out;
 	}
 	online = info->usb_online || info->wireless_online;
-	if (online == !!info->online)
+	if (online == !!info->online) {
+		if (online && info->weak_iterm_ma && old_usb != info->usb_online)
+			mod_delayed_work(system_wq, &info->monitor_work, 0);
 		goto out;
+	}
 	WRITE_ONCE(info->online, online);
 	cancel_delayed_work_sync(&info->monitor_work);
 	if (online) {

@@ -199,3 +199,4 @@ obj-$(CONFIG_S390)		+= s390/
 obj-y += eom/
 
 obj-y += xiaomi/
+obj-$(CONFIG_STMVL53L5) += stmvl53l5/

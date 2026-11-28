@@ -28,6 +28,9 @@ def main():
     errors, symbols, built, vermagics = [], {}, {}, set()
     roots = [args.out.resolve()] + [p.resolve() for p in args.external]
     paths = []
+    config = roots[0] / '.config'
+    btf_expected = config.is_file() and 'CONFIG_DEBUG_INFO_BTF_MODULES=y' in config.read_text().splitlines()
+    btf_modules = 0
     for root in roots:
         for line in (root / 'Module.symvers').read_text().splitlines():
             crc, name, *_ = line.split()
@@ -37,7 +40,12 @@ def main():
             symbols[name] = value
         for line in (root / 'modules.order').read_text().splitlines():
             p = Path(line).with_suffix('.ko')
-            paths.append(p if p.is_absolute() else root / p)
+            # Kbuild can record M relative to the kernel output, absolute, or
+            # relative to the individual module directory, depending on its caller.
+            if not p.is_absolute():
+                kernel_path = (roots[0] / p).resolve()
+                p = kernel_path if kernel_path.is_relative_to(root) else root / p
+            paths.append(p)
     builtins = {norm(x) for x in (args.out / 'modules.builtin').read_text().splitlines()}
     checks = 0
     for path in paths:
@@ -55,12 +63,18 @@ def main():
                 errors.append('duplicate module: ' + name)
             built[name] = {'file': path.name, 'depends': info.get('depends', '').split(',')}
             vermagics.add(info.get('vermagic', ''))
+            btf = elf.get_section_by_name('.BTF')
+            if btf is not None and btf['sh_size']:
+                btf_modules += 1
+            elif btf_expected:
+                errors.append('missing configured module BTF: ' + str(path))
             versions = elf.get_section_by_name('__versions')
             if not versions or versions.data_size % 64:
                 errors.append('missing/invalid modversions: ' + path.name)
                 continue
-            for offset in range(0, versions.data_size, 64):
-                data = versions.data()[offset:offset + 64]
+            version_data = versions.data()
+            for offset in range(0, len(version_data), 64):
+                data = version_data[offset:offset + 64]
                 crc = struct.unpack_from('<Q', data)[0]
                 symbol = data[8:].split(b'\0', 1)[0].decode()
                 checks += 1
@@ -88,7 +102,7 @@ def main():
         errors.extend(path.name + ': missing ' + name for name in missing)
     result = {'scope': 'build outputs only; not image/signature/runtime validation',
               'modules': len(built), 'kernel_modules': len((args.out / 'modules.order').read_text().splitlines()),
-              'external_directories': len(args.external), 'crc_checks': checks,
+              'external_directories': len(args.external), 'crc_checks': checks, 'modules_with_btf': btf_modules,
               'vermagic': sorted(vermagics), 'load_lists': lists,
               'explicit_host_exceptions': exceptions, 'errors': errors}
     if args.json:
