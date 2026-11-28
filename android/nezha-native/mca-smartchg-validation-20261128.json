@@ -1,0 +1,161 @@
+{
+  "date": "2026-11-28",
+  "base_commit": "130fb861db5c1e7d354ddf4c1ef2a0ebaee15aa2",
+  "branch": "nazha",
+  "compiler": "host cc",
+  "instrumentation": [
+    "ASan",
+    "UBSan"
+  ],
+  "tests": [
+    {
+      "test": "tools/test-mca-charge-interface.py",
+      "result": "PASS",
+      "sha256": "1bc8d15691fd4dc9b74b0728025152efcfea2584881caf56f69d09183c98a756",
+      "output": [
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)",
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)"
+      ]
+    },
+    {
+      "test": "tools/test-mca-jeita-lifetime.py",
+      "result": "PASS",
+      "sha256": "e50c3409b24bf7879dbf601c977b683d24a7ef20b0ba349182206a79df146d39",
+      "output": [
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe",
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe"
+      ]
+    },
+    {
+      "test": "tools/test-mca-owned-voter.py",
+      "result": "PASS",
+      "sha256": "8e54c52530c474167ed90b9947a39fe44c034a2abc0c7ad1a12056cf4bd10117",
+      "output": [
+        "PASS: actual owned voter stable handles, callback drain, duplicate/legacy rejection, rebind, allocation failures and module cleanup"
+      ]
+    },
+    {
+      "test": "tools/test-mca-provider-batch.py",
+      "result": "PASS",
+      "sha256": "d5ed760eff5c4465541273d38110d496e07927fd1a829a8e63568fefea6e891d",
+      "output": [
+        "PASS: actual buck probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe",
+        "PASS: actual qc probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe"
+      ]
+    },
+    {
+      "test": "tools/test-mca-qc-battery-selection.py",
+      "result": "PASS",
+      "sha256": "21be05573505576bc0e9e41b52b2343210e0c74b3cd63624dca31ed4ed865da1",
+      "output": [
+        "PASS: actual QC battery selector, mode/role bounds, supplier errors, read failures, selected table and OF reference release"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-lifetime.py",
+      "result": "PASS",
+      "sha256": "4b238a617e066f9b2915f005de1613d4ba963d9ca9b5c1b4f069cc2013e26456",
+      "output": [
+        "PASS: actual smartchg probe faults, 3 owned voters, all global exports/SRCU drain, dual-source events, overflow/errors and 20 rebinds"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-policy.py",
+      "result": "PASS",
+      "sha256": "2e168bbc6ee74cde29c18fb99260d0ef43b1999b98058e4398531246ac5605eb",
+      "output": [
+        "PASS: actual smartchg 1/2-row DT bounds, invalid fields, gauge failures, vote retry and stopped worker",
+        "PASS: actual QC rejects unverified BAA without reading input; non-foldable events do not reparse battery tables"
+      ]
+    },
+    {
+      "test": "tools/test-mca-smartchg-registry.py",
+      "result": "PASS",
+      "sha256": "4f8e670b49b62f4cc4868cd48e59ece2dc12a27596f8afaebd32985ed4b283f3",
+      "output": [
+        "PASS: actual smartchg copied registry, allocation failure, identity, seven dispatchers, backend failures and concurrent unregister/cleanup drain model"
+      ]
+    },
+    {
+      "test": "tools/test-mca-thermal-lifetime.py",
+      "result": "PASS",
+      "sha256": "6cac23dea9b866acac535cb76865899e066d07a2b72a817f999578c2ca13cb32",
+      "output": [
+        "PASS: actual thermal SRCU drain, ownership, all probe failures, cooling/wireless bounds and wired supplier retry"
+      ]
+    },
+    {
+      "test": "tools/test-mca-voter-errors.py",
+      "result": "PASS",
+      "sha256": "82c30f5d837e86e7ecfc077b2b586fb965cbd60be90b9561e2cf249774c50ab8",
+      "output": [
+        "PASS: actual MCA voter callback retry, override/force error state, no-callback votes and invalid-type unlock"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-jeita-events.py",
+      "result": "PASS",
+      "sha256": "03febc0c045f941fd4fb565c13be3fd6ba92f0c9cc450b0574cf520b43de7702",
+      "output": [
+        "PASS: actual Nezha JEITA wired/wireless handover, repeated events, final disconnect and shared OSS DTPT event (no OEM ID alias)"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-jeita-parser.py",
+      "result": "PASS",
+      "sha256": "231ff8a7cb540e205ef52c6a7acf921d4b26d609d2afd66938895b5cc6e668bc",
+      "output": [
+        "PASS: JEITA table, 3 allocation failures, 28 read failures and malformed fields"
+      ]
+    },
+    {
+      "test": "tools/test-nezha-thermal-format.py",
+      "result": "PASS",
+      "sha256": "551fe14899656ec531380cae44f05d56ee23562404b0c1ba3bc0c767d51b04af",
+      "output": [
+        "PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures, flip table bounds and unchanged error outputs"
+      ]
+    }
+  ],
+  "changed_files": [
+    {
+      "path": "android/nezha-native/module-gaps.md",
+      "sha256": "876ea29e72781924c0a56f46f57f26aa12f416a7c6e972bbb7e623952fb40cc6"
+    },
+    {
+      "path": "drivers/power/supply/mca/include/mca/smartchg/smart_chg_class.h",
+      "sha256": "4fb2d161b0ac80f993a60ac5914a261104e41a09d20112ce669d4f94f786d310"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_smart_charge/inc/mca_smart_charge.h",
+      "sha256": "0380cba30937d0abffea8b1fcc4e0d106895922f00ad316afe3f77293156ada8"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_smart_charge/mca_smart_charge.c",
+      "sha256": "be1aa16ef6c6b000e8a38f472bb3a400f52d5feba6e463811009df3b67b4fbc2"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.c",
+      "sha256": "bba67f3e4f33e2376e3c2d39bd8bd10ad9b0a355d95f7ddde225f29cf1a4ba61"
+    },
+    {
+      "path": "tools/test-mca-smartchg-lifetime.py",
+      "sha256": "4b238a617e066f9b2915f005de1613d4ba963d9ca9b5c1b4f069cc2013e26456"
+    },
+    {
+      "path": "tools/test-mca-smartchg-policy.py",
+      "sha256": "2e168bbc6ee74cde29c18fb99260d0ef43b1999b98058e4398531246ac5605eb"
+    },
+    {
+      "path": "tools/test-mca-smartchg-registry.py",
+      "sha256": "4f8e670b49b62f4cc4868cd48e59ece2dc12a27596f8afaebd32985ed4b283f3"
+    }
+  ],
+  "scope": [
+    "No smart_charge_cdev, ioctl/mmap or inferred BASP blob dispatch remains. Private BAA compatibility is intentionally unsupported, not implemented.",
+    "SRCU, workqueues, registry and hardware calls are host models; no in-kernel concurrency proof.",
+    "No ARM64 Kbuild/modpost or device validation in this batch.",
+    "Thermal table regression uses pinned device-tree 91998b30926ec6750803c45fbf25402268aa692e. JEITA parser uses built-in fixtures only.",
+    "Full MCA policy stays disabled; no config, module pin or DT pin changes."
+  ]
+}

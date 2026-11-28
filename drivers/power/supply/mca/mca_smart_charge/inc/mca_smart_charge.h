@@ -169,11 +169,12 @@ struct smart_bypass_temp_section {
 };
 
 struct smart_charge_info {
-	struct class *smart_charge_class;
-	struct cdev pri_dev;
-	struct device *sys_dev;
+	bool ready, stopping;
+	bool strategy_registered, panel_registered, thermal_registered;
+	bool sysfs_created;
+	bool usb_online;
+	int last_report_scene;
 	struct device *dev;
-	dev_t dev_num;
 	struct delayed_work smart_charge_work;
 	struct delayed_work smart_sense_chg_work;
 	struct delayed_work smart_soc_limit_work;
@@ -192,7 +193,6 @@ struct smart_charge_info {
 	int scene;
 	int fake_scene;
 	int board_temp;
-	int enable_fv_dec_by_cc;
 
 	int smart_night_val;
 	int smart_batt_val;
@@ -202,18 +202,16 @@ struct smart_charge_info {
 	bool support_sensechg_v2;
 	bool soc_limit_enable;
 	char reserve[2];
+	int ichg_cc_count;
 	struct ICHG_CC_CFG ichg_cc_table[CC_ICHG_MAX_GROUP];
 	/* Smart Charging Engine */
 	union SMART_CHG_HEADER smart_chg_control;
 	struct SMART_CHG_INFO smart_chg_data;
-	char *mmap_addr;
-	int map_flag;
 	int pulse_mode;
 	int support_csd;
 	int plugin_rsoc;
 	int night_enable_rsoc;
 	union SMART_CHG_MIEVENT ignore_upload;
-	size_t mmap_size;
 	struct mca_votable *smartchg_set_fcc_voter;
 	struct notifier_block thermal_nb;
 	int wls_online;

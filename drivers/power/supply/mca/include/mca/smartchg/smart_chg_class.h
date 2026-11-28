@@ -4,14 +4,10 @@
 #include <linux/types.h>
 
 /*
- * BASP (battery aging safety/spec) blob layout, parsed by mca_smart_charge.c
- * from mmap'd memory via sizeof()/offsetof().
- *
- * WARNING: the open-source drop ships NO definition for these structs. The
- * layout below is INFERRED from field usage only and is NOT verified against
- * the real binary format. It lets the module build; the BAA/spec-override
- * runtime path is unreliable and should be treated as unsupported until the
- * true layout is obtained.
+ * Legacy BASP/BAA structures retained for source compatibility with providers.
+ * Their layout was inferred from field usage and is NOT verified against the
+ * vendor wire ABI. No userspace BASP blob dispatcher is exposed by smartchg.
+ * These types must not be treated as a validated writable charging interface.
  */
 struct smart_batt_spec_curve {
 	int mv;

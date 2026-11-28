@@ -19,6 +19,7 @@
 
 #include <linux/kernel.h>
 #include <linux/mutex.h>
+#include <linux/overflow.h>
 #include <linux/srcu.h>
 #include <linux/string.h>
 #include <linux/init.h>
@@ -31,11 +32,6 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/thermal.h>
-#include <linux/kdev_t.h>
-#include <linux/fs.h>
-#include <linux/cdev.h>
-#include <linux/mm.h>
-#include <linux/version.h>
 #include <mca/protocol/protocol_class.h>
 #include <mca/strategy/strategy_class.h>
 #include <mca/strategy/strategy_fg_class.h>
@@ -67,19 +63,38 @@
 #define SMART_CHARGE_DELTA_ICHG_DEFAULT_VALUE 0
 #define SMART_CHARGE_DTPT_DELTA_VALUE 15
 #define SMART_CHARGE_FAKE_SCENE_DEFAULT -1
-#define MAX_MMAP_SIZE 4096
 
-enum mca_smart_charge_ioctrl_cmd {
-	MCA_SMARTCHG_CMD_DATA = 1,
-	MCA_SMARTCHG_CMD_INVALID,
-};
+static struct smart_charge_info __rcu *global_smartchg_info;
+static DEFINE_MUTEX(smartchg_info_lock);
+DEFINE_STATIC_SRCU(smartchg_info_srcu);
 
-#define MCA_SMARTCHG_MAGIC 0x10
-#define SMARTCHG_DATA_CMD                                \
-	_IOC(_IOC_READ | _IOC_WRITE, MCA_SMARTCHG_MAGIC, \
-	     MCA_SMARTCHG_CMD_DATA, PAGE_SIZE)
+static int smart_charge_publish(struct smart_charge_info *info)
+{
+	int ret = 0;
 
-static struct smart_charge_info *global_smartchg_info;
+	mutex_lock(&smartchg_info_lock);
+	if (rcu_access_pointer(global_smartchg_info))
+		ret = -EBUSY;
+	else
+		rcu_assign_pointer(global_smartchg_info, info);
+	mutex_unlock(&smartchg_info_lock);
+	return ret;
+}
+
+static void smart_charge_unpublish(struct smart_charge_info *info)
+{
+	bool removed = false;
+
+	mutex_lock(&smartchg_info_lock);
+	if (rcu_access_pointer(global_smartchg_info) == info) {
+		RCU_INIT_POINTER(global_smartchg_info, NULL);
+		removed = true;
+	}
+	mutex_unlock(&smartchg_info_lock);
+	if (removed)
+		synchronize_srcu(&smartchg_info_srcu);
+}
+
 static struct mca_smartchg_if_ops __rcu
 	*g_mca_smartchg_if_ops[MCA_SMARTCHG_IF_CHG_TYPE_END];
 static DEFINE_MUTEX(smartchg_if_lock);
@@ -190,19 +205,11 @@ static const struct attribute_group smartchg_sysfs_attr_group = {
 	.attrs = smartchg_sysfs_attrs,
 };
 
-void mca_smartchg_set_scene(int scene)
+static void smart_charge_set_scene(struct smart_charge_info *info, int scene)
 {
-	struct smart_charge_info *info = global_smartchg_info;
-
-	if (!info) {
-		mca_log_err("info is null\n");
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return;
-	}
-
-	mca_log_info("set scene: %d:%d => %d\n", info->scene, info->fake_scene,
-		     scene);
-	if (scene >= SMART_CHG_SCENE_NORMAL &&
-	    scene < SMART_CHG_SCENE_INDEX_MAX) {
+	if (scene >= SMART_CHG_SCENE_NORMAL && scene < SMART_CHG_SCENE_INDEX_MAX) {
 		smart_charge_report_scene(info, scene);
 		info->scene = scene;
 	} else if (scene >= SMART_CHG_SCENE_REDIR_START &&
@@ -211,82 +218,88 @@ void mca_smartchg_set_scene(int scene)
 	} else if (scene == SMART_CHARGE_FAKE_SCENE_DEFAULT) {
 		info->fake_scene = SMART_CHARGE_FAKE_SCENE_DEFAULT;
 	}
-
 	cancel_delayed_work_sync(&info->smart_sense_chg_work);
 	schedule_delayed_work(&info->smart_sense_chg_work, 0);
+}
+
+void mca_smartchg_set_scene(int scene)
+{
+	struct smart_charge_info *info;
+	int idx = srcu_read_lock(&smartchg_info_srcu);
+
+	info = srcu_dereference(global_smartchg_info, &smartchg_info_srcu);
+	smart_charge_set_scene(info, scene);
+	srcu_read_unlock(&smartchg_info_srcu, idx);
 }
 EXPORT_SYMBOL(mca_smartchg_set_scene);
 
 int mca_smartchg_get_scene(void)
 {
-	struct smart_charge_info *info = global_smartchg_info;
+	struct smart_charge_info *info;
+	int ret = 0, idx = srcu_read_lock(&smartchg_info_srcu);
 
-	if (!info) {
-		mca_log_err("info is null\n");
-		return 0;
-	}
-
-	if (info->fake_scene != SMART_CHARGE_FAKE_SCENE_DEFAULT)
-		return info->fake_scene;
-
-	return info->scene;
+	info = srcu_dereference(global_smartchg_info, &smartchg_info_srcu);
+	if (info && !READ_ONCE(info->stopping))
+		ret = info->fake_scene != SMART_CHARGE_FAKE_SCENE_DEFAULT ?
+			info->fake_scene : info->scene;
+	srcu_read_unlock(&smartchg_info_srcu, idx);
+	return ret;
 }
 EXPORT_SYMBOL(mca_smartchg_get_scene);
 
 void mca_smartchg_set_board_temp(int board_temp)
 {
-	struct smart_charge_info *info = global_smartchg_info;
+	struct smart_charge_info *info;
+	int idx = srcu_read_lock(&smartchg_info_srcu);
 
-	if (!info) {
-		mca_log_err("info is null\n");
-		return;
-	}
-
-	mca_log_info("set board_temp: %d\n", board_temp);
-	info->board_temp = board_temp;
+	info = srcu_dereference(global_smartchg_info, &smartchg_info_srcu);
+	if (info && !READ_ONCE(info->stopping))
+		WRITE_ONCE(info->board_temp, board_temp);
+	srcu_read_unlock(&smartchg_info_srcu, idx);
 }
 EXPORT_SYMBOL(mca_smartchg_set_board_temp);
 
 int mca_smartchg_get_board_temp(void)
 {
-	struct smart_charge_info *info = global_smartchg_info;
+	struct smart_charge_info *info;
+	int ret = 0, idx = srcu_read_lock(&smartchg_info_srcu);
 
-	if (!info) {
-		mca_log_err("info is null\n");
-		return 0;
-	}
-
-	return info->board_temp;
+	info = srcu_dereference(global_smartchg_info, &smartchg_info_srcu);
+	if (info && !READ_ONCE(info->stopping))
+		ret = READ_ONCE(info->board_temp);
+	srcu_read_unlock(&smartchg_info_srcu, idx);
+	return ret;
 }
 EXPORT_SYMBOL(mca_smartchg_get_board_temp);
 
 int mca_smartchg_is_extreme_cold_enabled(void)
 {
-	if (global_smartchg_info)
-		return global_smartchg_info->smart_chg_data
-			       .smart_chgcfg[SMART_CHG_EXTREME_COLD]
-			       .enable == 1;
-	return false;
+	struct smart_charge_info *info;
+	int ret = 0, idx = srcu_read_lock(&smartchg_info_srcu);
+
+	info = srcu_dereference(global_smartchg_info, &smartchg_info_srcu);
+	if (info && !READ_ONCE(info->stopping))
+		ret = info->smart_chg_data.smart_chgcfg[SMART_CHG_EXTREME_COLD].enable == 1;
+	srcu_read_unlock(&smartchg_info_srcu, idx);
+	return ret;
 }
 EXPORT_SYMBOL(mca_smartchg_is_extreme_cold_enabled);
 
 int mca_smartchg_get_limit_soc(void)
 {
-	struct smart_charge_info *info = global_smartchg_info;
+	struct smart_charge_info *info;
+	int ret = 0, idx = srcu_read_lock(&smartchg_info_srcu);
 
-	if (!info) {
-		mca_log_err("info is null\n");
-		return 0;
-	}
-	if (info->soc_limit_enable)
-		return info->soc_limit;
-	return 0;
+	info = srcu_dereference(global_smartchg_info, &smartchg_info_srcu);
+	if (info && !READ_ONCE(info->stopping) && info->soc_limit_enable)
+		ret = info->soc_limit;
+	srcu_read_unlock(&smartchg_info_srcu, idx);
+	return ret;
 }
 EXPORT_SYMBOL(mca_smartchg_get_limit_soc);
 
 static void smart_charge_report_scene(struct smart_charge_info *info, int scene)
 {
-	static int last_report_scene;
 	int report_scene = 0;
 	int len = 0;
 	char event[MCA_EVENT_NOTIFY_SIZE] = { 0 };
@@ -304,10 +317,10 @@ static void smart_charge_report_scene(struct smart_charge_info *info, int scene)
 			break;
 		}
 
-		if (report_scene != last_report_scene) {
+		if (report_scene != info->last_report_scene) {
 			mca_log_info("report scene: %d => %d\n",
-				     last_report_scene, report_scene);
-			last_report_scene = report_scene;
+				     info->last_report_scene, report_scene);
+			info->last_report_scene = report_scene;
 
 			len = snprintf(event, MCA_EVENT_NOTIFY_SIZE,
 				       "MCA_SMARTCHG_SCENE=%d", report_scene);
@@ -462,6 +475,9 @@ static void smart_charge_soc_limit_workfunc(struct work_struct *work)
 	struct smart_charge_info *info = container_of(
 		work, struct smart_charge_info, smart_soc_limit_work.work);
 	int curr_soc = 0;
+
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
 
 	if (!info->online) {
 		mca_log_err("adapter is plugout, don't handle soc limit\n");
@@ -627,13 +643,12 @@ static void smartcharging_handle_wls_quiet(struct smart_charge_info *info)
 	srcu_read_unlock(&smartchg_if_srcu, idx);
 }
 
-static void smartcharging_handle_controlmessage(void)
+static void smartcharging_handle_controlmessage(struct smart_charge_info *info)
 {
-	struct smart_charge_info *info = global_smartchg_info;
 	uint32_t smart_header = info->smart_chg_control.AsUINT32;
 	int soc = strategy_class_fg_ops_get_soc();
 
-	if (!info)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return;
 
 	smart_header = (smart_header & 0xFFFE);
@@ -758,19 +773,17 @@ static void smartcharging_handle_controlmessage(void)
 	}
 }
 
-static int smartcharging_receive_control_message(int val)
+static int smartcharging_receive_control_message(struct smart_charge_info *info, int val)
 {
-	struct smart_charge_info *info = global_smartchg_info;
 
 	info->smart_chg_control.AsUINT32 = val;
 	mca_log_info("smart_chg value is %08x\n", val);
-	smartcharging_handle_controlmessage();
+	smartcharging_handle_controlmessage(info);
 	return 0;
 }
 
-static int get_smart_chg_message(void)
+static int get_smart_chg_message(struct smart_charge_info *info)
 {
-	struct smart_charge_info *info = global_smartchg_info;
 	uint32_t control_header = 0;
 	int index = 0;
 
@@ -786,30 +799,26 @@ static int get_smart_chg_message(void)
 	return control_header;
 }
 
-static int handle_smart_batt_message(int val)
+static int handle_smart_batt_message(struct smart_charge_info *info, int val)
 {
-	struct smart_charge_info *info = global_smartchg_info;
-	int vote_value;
+	int vote_value, ret;
 
-	info->smart_batt_val = val;
-	vote_value = info->smart_batt_val * info->cell_type;
-
-	mca_log_info("smart_batt_val is %d vote_value %d\n", val, vote_value);
-	mca_vote(info->smartchg_delta_fv_voter, "smart_batt", true, vote_value);
-
-	return 0;
+	if (check_mul_overflow(val, info->cell_type, &vote_value))
+		return -ERANGE;
+	ret = mca_vote(info->smartchg_delta_fv_voter, "smart_batt", true, vote_value);
+	if (!ret)
+		info->smart_batt_val = val;
+	return ret;
 }
 
-static int get_smart_batt_message(void)
+static int get_smart_batt_message(struct smart_charge_info *info)
 {
-	struct smart_charge_info *info = global_smartchg_info;
 
 	return info->smart_batt_val;
 }
 
-static int handle_smart_night_message(int val)
+static int handle_smart_night_message(struct smart_charge_info *info, int val)
 {
-	struct smart_charge_info *info = global_smartchg_info;
 
 	info->smart_night_val = val;
 	mca_log_info("smart_night_val is %d\n", !!val);
@@ -825,21 +834,16 @@ static int handle_smart_night_message(int val)
 	return 0;
 }
 
-static int get_smart_night_message(void)
+static int get_smart_night_message(struct smart_charge_info *info)
 {
-	struct smart_charge_info *info = global_smartchg_info;
 
 	return info->smart_night_val;
 }
 
-static void smart_charge_plugin_or_plugout_reset(struct smart_charge_info *info)
+static int smart_charge_plugin_or_plugout_reset(struct smart_charge_info *info)
 {
-	if (info->online)
-		mca_vote(info->smartchg_delta_ichg_voter, "batt_health", true,
-			 info->smart_delta_ichg);
-	else
-		mca_vote(info->smartchg_delta_ichg_voter, "batt_health", false,
-			 info->smart_delta_ichg);
+	return mca_vote(info->smartchg_delta_ichg_voter, "batt_health",
+		       !!info->online, info->smart_delta_ichg);
 }
 
 static void smart_charge_csd_send_pulse(struct smart_charge_info *info)
@@ -899,6 +903,9 @@ static int smart_charge_thermal_notifier_cb(struct notifier_block *nb,
 {
 	struct smart_charge_info *info =
 		container_of(nb, struct smart_charge_info, thermal_nb);
+
+	if (!val || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return NOTIFY_DONE;
 
 	switch (event) {
 	case MCA_EVENT_THERMAL_BOARD_TEMP_CHANGE:
@@ -1079,27 +1086,29 @@ static void smart_charge_workfunc(struct work_struct *work)
 	int delta_ichg = 0;
 	const struct mca_hwid *hwid = mca_get_hwid_info();
 
+	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return;
+
 	//To-Do
 	//Battery status monitoring work_func
 	if (!info->online) {
 		mca_log_err("adapter is plugout\n");
 		return;
 	}
-	//battery health4.0 cyclecount decrease ichg
-	strategy_class_fg_ops_get_cyclecount(&info->cycle_count);
-	for (int i = 0; i < CC_ICHG_MAX_GROUP; i++) {
-		if (info->cycle_count <= info->ichg_cc_table[i].cc_max) {
-			delta_ichg = info->ichg_cc_table[i].delta_ichg;
-			break;
+	/* Retain the last applied reduction on failed gauge reads or votes. */
+	if (info->support_cc_ichg &&
+	    !strategy_class_fg_ops_get_cyclecount(&info->cycle_count)) {
+		for (int i = 0; i < info->ichg_cc_count; i++) {
+			if (info->cycle_count <= info->ichg_cc_table[i].cc_max) {
+				delta_ichg = info->ichg_cc_table[i].delta_ichg;
+				break;
+			}
 		}
-	}
-
-	if (delta_ichg != info->smart_delta_ichg) {
-		info->smart_delta_ichg = delta_ichg;
-		mca_vote(info->smartchg_delta_ichg_voter, "batt_health", true,
-			 delta_ichg);
-		mca_log_info("cycle_count %d smart_delta_ichg %d\n",
-			     info->cycle_count, info->smart_delta_ichg);
+		/* The voter skips successful unchanged values, but retries a prior
+		 * backend failure even when the requested reduction is unchanged.
+		 */
+		if (!mca_vote(info->smartchg_delta_ichg_voter, "batt_health", true, delta_ichg))
+			info->smart_delta_ichg = delta_ichg;
 	}
 	//csd1.0 feature:check battery swelling
 	if (hwid && hwid->country_version == CountryCN && info->support_csd)
@@ -1117,7 +1126,7 @@ static void smart_charge_sense_chg_workfunc(struct work_struct *work)
 	struct smart_charge_info *info = container_of(
 		work, struct smart_charge_info, smart_sense_chg_work.work);
 
-	if (!info)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return;
 
 	smart_charge_handle_sense_chg(info);
@@ -1126,158 +1135,158 @@ static void smart_charge_sense_chg_workfunc(struct work_struct *work)
 static int mca_smart_charge_process_event(int event, int value, void *data)
 {
 	struct smart_charge_info *info = data;
+	bool was_online;
+	int ret;
 
-	if (!info)
-		return -1;
-
-	mca_log_info("receive event %d, value %d\n", event, value);
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return -ENODEV;
+	was_online = info->online;
 	switch (event) {
-	case MCA_EVENT_WIRELESS_CONNECT:
-		info->wls_online = 1;
-		fallthrough;
 	case MCA_EVENT_USB_CONNECT:
-		info->online = 1;
+		info->usb_online = true;
+		break;
+	case MCA_EVENT_WIRELESS_CONNECT:
+		info->wls_online = true;
+		break;
+	case MCA_EVENT_USB_DISCONNECT:
+		info->usb_online = false;
+		break;
+	case MCA_EVENT_WIRELESS_DISCONNECT:
+		info->wls_online = false;
+		break;
+	case MCA_EVENT_BATTERY_DTPT:
+		return mca_vote(info->smartchg_delta_fv_voter, "dtpt", !!value,
+			value ? SMART_CHARGE_DTPT_DELTA_VALUE : 0);
+	default:
+		return 0;
+	}
+	info->online = info->usb_online || info->wls_online;
+	if (was_online == !!info->online)
+		return 0;
+	ret = smart_charge_plugin_or_plugout_reset(info);
+	if (info->online) {
 		strategy_class_fg_ops_get_rsoc(&info->plugin_rsoc);
-		smart_charge_plugin_or_plugout_reset(info);
 		cancel_delayed_work_sync(&info->smart_charge_work);
 		schedule_delayed_work(&info->smart_charge_work, 0);
 		cancel_delayed_work_sync(&info->smart_soc_limit_work);
 		schedule_delayed_work(&info->smart_soc_limit_work, 0);
-		break;
-	case MCA_EVENT_WIRELESS_DISCONNECT:
-		info->wls_online = 0;
-		fallthrough;
-	case MCA_EVENT_USB_DISCONNECT:
-		info->online = 0;
-		smart_charge_plugin_or_plugout_reset(info);
+	} else {
 		cancel_delayed_work_sync(&info->smart_charge_work);
 		cancel_delayed_work_sync(&info->smart_soc_limit_work);
-		//memset(&info->smart_chg_data, 0, sizeof(info->smart_chg_data));
-		memset(&info->smart_chg_control, 0,
-		       sizeof(info->smart_chg_control));
+		memset(&info->smart_chg_control, 0, sizeof(info->smart_chg_control));
 		info->soc_limit_enable = false;
 		info->ignore_upload.AsUINT32 = 0;
-		smart_charge_set_soc_limit(info->soc_limit_enable);
-		break;
-	case MCA_EVENT_BATTERY_DTPT:
-		if (value)
-			mca_vote(info->smartchg_delta_fv_voter, "dtpt", true,
-				 SMART_CHARGE_DTPT_DELTA_VALUE);
-		else
-			mca_vote(info->smartchg_delta_fv_voter, "dtpt", false,
-				 0);
-		break;
-	default:
-		break;
+		smart_charge_set_soc_limit(false);
 	}
-
-	return 0;
+	return ret;
 }
 
 static int smart_charge_fv_control(struct mca_votable *votable, void *data,
-				   int effective_result,
-				   const char *effective_client)
+	int effective_result, const char *effective_client)
 {
 	struct smart_charge_info *info = data;
 	struct mca_smartchg_if_ops *if_ops;
-	int idx;
+	int idx, ret = 0, rc;
+	bool handled = false;
 
-	if (!data)
-		return -1;
-
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return -ENODEV;
 	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
-		if (!if_ops || !if_ops->set_delta_fv) {
-			mca_log_info(" %d %p\n", i, if_ops);
+		if (!if_ops || !if_ops->set_delta_fv)
 			continue;
-		}
-		if_ops->set_delta_fv(if_ops->data, effective_result);
+		handled = true;
+		rc = if_ops->set_delta_fv(if_ops->data, effective_result);
+		if (rc && !ret)
+			ret = rc;
 	}
 	srcu_read_unlock(&smartchg_if_srcu, idx);
-	info->delta_fv = effective_result;
-	mca_log_err("smartchg_delta_fv %d\n", effective_result);
-
-	return 0;
+	if (!handled)
+		ret = -ENODEV;
+	if (!ret)
+		info->delta_fv = effective_result;
+	return ret;
 }
 
 static int smart_charge_ichg_control(struct mca_votable *votable, void *data,
-				     int effective_result,
-				     const char *effective_client)
+	int effective_result, const char *effective_client)
 {
 	struct smart_charge_info *info = data;
 	struct mca_smartchg_if_ops *if_ops;
-	int idx;
+	int idx, ret = 0, rc;
+	bool handled = false;
 
-	if (!data)
-		return -1;
-
-	if (effective_result)
-		info->delta_ichg = effective_result;
-	else
-		info->delta_ichg = 0;
-
-	mca_log_err("smartchg_delta_ichg %d\n", effective_result);
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return -ENODEV;
 	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_delta_ichg)
 			continue;
-		if_ops->set_delta_ichg(if_ops->data, effective_result);
+		handled = true;
+		rc = if_ops->set_delta_ichg(if_ops->data, effective_result);
+		if (rc && !ret)
+			ret = rc;
 	}
 	srcu_read_unlock(&smartchg_if_srcu, idx);
-
-	return 0;
+	if (!handled)
+		ret = -ENODEV;
+	if (!ret)
+		info->delta_ichg = effective_result;
+	return ret;
 }
 
 static int smart_charge_set_fcc_control(struct mca_votable *votable, void *data,
-					int effective_result,
-					const char *effective_client)
+	int effective_result, const char *effective_client)
 {
+	struct smart_charge_info *info = data;
 	struct mca_smartchg_if_ops *if_ops;
-	int idx;
+	int idx, ret = 0, rc;
+	bool handled = false;
 
-	if (!data)
-		return -1;
-
-	mca_log_err("smartchg_set_fcc %d\n", effective_result);
-
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return -ENODEV;
 	idx = srcu_read_lock(&smartchg_if_srcu);
 	for (int i = 0; i < MCA_SMARTCHG_IF_CHG_TYPE_END; i++) {
 		if_ops = mca_smartchg_if_get_ops(i);
 		if (!if_ops || !if_ops->set_fcc)
 			continue;
-		if_ops->set_fcc(if_ops->data, effective_result);
+		handled = true;
+		rc = if_ops->set_fcc(if_ops->data, effective_result);
+		if (rc && !ret)
+			ret = rc;
 	}
 	srcu_read_unlock(&smartchg_if_srcu, idx);
-
-	return 0;
+	if (!handled)
+		ret = -ENODEV;
+	return ret;
 }
 
 static int smart_charge_init_voter(struct smart_charge_info *info)
 {
-	info->smartchg_delta_fv_voter = mca_create_votable(
+	info->smartchg_delta_fv_voter = mca_create_owned_votable(
 		"smartchg_delta_fv", MCA_VOTE_MAX, smart_charge_fv_control,
 		SMART_CHARGE_DELTA_FV_DEFAULT_VALUE, info);
 	if (IS_ERR(info->smartchg_delta_fv_voter)) {
 		mca_log_err("smartchg_delta_fv voteable failed\n");
-		return -1;
+		return PTR_ERR(info->smartchg_delta_fv_voter);
 	}
 
-	info->smartchg_delta_ichg_voter = mca_create_votable(
+	info->smartchg_delta_ichg_voter = mca_create_owned_votable(
 		"smartchg_delta_ichg", MCA_VOTE_MAX, smart_charge_ichg_control,
 		SMART_CHARGE_DELTA_ICHG_DEFAULT_VALUE, info);
 	if (IS_ERR(info->smartchg_delta_ichg_voter)) {
 		mca_log_err("smartchg_delta_ichg voteable failed\n");
-		return -1;
+		return PTR_ERR(info->smartchg_delta_ichg_voter);
 	}
 
-	info->smartchg_set_fcc_voter = mca_create_votable(
+	info->smartchg_set_fcc_voter = mca_create_owned_votable(
 		"smartchg_set_fcc", MCA_VOTE_MIN, smart_charge_set_fcc_control, 0,
 		info);
 	if (IS_ERR(info->smartchg_set_fcc_voter)) {
 		mca_log_err("smartchg_fcc_voter voteable failed\n");
-		return -1;
+		return PTR_ERR(info->smartchg_set_fcc_voter);
 	}
 
 	return 0;
@@ -1297,22 +1306,22 @@ static ssize_t smart_charge_sysfs_show(struct device *dev,
 	if (!attr_info)
 		return -1;
 
-	if (!info) {
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping)) {
 		mca_log_err("%s dev_driverdata is null\n", __func__);
 		return -1;
 	}
 
 	switch (attr_info->sysfs_attr_name) {
 	case MCA_PROP_SMARTCHG:
-		val = get_smart_chg_message();
+		val = get_smart_chg_message(info);
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
 		break;
 	case MCA_PROP_SMARTBATT:
-		val = get_smart_batt_message();
+		val = get_smart_batt_message(info);
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
 		break;
 	case MCA_PROP_SMARTNIGHT:
-		val = get_smart_night_message();
+		val = get_smart_night_message(info);
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
 		break;
 	case MCA_PROP_SMARTCHG_FV:
@@ -1339,7 +1348,8 @@ static ssize_t smart_charge_sysfs_show(struct device *dev,
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
 		break;
 	case MCA_PROP_SCENE:
-		val = mca_smartchg_get_scene();
+		val = info->fake_scene != SMART_CHARGE_FAKE_SCENE_DEFAULT ?
+			info->fake_scene : info->scene;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val);
 		break;
 	case MCA_PROP_BOARD_TEMP:
@@ -1361,7 +1371,7 @@ static ssize_t smart_charge_sysfs_store(struct device *dev,
 {
 	struct mca_sysfs_attr_info *attr_info;
 	struct smart_charge_info *info = dev_get_drvdata(dev);
-	int val;
+	int val, ret = 0;
 
 	attr_info = mca_sysfs_lookup_attr(attr->attr.name,
 					  smartchg_sysfs_field_tbl,
@@ -1369,7 +1379,7 @@ static ssize_t smart_charge_sysfs_store(struct device *dev,
 	if (!attr_info)
 		return -1;
 
-	if (!info) {
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping)) {
 		mca_log_err("%s dev_driverdata is null\n", __func__);
 		return -1;
 	}
@@ -1379,27 +1389,28 @@ static ssize_t smart_charge_sysfs_store(struct device *dev,
 
 	switch (attr_info->sysfs_attr_name) {
 	case MCA_PROP_SMARTCHG:
-		smartcharging_receive_control_message(val);
+		ret = smartcharging_receive_control_message(info, val);
 		break;
 	case MCA_PROP_SMARTBATT:
-		handle_smart_batt_message(val);
+		ret = handle_smart_batt_message(info, val);
 		break;
 	case MCA_PROP_SMARTNIGHT:
-		handle_smart_night_message(val);
+		ret = handle_smart_night_message(info, val);
 		break;
 	case MCA_PROP_SMARTCHG_FV:
-		val = val * info->cell_type;
-		mca_vote(info->smartchg_delta_fv_voter, "smart_chg", true, val);
+		if (check_mul_overflow(val, info->cell_type, &val))
+			return -ERANGE;
+		ret = mca_vote(info->smartchg_delta_fv_voter, "smart_chg", true, val);
 		break;
 	case MCA_PROP_SMARTCHG_ICHG:
-		mca_vote(info->smartchg_delta_ichg_voter, "smart_chg", true,
+		ret = mca_vote(info->smartchg_delta_ichg_voter, "smart_chg", true,
 			 val);
 		break;
 	case MCA_PROP_SCENE:
-		mca_smartchg_set_scene(val);
+		smart_charge_set_scene(info, val);
 		break;
 	case MCA_PROP_BOARD_TEMP:
-		mca_smartchg_set_board_temp(val);
+		WRITE_ONCE(info->board_temp, val);
 		break;
 	default:
 		break;
@@ -1408,6 +1419,8 @@ static ssize_t smart_charge_sysfs_store(struct device *dev,
 	mca_log_info("set the %d value = %d\n", attr_info->sysfs_attr_name,
 		     val);
 
+	if (ret)
+		return ret;
 	return count;
 }
 
@@ -1425,284 +1438,9 @@ static void smart_charge_sysfs_remove_group(struct device *dev)
 				    &smartchg_sysfs_attr_group);
 }
 
-static int smart_charge_handle_baa_data(struct smart_charge_info *info)
-{
-	struct smart_basp_header *basp_header =
-		(struct smart_basp_header *)info->mmap_addr;
-	struct smart_batt_spec *pbatt_spec = NULL;
-	struct mca_smartchg_if_ops *if_ops;
-	int idx;
-	int offset = 0;
-
-	if (!basp_header) {
-		mca_log_err("mmap_addr is NULL\n");
-		return -1;
-	}
-
-#if 0
-	int *raw = (int *)(info->mmap_addr);
-	for (int i = 0; i < basp_header->total_len / sizeof(int) - 10; i += 10) {
-		mca_log_err("raw[%d]: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n",
-			i, raw[i], raw[i + 1], raw[i + 2], raw[i + 3], raw[i + 4],
-			raw[i + 5], raw[i + 6], raw[i + 7], raw[i + 8], raw[i + 9]);
-	}
-#endif
-
-	idx = srcu_read_lock(&smartchg_if_srcu);
-
-	// update buck para
-	offset = sizeof(struct smart_basp_header);
-	if_ops = mca_smartchg_if_get_ops(MCA_SMARTCHG_IF_CHG_TYPE_JEITA);
-	if (!if_ops || !if_ops->update_baa_para) {
-		mca_log_err("jeita update_baa_para is null\n");
-	} else {
-		mca_log_err("jeita update_baa_para offset: %d, size: %d/%d\n",
-			    offset, basp_header->jeita_ffc_term_size,
-			    basp_header->jeita_normal_term_size);
-		if_ops->update_baa_para(if_ops->data, info->mmap_addr + offset,
-					basp_header->jeita_ffc_term_size,
-					basp_header->jeita_normal_term_size);
-	}
-
-	// get wired para offset
-	offset += basp_header->jeita_ffc_term_size *
-		  sizeof(struct smart_batt_jeita_term_para);
-	offset += basp_header->jeita_normal_term_size *
-		  sizeof(struct smart_batt_jeita_term_para);
-
-	// update wired para
-	if_ops = mca_smartchg_if_get_ops(MCA_SMARTCHG_IF_CHG_TYPE_QC);
-	if (!if_ops || !if_ops->update_baa_para) {
-		mca_log_err("wired qc update_baa_para is null\n");
-	} else {
-		mca_log_err(
-			"wired qc update_baa_para offset: %d, size: %d/%d\n",
-			offset, basp_header->wired_ffc_size,
-			basp_header->wired_normal_size);
-		if_ops->update_baa_para(if_ops->data, info->mmap_addr + offset,
-					basp_header->wired_ffc_size,
-					basp_header->wired_normal_size);
-	}
-
-	// get wls para offset
-	for (int i = 0; i < basp_header->wired_ffc_size; i++) {
-		pbatt_spec =
-			(struct smart_batt_spec *)(info->mmap_addr + offset);
-		offset += offsetof(struct smart_batt_spec, steps) +
-			  pbatt_spec->step_size *
-				  sizeof(struct smart_batt_spec_curve);
-	}
-	for (int i = 0; i < basp_header->wired_normal_size; i++) {
-		pbatt_spec =
-			(struct smart_batt_spec *)(info->mmap_addr + offset);
-		offset += offsetof(struct smart_batt_spec, steps) +
-			  pbatt_spec->step_size *
-				  sizeof(struct smart_batt_spec_curve);
-	}
-
-	// update wls para
-	if_ops = mca_smartchg_if_get_ops(MCA_SMARTCHG_IF_CHG_TYPE_WL_QC);
-	if (!if_ops || !if_ops->update_baa_para) {
-		mca_log_err("wls qc update_baa_para is null\n");
-	} else {
-		mca_log_err("wls qc update_baa_para offset: %d, size: %d/%d\n",
-			    offset, basp_header->wls_ffc_size,
-			    basp_header->wls_normal_size);
-		if_ops->update_baa_para(if_ops->data, info->mmap_addr + offset,
-					basp_header->wls_ffc_size,
-					basp_header->wls_normal_size);
-	}
-	srcu_read_unlock(&smartchg_if_srcu, idx);
-
-	return 0;
-}
-
-static int smart_charge_cal_checksum(struct smart_charge_info *info)
-{
-	struct smart_basp_header *basp_header = NULL;
-	uint32_t checksum = 0;
-	size_t i = 0;
-	size_t total_len;
-	char *temp_buff = info->mmap_addr;
-	size_t buffer_size = info->mmap_size;
-
-	if (!temp_buff) {
-		mca_log_err("mmap_addr is NULL\n");
-		return -1;
-	}
-
-	basp_header = kmalloc(sizeof(struct smart_basp_header), GFP_KERNEL);
-	if (!basp_header) {
-		mca_log_err("Alloc header failed\n");
-		return -1;
-	}
-	memcpy(basp_header, temp_buff, sizeof(struct smart_basp_header));
-
-	mca_log_err("header: %d, %d, %d; %d, %d; %d, %d; %d, %d\n",
-		    basp_header->checksum, basp_header->type,
-		    basp_header->total_len, basp_header->jeita_ffc_term_size,
-		    basp_header->jeita_normal_term_size,
-		    basp_header->wired_ffc_size, basp_header->wired_normal_size,
-		    basp_header->wls_ffc_size, basp_header->wls_normal_size);
-
-	total_len = basp_header->total_len;
-	if ((total_len > buffer_size && info->map_flag) ||
-	    total_len < sizeof(struct smart_basp_header)) {
-		mca_log_err("Invalid total_len: %zu\n", total_len);
-		kfree(basp_header);
-		return -1;
-	}
-
-	for (i = sizeof(int); i < total_len; i++)
-		checksum += (uint8_t)temp_buff[i];
-
-	mca_log_err("cal checksum %d, origin checksum %d\n", checksum,
-		    basp_header->checksum);
-	if (checksum != basp_header->checksum) {
-		kfree(basp_header);
-		return -1;
-	}
-
-	kfree(basp_header);
-	return 0;
-}
-
-static void smart_charge_handle_mmap_data(struct smart_charge_info *info)
-{
-	if (!info->mmap_addr || (!info->mmap_size && info->map_flag)) {
-		mca_log_err("Invalid mmap buffer\n");
-		goto out;
-	}
-	if (smart_charge_cal_checksum(info)) {
-		mca_log_err("checksum failed\n");
-		goto out;
-	}
-
-	if (info->enable_fv_dec_by_cc)
-		smart_charge_handle_baa_data(info);
-
-out:
-	info->map_flag = 0;
-	if (info->mmap_addr) {
-		kfree(info->mmap_addr);
-		info->mmap_addr = NULL;
-		info->mmap_size = 0;
-	}
-}
-
-static int smart_charge_file_open(struct inode *inode, struct file *filp)
-{
-	struct smart_charge_info *info = NULL;
-
-	info = container_of(inode->i_cdev, struct smart_charge_info, pri_dev);
-	if (info->mmap_addr)
-		return 0;
-
-	info->mmap_addr = kzalloc(PAGE_SIZE, GFP_KERNEL);
-	if (!info->mmap_addr)
-		return -1;
-
-	mca_log_err("malloc memery succ\n");
-	filp->private_data = info;
-
-	return 0;
-}
-
-static int smart_charge_file_close(struct inode *inode, struct file *filp)
-{
-	struct smart_charge_info *info = NULL;
-
-	info = container_of(inode->i_cdev, struct smart_charge_info, pri_dev);
-	if (!info) {
-		mca_log_err("Failed to get smart_charge_info from cdev\n");
-		return -EINVAL;
-	}
-
-	if (info && info->mmap_addr)
-		smart_charge_handle_mmap_data(info);
-	mca_log_err("release memery succ\n");
-
-	return 0;
-}
-
-static int smart_charge_mmap(struct file *filp, struct vm_area_struct *vma)
-{
-	struct smart_charge_info *info = filp->private_data;
-	unsigned long size = vma->vm_end - vma->vm_start;
-	int ret;
-
-	if (size > MAX_MMAP_SIZE) {
-		mca_log_err("mmap size %lu exceeds limit %d\n", size,
-			    MAX_MMAP_SIZE);
-		return -EINVAL;
-	}
-
-	if (!info || !info->mmap_addr || info->map_flag) {
-		mca_log_err("map addr error\n");
-		return -1;
-	}
-	if (vma->vm_end - vma->vm_start > PAGE_SIZE) {
-		mca_log_err("map addr len error\n");
-		return -1;
-	}
-
-	info->mmap_size = size;
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-	ret = remap_pfn_range(vma, vma->vm_start,
-			      virt_to_phys(info->mmap_addr) >> PAGE_SHIFT,
-			      vma->vm_end - vma->vm_start, vma->vm_page_prot);
-
-	mca_log_err("vma start 0x%lx, prot 0x%llx\n", vma->vm_start,
-		    (unsigned long long)pgprot_val(vma->vm_page_prot));
-	info->map_flag = 1;
-
-	if (ret)
-		mca_log_err("remap pfn failed %d\n", ret);
-
-	return ret;
-}
-
-static long smart_charge_ioctl(struct file *file, unsigned int cmd,
-			       unsigned long arg)
-{
-	struct smart_charge_info *info = file->private_data;
-	int ret;
-	int err = 0;
-
-#if (KERNEL_VERSION(5, 0, 0) > LINUX_VERSION_CODE)
-	if (_IOC_DIR(cmd) & _IOC_READ)
-		err = !access_ok(VERIFY_WRITE, (void __user *)arg,
-				 _IOC_SIZE(cmd));
-	else if (_IOC_DIR(cmd) & _IOC_WRITE)
-		err = !access_ok(VERIFY_READ, (void __user *)arg,
-				 _IOC_SIZE(cmd));
-#else
-	if (_IOC_DIR(cmd) & _IOC_READ)
-		err = !access_ok((void *)arg, _IOC_SIZE(cmd));
-	else if (_IOC_DIR(cmd) & _IOC_WRITE)
-		err = !access_ok((void *)arg, _IOC_SIZE(cmd));
-#endif
-	if (err)
-		return -EFAULT;
-
-	switch (cmd) {
-	case SMARTCHG_DATA_CMD:
-		if (!info->mmap_addr) {
-			mca_log_err("mmap addr is null\n");
-			return -EINVAL;
-		}
-		ret = copy_from_user(info->mmap_addr, (void __user *)arg,
-				     PAGE_SIZE);
-		mca_log_info("data ret = %d\n", ret);
-		if (ret)
-			return -EINVAL;
-		break;
-	default:
-		mca_log_err("invalid cmd\n");
-		return -EINVAL;
-	}
-	return 0;
-}
+/* No BASP/BAA character device is published. The inferred private blob ABI
+ * is not a validated charging interface; use the DT policy and typed APIs.
+ */
 
 static int smart_charge_panel_notifier_cb(struct notifier_block *nb,
 					  unsigned long event, void *val)
@@ -1710,6 +1448,9 @@ static int smart_charge_panel_notifier_cb(struct notifier_block *nb,
 	struct smart_charge_info *info =
 		container_of(nb, struct smart_charge_info, panel_nb);
 	int tmp = 0;
+
+	if (!val || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return NOTIFY_DONE;
 
 	switch (event) {
 	case MCA_EVENT_PANEL_SCREEN_STATE_CHANGE:
@@ -1726,17 +1467,6 @@ static int smart_charge_panel_notifier_cb(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
-static const struct file_operations g_smt_chg_file_ops = {
-	.owner = THIS_MODULE,
-	.open = smart_charge_file_open,
-	.release = smart_charge_file_close,
-	.mmap = smart_charge_mmap,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl = smart_charge_ioctl,
-#endif /* CONFIG_COMPAT */
-	.unlocked_ioctl = smart_charge_ioctl,
-};
-
 static int smart_charge_parse_dt(struct smart_charge_info *info)
 {
 	struct device_node *node = info->dev->of_node;
@@ -1744,10 +1474,13 @@ static int smart_charge_parse_dt(struct smart_charge_info *info)
 	int ret = 0;
 	int batt_ichg_cfg[CC_ICHG_MAX_GROUP * SMARTCHG_MODE_PARA_MAX];
 
+	if (!node)
+		return -EINVAL;
 	(void)mca_parse_dts_u32(node, "cell_type", &info->cell_type,
 				MCA_CELL_TYPE_1S);
-	mca_parse_dts_u32(node, "enable_fv_dec_by_cc",
-			  &info->enable_fv_dec_by_cc, 0);
+	if (info->cell_type < MCA_CELL_TYPE_1S || info->cell_type >= MCA_CELL_TYPE_MAX)
+		return -EINVAL;
+	/* The vendor BASP blob layout is unverified; no runtime table override. */
 	mca_parse_dts_u32(node, "support_csd", &info->support_csd, 0);
 	info->support_sensechg_v2 =
 		of_property_read_bool(node, "support_sensechg_v2");
@@ -1756,20 +1489,26 @@ static int smart_charge_parse_dt(struct smart_charge_info *info)
 		len = mca_parse_dts_u32_count(node, "cc_ichg_cfg",
 					      CC_ICHG_MAX_GROUP,
 					      SMARTCHG_MODE_PARA_MAX);
-		if (len < 0) {
-			mca_log_err("parse cc_ichg_cfg failed\n");
-			return -1;
-		}
+		if (len <= 0 || len > ARRAY_SIZE(batt_ichg_cfg) ||
+		    len % SMARTCHG_MODE_PARA_MAX)
+			return len < 0 ? len : -EINVAL;
 
 		ret = mca_parse_dts_u32_array(
-			node, "cc_ichg_cfg", batt_ichg_cfg,
-			CC_ICHG_MAX_GROUP * SMARTCHG_MODE_PARA_MAX);
+			node, "cc_ichg_cfg", batt_ichg_cfg, len);
 		if (ret) {
 			mca_log_err(" parse cc_ichg_cfg failed\n");
-			return -1;
+			return ret;
 		}
 
-		for (int row = 0; row < (len / SMARTCHG_MODE_PARA_MAX); row++) {
+		for (int row = 0; row < len / SMARTCHG_MODE_PARA_MAX; row++) {
+			int col = row * SMARTCHG_MODE_PARA_MAX;
+
+			if (batt_ichg_cfg[col] < 0 || batt_ichg_cfg[col + 1] < 0 ||
+			    (row && batt_ichg_cfg[col] <= batt_ichg_cfg[col - SMARTCHG_MODE_PARA_MAX]))
+				return -EINVAL;
+		}
+		info->ichg_cc_count = len / SMARTCHG_MODE_PARA_MAX;
+		for (int row = 0; row < info->ichg_cc_count; row++) {
 			int col = row * SMARTCHG_MODE_PARA_MAX;
 
 			info->ichg_cc_table[row].cc_max =
@@ -1835,121 +1574,109 @@ static int smart_charge_parse_dt(struct smart_charge_info *info)
 	return 0;
 }
 
+static void smart_charge_stop(struct smart_charge_info *info)
+{
+	if (!info || READ_ONCE(info->stopping))
+		return;
+	WRITE_ONCE(info->stopping, true);
+	WRITE_ONCE(info->ready, false);
+	smart_charge_unpublish(info);
+	if (info->sysfs_created) {
+		smart_charge_sysfs_remove_group(info->dev);
+		info->sysfs_created = false;
+	}
+	if (info->panel_registered) {
+		mca_event_block_notify_unregister(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
+		info->panel_registered = false;
+	}
+	if (info->thermal_registered) {
+		mca_event_block_notify_unregister(MCA_EVENT_TYPE_THERMAL_TEMP, &info->thermal_nb);
+		info->thermal_registered = false;
+	}
+	if (info->strategy_registered) {
+		mca_strategy_ops_unregister(STRATEGY_FUNC_TYPE_SMARTCHG, info);
+		info->strategy_registered = false;
+	}
+	if (!IS_ERR_OR_NULL(info->smartchg_delta_fv_voter))
+		mca_detach_owned_votable(info->smartchg_delta_fv_voter, info);
+	if (!IS_ERR_OR_NULL(info->smartchg_delta_ichg_voter))
+		mca_detach_owned_votable(info->smartchg_delta_ichg_voter, info);
+	if (!IS_ERR_OR_NULL(info->smartchg_set_fcc_voter))
+		mca_detach_owned_votable(info->smartchg_set_fcc_voter, info);
+	disable_delayed_work_sync(&info->smart_charge_work);
+	disable_delayed_work_sync(&info->smart_sense_chg_work);
+	disable_delayed_work_sync(&info->smart_soc_limit_work);
+	/* Retain downstream limits until a live provider explicitly updates them. */
+}
+
 static int smart_charge_probe(struct platform_device *pdev)
 {
 	struct smart_charge_info *info;
-	static int probe_cnt;
-	int ret = 0, online = 0, wireless_online = 0;
+	int ret, online = 0, wireless_online = 0;
 
-	mca_log_info("probe_cnt = %d\n", ++probe_cnt);
 	info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
-	if (!info) {
-		mca_log_err("out of memory\n");
+	if (!info)
 		return -ENOMEM;
-	}
-
 	info->dev = &pdev->dev;
-	/* Sysfs, strategy and panel callbacks can run as soon as published. */
-	INIT_DELAYED_WORK(&info->smart_charge_work, smart_charge_workfunc);
-	INIT_DELAYED_WORK(&info->smart_sense_chg_work,
-			  smart_charge_sense_chg_workfunc);
-	INIT_DELAYED_WORK(&info->smart_soc_limit_work,
-			  smart_charge_soc_limit_workfunc);
-	info->fake_scene = SMART_CHARGE_FAKE_SCENE_DEFAULT;
 	platform_set_drvdata(pdev, info);
-	global_smartchg_info = info;
+	INIT_DELAYED_WORK(&info->smart_charge_work, smart_charge_workfunc);
+	INIT_DELAYED_WORK(&info->smart_sense_chg_work, smart_charge_sense_chg_workfunc);
+	INIT_DELAYED_WORK(&info->smart_soc_limit_work, smart_charge_soc_limit_workfunc);
+	info->fake_scene = SMART_CHARGE_FAKE_SCENE_DEFAULT;
 	ret = smart_charge_parse_dt(info);
-	if (ret) {
-		mca_log_err("parse dt failed\n");
-		return -1;
-	}
-	smart_charge_sysfs_create_group(info->dev);
+	if (ret)
+		goto fail;
 	ret = smart_charge_init_voter(info);
-	if (ret) {
-		mca_log_err("init voter err\n");
-		return -1;
-	}
-
-	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_SMARTCHG,
-					mca_smart_charge_process_event, NULL,
-					NULL, info);
-
+	if (ret)
+		goto fail;
 	(void)mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
-					   STRATEGY_STATUS_TYPE_ONLINE,
-					   &online);
+		STRATEGY_STATUS_TYPE_ONLINE, &online);
 	(void)mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
-					   STRATEGY_STATUS_TYPE_ONLINE,
-					   &wireless_online);
-	ret = alloc_chrdev_region(&info->dev_num, 0, 1, "smart_charge");
-	if (ret) {
-		mca_log_err("alloc chrdev num failed\n");
-		return ret;
-	}
-
-	cdev_init(&info->pri_dev, &g_smt_chg_file_ops);
-	info->pri_dev.owner = THIS_MODULE;
-	ret = cdev_add(&info->pri_dev, info->dev_num, 1);
-	if (ret) {
-		mca_log_err("cdev add failed\n");
-		goto error1;
-	}
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 9))
-	info->smart_charge_class = class_create("smart_charge");
-#else
-	info->smart_charge_class = class_create(THIS_MODULE, "smart_charge");
-#endif
-	if (IS_ERR(info->smart_charge_class)) {
-		ret = PTR_ERR(info->smart_charge_class);
-		mca_log_err("create smart charge class failed\n");
-		goto error2;
-	}
-
-	info->sys_dev = device_create(info->smart_charge_class, NULL,
-				      info->dev_num, NULL, "smart_charge_cdev");
-	if (IS_ERR(info->sys_dev)) {
-		ret = PTR_ERR(info->sys_dev);
-		mca_log_err("create smart charge device failed\n");
-		goto error3;
-	}
-
-	/* Subscribe only after the remaining fallible device setup succeeds. */
+		STRATEGY_STATUS_TYPE_ONLINE, &wireless_online);
+	info->usb_online = online > 0;
+	info->wls_online = wireless_online > 0;
+	info->online = info->usb_online || info->wls_online;
+	WRITE_ONCE(info->ready, true);
+	ret = mca_strategy_ops_register(STRATEGY_FUNC_TYPE_SMARTCHG,
+		mca_smart_charge_process_event, NULL, NULL, info);
+	if (ret)
+		goto fail;
+	info->strategy_registered = true;
 	info->panel_nb.notifier_call = smart_charge_panel_notifier_cb;
-	mca_event_block_notify_register(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
-
+	ret = mca_event_block_notify_register(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
+	if (ret)
+		goto fail;
+	info->panel_registered = true;
 	info->thermal_nb.notifier_call = smart_charge_thermal_notifier_cb;
-	mca_event_block_notify_register(MCA_EVENT_TYPE_THERMAL_TEMP,
-					&info->thermal_nb);
-
-	if (online || wireless_online) {
-		info->online = 1;
+	ret = mca_event_block_notify_register(MCA_EVENT_TYPE_THERMAL_TEMP, &info->thermal_nb);
+	if (ret)
+		goto fail;
+	info->thermal_registered = true;
+	ret = smart_charge_publish(info);
+	if (ret)
+		goto fail;
+	ret = smart_charge_sysfs_create_group(info->dev);
+	if (ret)
+		goto fail;
+	info->sysfs_created = true;
+	if (info->online) {
 		schedule_delayed_work(&info->smart_charge_work, 0);
+		schedule_delayed_work(&info->smart_soc_limit_work, 0);
 	}
-
-	mca_log_info("done\n");
 	return 0;
-
-error3:
-	class_destroy(info->smart_charge_class);
-error2:
-	cdev_del(&info->pri_dev);
-error1:
-	unregister_chrdev_region(info->dev_num, 1);
-
+fail:
+	smart_charge_stop(info);
 	return ret;
 }
 
 static void smart_charge_remove(struct platform_device *pdev)
 {
-	struct smart_charge_info *info = platform_get_drvdata(pdev);
+	smart_charge_stop(platform_get_drvdata(pdev));
+}
 
-	unregister_chrdev_region(info->dev_num, 1);
-	cdev_del(&info->pri_dev);
-	device_destroy(info->smart_charge_class, info->dev_num);
-	class_destroy(info->smart_charge_class);
-	smart_charge_sysfs_remove_group(&pdev->dev);
-	mca_event_block_notify_unregister(MCA_EVENT_TYPE_PANEL,
-					  &info->panel_nb);
-
+static void smart_charge_shutdown(struct platform_device *pdev)
+{
+	smart_charge_stop(platform_get_drvdata(pdev));
 }
 
 static const struct of_device_id match_table[] = {
@@ -1965,6 +1692,7 @@ static struct platform_driver smart_charge_driver = {
 	},
 	.probe = smart_charge_probe,
 	.remove = smart_charge_remove,
+	.shutdown = smart_charge_shutdown,
 };
 
 static int __init smart_charge_init(void)

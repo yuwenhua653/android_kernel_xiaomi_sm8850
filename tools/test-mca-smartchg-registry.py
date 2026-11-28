@@ -3,7 +3,7 @@
 """Actual smartchg registry/dispatch tests, including a concurrent drain model.
 
 SRCU is modeled by pthread rwlocks; this is not an in-kernel concurrency test.
-BASP coverage here uses only a zero-length table: its OEM ABI remains unverified.
+The unverified BASP dispatcher is deliberately absent.
 """
 from pathlib import Path
 import os
@@ -17,7 +17,7 @@ s=(mca/'mca_smart_charge/mca_smart_charge.c').read_text()
 h=(mca/'include/mca/smartchg/smart_chg_class.h').read_text().replace('#include <linux/types.h>','')
 reg=s[s.index('static struct mca_smartchg_if_ops __rcu'):s.index('static ssize_t smart_charge_sysfs_show')]
 reg=re.sub(r'static void smart_charge_report_scene\([^;]+;', '', reg)
-names=['smart_charge_set_soc_limit','smartcharging_handle_wls_super','smartcharging_handle_power_boost','smartcharging_handle_wls_quiet','smart_charge_fv_control','smart_charge_ichg_control','smart_charge_set_fcc_control','smart_charge_handle_baa_data']
+names=['smart_charge_set_soc_limit','smartcharging_handle_wls_super','smartcharging_handle_power_boost','smartcharging_handle_wls_quiet','smart_charge_fv_control','smart_charge_ichg_control','smart_charge_set_fcc_control']
 funcs=[]
 for name in names:
     m=re.search(r'static (?:int|void) '+name+r'\([^;]+?\n\{',s)
@@ -48,6 +48,7 @@ c=r'''
 #include <string.h>
 #include <stddef.h>
 typedef uint32_t u32;
+#define READ_ONCE(x) __atomic_load_n(&(x),__ATOMIC_ACQUIRE)
 #define __rcu
 #define GFP_KERNEL 0
 #define EXPORT_SYMBOL(x)
@@ -79,19 +80,16 @@ enum { SMART_CHG_WLS_SUPER, SMART_CHG_OUTDOOR, SMART_CHG_TRAVELWAIT, SMART_CHG_W
 struct smart_charge_info {
     struct { struct { int enable; } smart_chgcfg[4]; } smart_chg_data;
     int delta_fv, delta_ichg;
-    char *mmap_addr;
+    bool ready,stopping;
 };
 struct mca_votable;
 ''' + h + reg + '\n'.join(funcs) + r'''
 static atomic_int entered, release_cb, unregistered, calls;
 static int payload=123;
+static int fail_value;
 static int cb(void *data,int value) {
     assert(read_depth>0 && data==&payload && value==1);
-    atomic_fetch_add(&calls,1); return 0;
-}
-static int baa(void *data,char *p,int ffc,int normal) {
-    assert(read_depth>0 && data==&payload && p && !ffc && !normal);
-    atomic_fetch_add(&calls,1); return 0;
+    atomic_fetch_add(&calls,1); return fail_value;
 }
 static int blocking_cb(void *data,int value) {
     assert(read_depth>0 && data==&payload && value==1);
@@ -124,7 +122,7 @@ static void drain_test(bool cleanup) {
 int main(void) {
     struct mca_smartchg_if_ops ops={.type=MCA_SMARTCHG_IF_CHG_TYPE_BUCK,.data=&payload,
         .set_soc_limit_sts=cb,.set_wls_super_sts=cb,.set_wls_quiet_sts=cb,.set_pwr_boost_sts=cb,
-        .set_delta_fv=cb,.set_delta_ichg=cb,.set_fcc=cb,.update_baa_para=baa};
+        .set_delta_fv=cb,.set_delta_ichg=cb,.set_fcc=cb};
     assert(mca_smartchg_if_ops_register(NULL)==-EINVAL);
     ops.type=-1; assert(mca_smartchg_if_ops_register(&ops)==-EINVAL);
     ops.type=MCA_SMARTCHG_IF_CHG_TYPE_END; assert(mca_smartchg_if_ops_register(&ops)==-EINVAL);
@@ -141,8 +139,7 @@ int main(void) {
     assert(!mca_smartchg_if_ops_unregister(ops.type,&payload) && !atomic_load(&allocations));
     ops.data=&payload; ops.set_soc_limit_sts=cb;
     for(int i=0;i<MCA_SMARTCHG_IF_CHG_TYPE_END;i++) { ops.type=i; assert(!mca_smartchg_if_ops_register(&ops)); }
-    struct smart_basp_header header={0};
-    struct smart_charge_info info={.mmap_addr=(char *)&header};
+    struct smart_charge_info info={.ready=true};
     for(int i=0;i<4;i++) info.smart_chg_data.smart_chgcfg[i].enable=1;
     atomic_store(&calls,0);
     smart_charge_set_soc_limit(true);
@@ -152,15 +149,22 @@ int main(void) {
     assert(!smart_charge_fv_control(NULL,&info,1,NULL) && info.delta_fv==1);
     assert(!smart_charge_ichg_control(NULL,&info,1,NULL) && info.delta_ichg==1);
     assert(!smart_charge_set_fcc_control(NULL,&info,1,NULL));
-    assert(!smart_charge_handle_baa_data(&info));
-    assert(atomic_load(&calls)==8*MCA_SMARTCHG_IF_CHG_TYPE_END+3 && !read_depth);
-    assert(smart_charge_fv_control(NULL,NULL,1,NULL)==-1);
-    assert(smart_charge_ichg_control(NULL,NULL,1,NULL)==-1);
-    assert(smart_charge_set_fcc_control(NULL,NULL,1,NULL)==-1);
-    info.mmap_addr=NULL; assert(smart_charge_handle_baa_data(&info)==-1 && !read_depth);
+    assert(atomic_load(&calls)==8*MCA_SMARTCHG_IF_CHG_TYPE_END && !read_depth);
+    assert(smart_charge_fv_control(NULL,NULL,1,NULL)==-ENODEV);
+    assert(smart_charge_ichg_control(NULL,NULL,1,NULL)==-ENODEV);
+    assert(smart_charge_set_fcc_control(NULL,NULL,1,NULL)==-ENODEV);
+    fail_value=-EIO;info.delta_fv=7;info.delta_ichg=9;atomic_store(&calls,0);
+    assert(smart_charge_fv_control(NULL,&info,1,NULL)==-EIO&&info.delta_fv==7);
+    assert(smart_charge_ichg_control(NULL,&info,1,NULL)==-EIO&&info.delta_ichg==9);
+    assert(smart_charge_set_fcc_control(NULL,&info,1,NULL)==-EIO);
+    assert(atomic_load(&calls)==3*MCA_SMARTCHG_IF_CHG_TYPE_END);fail_value=0;
+    info.stopping=true;assert(smart_charge_fv_control(NULL,&info,1,NULL)==-ENODEV);info.stopping=false;
     mca_smartchg_if_cleanup(); assert(!atomic_load(&allocations));
+    assert(smart_charge_fv_control(NULL,&info,1,NULL)==-ENODEV);
+    assert(smart_charge_ichg_control(NULL,&info,1,NULL)==-ENODEV);
+    assert(smart_charge_set_fcc_control(NULL,&info,1,NULL)==-ENODEV);
     drain_test(false); drain_test(true);
-    puts("PASS: actual smartchg copied registry, allocation failure, identity, eight dispatchers and concurrent unregister/cleanup drain model");
+    puts("PASS: actual smartchg copied registry, allocation failure, identity, seven dispatchers, backend failures and concurrent unregister/cleanup drain model");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='mca-smartchg-registry-') as d:

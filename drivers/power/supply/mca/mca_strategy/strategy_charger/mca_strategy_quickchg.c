@@ -4449,6 +4449,10 @@ static void update_batt_para(struct mca_quick_charge_info *info)
 	int cc[FG_SITE_MAX] = { 0 };
 	int i, j;
 
+	/* These cycle-specific tables belong to the foldable base/flip path. */
+	if (!info->support_base_flip)
+		return;
+
 	(void)platform_fg_ops_get_cyclecount(FG_IC_SLAVE, &cc[FG_IC_SLAVE]);
 	(void)platform_fg_ops_get_cyclecount(FG_IC_MASTER, &cc[FG_IC_MASTER]);
 	mca_log_err("base_flip_cc, update_batt_para, master:%d, slave:%d\n",
@@ -5776,109 +5780,17 @@ static int strategy_quickchg_smartchg_soc_limit_callback(void *data,
 	return 0;
 }
 
-static int strategy_quickchg_smartchg_baa_update_volt_info(
-	struct mca_quick_charge_temp_para_info *qc_temp_para,
-	struct smart_batt_spec *pbatt_spec)
-{
-	struct mca_quick_charge_volt_para_info *volt_info = NULL;
-	struct mca_quick_charge_volt_para *old_volt_para = NULL,
-					  *new_volt_para = NULL;
-
-	if (pbatt_spec->ffc)
-		volt_info = &qc_temp_para->volt_ffc_info;
-	else
-		volt_info = &qc_temp_para->volt_info;
-
-	mca_log_info(
-		"wired para type: %d, ffc: %d, idx: %d, size: %d => %d, temp: %d:%d => %d:%d\n",
-		pbatt_spec->type, pbatt_spec->ffc, pbatt_spec->t_range.idx,
-		volt_info->volt_para_size, pbatt_spec->step_size,
-		qc_temp_para->temp_para.temp_low,
-		qc_temp_para->temp_para.temp_high, pbatt_spec->t_range.min,
-		pbatt_spec->t_range.max);
-
-	new_volt_para = kcalloc(pbatt_spec->step_size, sizeof(*new_volt_para),
-				GFP_KERNEL);
-	if (!new_volt_para) {
-		mca_log_err("volt para no mem\n");
-		return -ENOMEM;
-	}
-
-	for (int i = 0; i < volt_info->volt_para_size; i++) {
-		mca_log_debug(
-			"volt_para[%d] voltage: %d, current_max: %d, current_min: %d\n",
-			i, volt_info->volt_para[i].voltage,
-			volt_info->volt_para[i].current_max,
-			volt_info->volt_para[i].current_min);
-	}
-
-	for (int i = 0; i < pbatt_spec->step_size; i++) {
-		new_volt_para[i].voltage = pbatt_spec->steps[i].mv;
-		new_volt_para[i].current_max = pbatt_spec->steps[i].ma_h;
-		new_volt_para[i].current_min = pbatt_spec->steps[i].ma_l;
-		mca_log_info(
-			"new_volt_para[%d] voltage: %d, current_max: %d, current_min: %d\n",
-			i, new_volt_para[i].voltage,
-			new_volt_para[i].current_max,
-			new_volt_para[i].current_min);
-	}
-
-	old_volt_para = volt_info->volt_para;
-	volt_info->volt_para = new_volt_para;
-	volt_info->volt_para_size = pbatt_spec->step_size;
-	kfree(old_volt_para);
-
-	return 0;
-}
-
-#define MCA_QUICK_CHARGE_MAX_VOLT_STEP_SIZE 8
 static int strategy_quickchg_smartchg_update_baa_para(void *data,
-						      char *baa_para,
-						      int ffc_size,
-						      int normal_size)
+	char *baa_para, int ffc_size, int normal_size)
 {
-	struct mca_quick_charge_info *info =
-		(struct mca_quick_charge_info *)data;
-	struct smart_batt_spec *pbatt_spec = NULL;
-	struct smart_batt_spec_curve
-		curve[MCA_QUICK_CHARGE_MAX_VOLT_STEP_SIZE] = { 0 };
-	int offset = 0;
+	struct mca_quick_charge_info *info = data;
 
-	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping) || !baa_para) {
-		mca_log_err("data or baa_para is NULL\n");
-		return -1;
-	}
-
-	for (int i = 0; i < ffc_size + normal_size; i++) {
-		pbatt_spec = (struct smart_batt_spec *)(baa_para + offset);
-		offset += offsetof(struct smart_batt_spec, steps);
-
-		memset(curve, 0, sizeof(curve));
-		memcpy(curve, baa_para + offset,
-		       pbatt_spec->step_size *
-			       sizeof(struct smart_batt_spec_curve));
-		pbatt_spec->steps = curve;
-		offset += pbatt_spec->step_size *
-			  sizeof(struct smart_batt_spec_curve);
-
-		if (pbatt_spec->t_range.idx < 0 ||
-		    pbatt_spec->t_range.idx >=
-			    info->batt_para[FG_IC_MASTER].temp_para_size) {
-			mca_log_err(
-				"temp_para_size: %d, temp_range.idx: %d is invalid\n",
-				pbatt_spec->t_range.idx >=
-					info->batt_para[FG_IC_MASTER]
-						.temp_para_size,
-				pbatt_spec->t_range.idx);
-		} else {
-			strategy_quickchg_smartchg_baa_update_volt_info(
-				&(info->batt_para[FG_IC_MASTER]
-					  .temp_info[pbatt_spec->t_range.idx]),
-				pbatt_spec);
-		}
-	}
-
-	return 0;
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return -ENODEV;
+	/* The inferred BASP layout is not a validated writable ABI. Retain DT
+	 * tables instead of replacing voltage/stage arrays while readers run.
+	 */
+	return -EOPNOTSUPP;
 }
 
 static int strategy_quickchg_smartchg_pwr_boost_sts_callback(void *data,
