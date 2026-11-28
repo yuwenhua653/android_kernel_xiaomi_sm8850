@@ -127,8 +127,12 @@ static int scmi_cpuss_telemetry_probe(struct scmi_device *sdev)
 		return PTR_ERR(t->ops);
 	ret = t->ops->get_param(t->ph, &address, SCMI_TELEMETRY_ALGO_STR,
 				0, 0, sizeof(address));
+	/* Firmware may not answer the first request during early boot. */
+	if (ret == -ETIMEDOUT)
+		ret = -EPROBE_DEFER;
 	if (ret)
-		return ret;
+		return dev_err_probe(&sdev->dev, ret,
+				     "Failed to obtain telemetry shared memory\n");
 	if (!address || !IS_ALIGNED(address, sizeof(u64)))
 		return -EINVAL;
 	t->header = ioremap_cache(address, sizeof(struct telemetry_global_param_t));

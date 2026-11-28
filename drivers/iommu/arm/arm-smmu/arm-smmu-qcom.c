@@ -1901,8 +1901,8 @@ static int qsmmuv500_tbu_register(struct device *dev, void *cookie)
 	struct qsmmuv500_archdata *data = cookie;
 
 	if (!dev->driver_data) {
-		dev_err(dev, "TBU failed probe, QSMMUV500 cannot continue!\n");
-		return -EINVAL;
+		dev_dbg(dev, "Waiting for TBU probe\n");
+		return -EPROBE_DEFER;
 	}
 
 	tbu = dev_get_drvdata(dev);
@@ -2099,7 +2099,8 @@ struct arm_smmu_device *qsmmuv500_create(struct arm_smmu_device *smmu,
 	/* Attempt to register child devices */
 	ret = device_for_each_child(dev, data, qsmmuv500_tbu_register);
 	if (ret)
-		return ERR_PTR(-EPROBE_DEFER);
+		return ERR_PTR(dev_err_probe(dev, ret,
+					    "TBU child is not ready\n"));
 
 	return &data->smmu;
 }
