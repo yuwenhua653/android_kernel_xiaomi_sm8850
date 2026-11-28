@@ -123,6 +123,10 @@ struct mca_sic_data sic_init_list[POWER_MAX_LIST] = {
 #define BATT_CELL_SELECT_MAX 3
 
 struct mca_thermal_info {
+	bool stopping;
+	bool strategy_registered, smartchg_registered, sysfs_created, log_registered;
+	int wireless_thermal_removed, wired_thermal_removed;
+	int wired_flip_thermal_removed, wireless_flip_thermal_removed;
 	struct device *dev;
 	struct thermal_cooling_device *tcd;
 	struct delayed_work init_voter_work;

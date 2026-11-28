@@ -19,6 +19,8 @@
 #ifndef __MCA_QUICK_CHARGE_H__
 #define __MCA_QUICK_CHARGE_H__
 
+#include <mca/common/mca_charge_interface.h>
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
@@ -449,6 +451,10 @@ struct mca_quick_charge_smartchg_data {
 };
 
 struct mca_quick_charge_info {
+	bool ready, stopping;
+	bool strategy_registered, charge_if_registered, smartchg_registered;
+	bool sysfs_created, reboot_registered;
+	struct mca_charge_if_ops charge_if_ops;
 	struct device *dev;
 	struct mca_votable *input_suspend_voter;
 	struct mca_votable *buck_input_voter;

@@ -9,7 +9,7 @@ import os,re,subprocess,sys,tempfile
 root=Path(__file__).resolve().parents[1]
 mca=root/'drivers/power/supply/mca/mca_strategy/strategy_charger'
 h=(mca/'inc/mca_charger_thermal.h').read_text();h=h[h.index('#define MAX_THERMAL_LEVEL'):h.index('struct mca_thermal_ctrl_info')]
-s=(mca/'mca_charger_thermal.c').read_text();s=s[s.index('static int mca_wireless_charger_thermal_parse_data('):s.index('static void mca_charger_thermal_flip_parse_data(')]
+s=(mca/'mca_charger_thermal.c').read_text();s=s[s.index('static int mca_wireless_charger_thermal_parse_data('):s.index('static int mca_charger_thermal_parse_dt(')]
 path=Path(sys.argv[1]) if len(sys.argv)>1 else root.parent/'sm8850-devicetrees/qcom/nezha-charger-common.dtsi'
 dts=re.sub(r'/\*.*?\*/','',path.read_text(),flags=re.S)
 def prop(name):
@@ -32,7 +32,7 @@ typedef uint32_t u32;
 #define mca_log_debug(...) ((void)0)
 struct device_node {const int *vals;int len;bool format_present;u32 cols;int format_count,format_error,read_error;};
 static void *of_find_property(struct device_node*n,const char*p,void*len){return n&&n->format_present?n:NULL;}
-static int of_property_count_u32_elems(struct device_node*n,const char*p){return n->format_count;}
+static int of_property_count_u32_elems(struct device_node*n,const char*p){return !strcmp(p,"xiaomi,wireless-thermal-columns") ? n->format_count : n->len;}
 static int of_property_read_u32(struct device_node*n,const char*p,u32*out){if(n->format_error)return n->format_error;*out=n->cols;return 0;}
 static int mca_parse_dts_u32_count(struct device_node*n,const char*p,u32 rows,u32 cols){return !n||n->len<=0||n->len%cols||n->len>rows*cols?-EINVAL:n->len;}
 static int mca_parse_dts_u32_array(struct device_node*n,const char*p,int*out,int len){if(n->read_error)return n->read_error;assert(len==n->len);memcpy(out,n->vals,len*sizeof(int));return 0;}
@@ -67,7 +67,16 @@ int main(void){
  for(int len=0;len<220;len++){if(len==110)continue;n.len=len;if(len<=0||len%10||len>MAX_THERMAL_LEVEL*10)assert(mca_wireless_charger_thermal_parse_data("wireless_thermal",&n,data,&level)==-EINVAL);}
  assert(!memcmp(saved,data,sizeof(data))&&level==77);
  assert(mca_wireless_charger_thermal_parse_data("wireless_thermal",NULL,data,&level)==-EINVAL);
- puts("PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures and unchanged error outputs");
+ int flip[16],saved_flip[16],vals[17];for(int i=0;i<17;i++)vals[i]=1000-i;
+ n=(struct device_node){.vals=vals,.len=16};
+ assert(!mca_charger_thermal_flip_parse_data("wired_flip_thermal",&n,flip,&level)&&level==15&&flip[15]==985);
+ memcpy(saved_flip,flip,sizeof(flip));level=99;
+ for(int len=-1;len<=17;len++){if(len>0&&len<=16)continue;n.len=len;assert(mca_charger_thermal_flip_parse_data("wired_flip_thermal",&n,flip,&level)==-EINVAL);}
+ n.len=16;n.read_error=-EIO;assert(mca_charger_thermal_flip_parse_data("wired_flip_thermal",&n,flip,&level)==-EIO);n.read_error=0;
+ vals[8]=-1;assert(mca_charger_thermal_flip_parse_data("wired_flip_thermal",&n,flip,&level)==-EINVAL);
+ assert(!memcmp(saved_flip,flip,sizeof(flip))&&level==99);vals[8]=992;n.len=1;
+ assert(!mca_charger_thermal_flip_parse_data("wired_flip_thermal",&n,flip,&level)&&level==0);
+ puts("PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures, flip table bounds and unchanged error outputs");
 }
 '''
 with tempfile.TemporaryDirectory() as tmp:

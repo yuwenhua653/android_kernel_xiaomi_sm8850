@@ -103,7 +103,6 @@ strategy_buckchg_check_charger_change(struct strategy_buckchg_dev *info);
 static void strategy_buckchg_sw_cv_start(struct strategy_buckchg_dev *info);
 static void strategy_buckchg_sw_cv_stop(struct strategy_buckchg_dev *info);
 
-static struct strategy_buckchg_dev *g_buckchg_info;
 
 static int
 strategy_class_buckchg_ops_set_input_volt(struct strategy_buckchg_dev *info,
@@ -328,7 +327,7 @@ static int strategy_buckchg_enable(struct mca_votable *votable, void *data,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 	mca_log_err("%d\n", effective_result);
 	if (effective_result)
@@ -343,7 +342,7 @@ static int strategy_buckchg_input_suspend(struct mca_votable *votable,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 	mca_log_err("%d\n", effective_result);
 	if (effective_result)
@@ -359,7 +358,7 @@ static int strategy_buckchg_input_voltage(struct mca_votable *votable,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->hvdcp_allow_flag = effective_result;
@@ -397,7 +396,7 @@ static int strategy_buckchg_input_limit(struct mca_votable *votable, void *data,
 	int is_zero_speed = 0;
 	int result = effective_result;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	ktime_get_boottime_ts64(&ts);
@@ -437,7 +436,7 @@ static int strategy_buckchg_charge_limit(struct mca_votable *votable,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_err("set chg current %d\n", effective_result);
@@ -473,15 +472,14 @@ static int strategy_buckchg_set_vterm(struct mca_votable *votable, void *data,
 				      int effective_result,
 				      const char *effective_client)
 {
-	struct strategy_buckchg_dev *info = NULL;
+	struct strategy_buckchg_dev *info = data;
 	int vterm = 0;
 	int batt_temp = 0;
 	int compensation;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
-	info = data;
 
 	if (info->support_base_flip) {
 		if (!strategy_class_fg_get_fastcharge())
@@ -619,7 +617,7 @@ static int strategy_buckchg_set_iterm(struct mca_votable *votable, void *data,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (info->support_base_flip)
@@ -646,7 +644,7 @@ static int strategy_buckchg_set_5v_input(struct mca_votable *votable,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->buck_5v_in = effective_result;
@@ -670,7 +668,7 @@ static int strategy_buckchg_set_5v_ichg(struct mca_votable *votable, void *data,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->buck_5v_ich = effective_result;
@@ -694,7 +692,7 @@ static int strategy_buckchg_set_9v_input(struct mca_votable *votable,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->buck_9v_in = effective_result;
@@ -718,7 +716,7 @@ static int strategy_buckchg_set_9v_ichg(struct mca_votable *votable, void *data,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->buck_9v_ich = effective_result;
@@ -739,72 +737,72 @@ static int strategy_buckchg_set_9v_ichg(struct mca_votable *votable, void *data,
 static int strategy_buckchg_init_voter(struct strategy_buckchg_dev *info)
 {
 	/* buck charge */
-	info->chg_enable_voter = mca_create_votable("chg_enable", MCA_VOTE_AND,
+	info->chg_enable_voter = mca_create_owned_votable("chg_enable", MCA_VOTE_AND,
 						    strategy_buckchg_enable,
 						    STATEGY_CHARGE_DISENABLE,
 						    info);
 	if (IS_ERR(info->chg_enable_voter))
-		return -1;
-	info->input_suppend_voter = mca_create_votable(
+		return PTR_ERR(info->chg_enable_voter);
+	info->input_suppend_voter = mca_create_owned_votable(
 		"input_suspend", MCA_VOTE_OR, strategy_buckchg_input_suspend,
 		STATEGY_CHARGE_INPUT_SUSPEND, info);
 	if (IS_ERR(info->input_suppend_voter))
-		return -1;
-	info->input_limit_voter = mca_create_votable(
+		return PTR_ERR(info->input_suppend_voter);
+	info->input_limit_voter = mca_create_owned_votable(
 		"buck_input", MCA_VOTE_MIN, strategy_buckchg_input_limit,
 		STATEGY_INPUT_DEFAULT_VALUE, info);
 	if (IS_ERR(info->input_limit_voter))
-		return -1;
-	info->charge_limit_voter = mca_create_votable(
+		return PTR_ERR(info->input_limit_voter);
+	info->charge_limit_voter = mca_create_owned_votable(
 		"buck_charge_curr", MCA_VOTE_MIN, strategy_buckchg_charge_limit,
 		STATEGY_CHARGE_CURRENT_DEFAULT_VALUE, info);
 	if (IS_ERR(info->charge_limit_voter))
-		return -1;
+		return PTR_ERR(info->charge_limit_voter);
 
 	if (0)
-		info->iterm_voter = mca_create_votable(
+		info->iterm_voter = mca_create_owned_votable(
 			"term_curr", MCA_VOTE_MIN, strategy_buckchg_set_iterm,
 			STATEGY_ITERM_DEFAULT_VALUE, info);
 	else
-		info->iterm_voter = mca_create_votable(
+		info->iterm_voter = mca_create_owned_votable(
 			"term_curr", MCA_VOTE_MAX, strategy_buckchg_set_iterm,
 			STATEGY_ITERM_DEFAULT_VALUE, info);
 	if (IS_ERR(info->iterm_voter))
-		return -1;
+		return PTR_ERR(info->iterm_voter);
 
-	info->vterm_voter = mca_create_votable("term_volt", MCA_VOTE_MIN,
+	info->vterm_voter = mca_create_owned_votable("term_volt", MCA_VOTE_MIN,
 					       strategy_buckchg_set_vterm,
 					       STATEGY_VTERM_DEFAULT_VALUE,
 					       info);
 	if (IS_ERR(info->vterm_voter))
-		return -1;
+		return PTR_ERR(info->vterm_voter);
 
 	/* wire voter */
 	info->input_voltage_voter =
-		mca_create_votable("input_voltage", MCA_VOTE_AND,
+		mca_create_owned_votable("input_voltage", MCA_VOTE_AND,
 				   strategy_buckchg_input_voltage, 1, info);
 	if (IS_ERR(info->input_voltage_voter))
-		return -1;
-	info->buck_5v_in_voter = mca_create_votable(
+		return PTR_ERR(info->input_voltage_voter);
+	info->buck_5v_in_voter = mca_create_owned_votable(
 		"buck_5v_in", MCA_VOTE_MIN, strategy_buckchg_set_5v_input,
 		STATEGY_INPUT_5V_DEFAULT_VALUE, info);
 	if (IS_ERR(info->buck_5v_in_voter))
-		return -1;
-	info->buck_5v_ich_voter = mca_create_votable(
+		return PTR_ERR(info->buck_5v_in_voter);
+	info->buck_5v_ich_voter = mca_create_owned_votable(
 		"buck_5v_ich", MCA_VOTE_MIN, strategy_buckchg_set_5v_ichg,
 		STATEGY_CHARGE_CURRENT_DEFAULT_VALUE, info);
 	if (IS_ERR(info->buck_5v_ich_voter))
-		return -1;
-	info->buck_9v_in_voter = mca_create_votable(
+		return PTR_ERR(info->buck_5v_ich_voter);
+	info->buck_9v_in_voter = mca_create_owned_votable(
 		"buck_9v_in", MCA_VOTE_MIN, strategy_buckchg_set_9v_input,
 		STATEGY_INPUT_9V_DEFAULT_VALUE, info);
 	if (IS_ERR(info->buck_9v_in_voter))
-		return -1;
-	info->buck_9v_ich_voter = mca_create_votable(
+		return PTR_ERR(info->buck_9v_in_voter);
+	info->buck_9v_ich_voter = mca_create_owned_votable(
 		"buck_9v_ich", MCA_VOTE_MIN, strategy_buckchg_set_9v_ichg,
 		STATEGY_CHARGE_CURRENT_DEFAULT_VALUE, info);
 	if (IS_ERR(info->buck_9v_ich_voter))
-		return -1;
+		return PTR_ERR(info->buck_9v_ich_voter);
 
 	return 0;
 }
@@ -1407,7 +1405,7 @@ static int strategy_buckchg_process_event(int event, int value, void *data)
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("receive event %d, value %d\n", event, value);
@@ -1567,7 +1565,7 @@ static int strategy_buckchg_get_status(int status, void *value, void *data)
 	struct strategy_buckchg_dev *info = (struct strategy_buckchg_dev *)data;
 	int *cur_val = (int *)value;
 
-	if (!info || !value)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping) || !value)
 		return -1;
 
 	switch (status) {
@@ -1738,7 +1736,7 @@ static int strategy_buckchg_set_config(int config, int value, void *data)
 {
 	struct strategy_buckchg_dev *info = (struct strategy_buckchg_dev *)data;
 
-	if (!info)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	switch (config) {
@@ -3128,6 +3126,8 @@ static int strategy_buckchg_thermal_notifier_cb(struct notifier_block *nb,
 	struct strategy_buckchg_dev *info =
 		container_of(nb, struct strategy_buckchg_dev, thermal_board_nb);
 
+	if (!val || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return NOTIFY_DONE;
 	switch (event) {
 	case MCA_EVENT_THERMAL_BOARD_TEMP_CHANGE:
 		info->thermal_board_temp = *(int *)val / NTC_SCALE_BOARDTEMP;
@@ -3145,7 +3145,8 @@ static int strategy_buckchg_panel_notifier_cb(struct notifier_block *nb,
 		container_of(nb, struct strategy_buckchg_dev, panel_nb);
 	int screen_state;
 
-	if (event != MCA_EVENT_PANEL_SCREEN_STATE_CHANGE)
+	if (!data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping) ||
+	    event != MCA_EVENT_PANEL_SCREEN_STATE_CHANGE)
 		return NOTIFY_DONE;
 
 	screen_state = *(int *)data;
@@ -3169,7 +3170,7 @@ static int strategy_buckchg_if_set_chg_cur(const char *user, char *value,
 	int temp_value = 0;
 	struct strategy_buckchg_dev *info = data;
 
-	if (!user || !value || !data)
+	if (!user || !value || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (kstrtoint(value, 0, &temp_value))
@@ -3190,7 +3191,7 @@ static int strategy_buckchg_if_get_chg_cur(char *buf, void *data)
 	int value;
 	struct strategy_buckchg_dev *info = data;
 
-	if (!buf || !data)
+	if (!buf || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	client_str = mca_get_effective_client(info->charge_limit_voter);
@@ -3214,7 +3215,7 @@ static int strategy_buckchg_if_set_input_cur(const char *user, char *value,
 	int temp_value = 0;
 	struct strategy_buckchg_dev *info = data;
 
-	if (!user || !value || !data)
+	if (!user || !value || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (kstrtoint(value, 0, &temp_value))
@@ -3252,7 +3253,7 @@ static int strategy_buckchg_if_get_input_cur(char *buf, void *data)
 	int value;
 	struct strategy_buckchg_dev *info = data;
 
-	if (!buf || !data)
+	if (!buf || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	client_str = mca_get_effective_client(info->input_limit_voter);
@@ -3271,7 +3272,7 @@ static int strategy_buckchg_if_set_chg_en(const char *user, unsigned int value,
 {
 	struct strategy_buckchg_dev *info = data;
 
-	if (!user || !data)
+	if (!user || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (value) {
@@ -3291,7 +3292,7 @@ static int strategy_buckchg_if_get_chg_en(char *buf, void *data)
 	int value;
 	struct strategy_buckchg_dev *info = data;
 
-	if (!buf || !data)
+	if (!buf || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	client_str = mca_get_effective_client(info->chg_enable_voter);
@@ -3311,7 +3312,7 @@ static int strategy_buckchg_if_get_input_suspend(char *buf, void *data)
 	int value;
 	struct strategy_buckchg_dev *info = data;
 
-	if (!buf || !data)
+	if (!buf || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	client_str = mca_get_effective_client(info->input_suppend_voter);
@@ -3331,7 +3332,7 @@ static int strategy_buckchg_if_set_input_suspend(const char *user, char *value,
 	int temp_value = 0;
 	struct strategy_buckchg_dev *info = data;
 
-	if (!user || !value || !data)
+	if (!user || !value || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (kstrtoint(value, 0, &temp_value))
@@ -3371,7 +3372,7 @@ static int strategy_buckchg_if_get_ship_mode(bool *val, void *data)
 	return 0;
 }
 
-static struct mca_charge_if_ops g_strategy_buckchg_if_ops = {
+static const struct mca_charge_if_ops g_strategy_buckchg_if_ops = {
 	.type_name = "buck",
 	.set_input_suspend = strategy_buckchg_if_set_input_suspend,
 	.get_input_suspend = strategy_buckchg_if_get_input_suspend,
@@ -3390,7 +3391,7 @@ static int strategy_buckchg_soc_limit_sts_callback(void *data,
 {
 	struct strategy_buckchg_dev *info = (struct strategy_buckchg_dev *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->soc_limit_more_enable = effective_result;
@@ -3417,7 +3418,7 @@ static int mca_charger_buckchg_pwr_boost_sts_callback(void *data, int enable)
 {
 	struct strategy_buckchg_dev *info = (struct strategy_buckchg_dev *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->smartchg_data.pwr_boost_state = enable;
@@ -3429,7 +3430,7 @@ static int strategy_buckchg_smartchg_set_fcc_callback(void *data, int val)
 {
 	struct strategy_buckchg_dev *info = (struct strategy_buckchg_dev *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_vote(info->charge_limit_voter, "smartchg", val != 0, val);
@@ -3437,7 +3438,7 @@ static int strategy_buckchg_smartchg_set_fcc_callback(void *data, int val)
 	return 0;
 }
 
-static struct mca_smartchg_if_ops g_buck_smartchg_if_ops = {
+static const struct mca_smartchg_if_ops g_buck_smartchg_if_ops = {
 	.type = MCA_SMARTCHG_IF_CHG_TYPE_BUCK,
 	.data = NULL,
 	.set_soc_limit_sts = strategy_buckchg_soc_limit_sts_callback,
@@ -3445,83 +3446,152 @@ static struct mca_smartchg_if_ops g_buck_smartchg_if_ops = {
 	.set_fcc = strategy_buckchg_smartchg_set_fcc_callback,
 };
 
+static void strategy_buckchg_stop(struct strategy_buckchg_dev *info)
+{
+	bool was_ready;
+	int ret;
+
+	if (!info || READ_ONCE(info->stopping))
+		return;
+	WRITE_ONCE(info->stopping, true);
+	was_ready = info->ready;
+	WRITE_ONCE(info->ready, false);
+	if (info->panel_registered) {
+		mca_event_block_notify_unregister(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
+		info->panel_registered = false;
+	}
+	if (info->thermal_registered) {
+		mca_event_block_notify_unregister(MCA_EVENT_TYPE_THERMAL_TEMP, &info->thermal_board_nb);
+		info->thermal_registered = false;
+	}
+	if (info->strategy_registered) {
+		mca_strategy_ops_unregister(STRATEGY_FUNC_TYPE_BUCK_CHARGE, info);
+		info->strategy_registered = false;
+	}
+	if (info->charge_if_registered) {
+		mca_charge_if_ops_unregister(&info->charge_if_ops);
+		info->charge_if_registered = false;
+	}
+	if (info->smartchg_registered) {
+		mca_smartchg_if_ops_unregister(MCA_SMARTCHG_IF_CHG_TYPE_BUCK, info);
+		info->smartchg_registered = false;
+	}
+	if (!IS_ERR_OR_NULL(info->chg_enable_voter))
+		mca_detach_owned_votable(info->chg_enable_voter, info);
+	if (!IS_ERR_OR_NULL(info->input_suppend_voter))
+		mca_detach_owned_votable(info->input_suppend_voter, info);
+	if (!IS_ERR_OR_NULL(info->input_limit_voter))
+		mca_detach_owned_votable(info->input_limit_voter, info);
+	if (!IS_ERR_OR_NULL(info->charge_limit_voter))
+		mca_detach_owned_votable(info->charge_limit_voter, info);
+	if (!IS_ERR_OR_NULL(info->iterm_voter))
+		mca_detach_owned_votable(info->iterm_voter, info);
+	if (!IS_ERR_OR_NULL(info->vterm_voter))
+		mca_detach_owned_votable(info->vterm_voter, info);
+	if (!IS_ERR_OR_NULL(info->input_voltage_voter))
+		mca_detach_owned_votable(info->input_voltage_voter, info);
+	if (!IS_ERR_OR_NULL(info->buck_5v_in_voter))
+		mca_detach_owned_votable(info->buck_5v_in_voter, info);
+	if (!IS_ERR_OR_NULL(info->buck_5v_ich_voter))
+		mca_detach_owned_votable(info->buck_5v_ich_voter, info);
+	if (!IS_ERR_OR_NULL(info->buck_9v_in_voter))
+		mca_detach_owned_votable(info->buck_9v_in_voter, info);
+	if (!IS_ERR_OR_NULL(info->buck_9v_ich_voter))
+		mca_detach_owned_votable(info->buck_9v_ich_voter, info);
+	/* Disabled work cannot be requeued by a racing work item. */
+	disable_delayed_work_sync(&info->monitor_work);
+	disable_delayed_work_sync(&info->sw_cv_work);
+	disable_delayed_work_sync(&info->base_flip_sw_cv_work);
+	disable_delayed_work_sync(&info->wls_revchg_monitor_work);
+	disable_delayed_work_sync(&info->csd_pulse_process_work);
+	disable_delayed_work_sync(&info->source_status_monitor_work);
+	disable_delayed_work_sync(&info->check_pd_secret_work);
+	disable_delayed_work_sync(&info->rerun_handle_pd_auth_work);
+	disable_delayed_work_sync(&info->soc_limit_stepper_work);
+	if (was_ready) {
+		ret = strategy_class_buckchg_ops_set_chg(info, false);
+		if (ret)
+			mca_log_err("buck stop failed: %d\n", ret);
+	}
+}
+
 static int strategy_buckchg_class_probe(struct platform_device *pdev)
 {
 	struct strategy_buckchg_dev *info;
-	int online = 0;
-	int ret;
+	struct mca_smartchg_if_ops smartchg_ops = g_buck_smartchg_if_ops;
+	int online = 0, ret;
 
 	info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
-
 	info->dev = &pdev->dev;
-	strategy_buckchg_parse_dt(info);
-	ret = strategy_buckchg_init_voter(info);
-	if (ret) {
-		mca_log_err("init voter err\n");
-		return -1;
-	}
-
-	mca_vote(info->input_voltage_voter, "batt_auth", true, 0);
-	mca_vote(info->charge_limit_voter, "batt_auth", true,
-		 info->chg_batt_auth_failed);
-	info->proc_data.voltage = STATEGY_CHARGE_VBUS_5V;
-	info->hvdcp_allow_flag = 0;
-	info->vbat_ov_count = 0;
-	INIT_DELAYED_WORK(&info->monitor_work,
-			  strategy_buckchg_monitor_workfunc);
+	platform_set_drvdata(pdev, info);
+	INIT_DELAYED_WORK(&info->monitor_work, strategy_buckchg_monitor_workfunc);
 	INIT_DELAYED_WORK(&info->sw_cv_work, strategy_buckchg_sw_cv_workfunc);
-	INIT_DELAYED_WORK(&info->base_flip_sw_cv_work,
-			  strategy_buckchg_base_flip_sw_cv_workfunc);
-	INIT_DELAYED_WORK(&info->wls_revchg_monitor_work,
-			  strategy_wls_revchg_monitor_workfunc);
-	INIT_DELAYED_WORK(&info->csd_pulse_process_work,
-			  strategy_csd_pulse_process_workfunc);
-	INIT_DELAYED_WORK(&info->source_status_monitor_work,
-			  strategy_source_status_monitor_workfunc);
-	INIT_DELAYED_WORK(&info->check_pd_secret_work,
-			  strategy_buckchg_check_pdsecret_workfunc);
-	INIT_DELAYED_WORK(&info->rerun_handle_pd_auth_work,
-			  strategy_rerun_handle_pd_auth_workfunc);
-	INIT_DELAYED_WORK(&info->soc_limit_stepper_work,
-			  strategy_buckchg_soc_limit_stepper_workfunc);
-	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
-					strategy_buckchg_process_event,
-					strategy_buckchg_get_status,
-					strategy_buckchg_set_config, info);
-	g_strategy_buckchg_if_ops.data = info;
-	(void)mca_charge_if_ops_register(&g_strategy_buckchg_if_ops);
-	g_buck_smartchg_if_ops.data = info;
-	(void)mca_smartchg_if_ops_register(&g_buck_smartchg_if_ops);
-	info->thermal_board_nb.notifier_call =
-		strategy_buckchg_thermal_notifier_cb;
-	mca_event_block_notify_register(MCA_EVENT_TYPE_THERMAL_TEMP,
-					&info->thermal_board_nb);
+	INIT_DELAYED_WORK(&info->base_flip_sw_cv_work, strategy_buckchg_base_flip_sw_cv_workfunc);
+	INIT_DELAYED_WORK(&info->wls_revchg_monitor_work, strategy_wls_revchg_monitor_workfunc);
+	INIT_DELAYED_WORK(&info->csd_pulse_process_work, strategy_csd_pulse_process_workfunc);
+	INIT_DELAYED_WORK(&info->source_status_monitor_work, strategy_source_status_monitor_workfunc);
+	INIT_DELAYED_WORK(&info->check_pd_secret_work, strategy_buckchg_check_pdsecret_workfunc);
+	INIT_DELAYED_WORK(&info->rerun_handle_pd_auth_work, strategy_rerun_handle_pd_auth_workfunc);
+	INIT_DELAYED_WORK(&info->soc_limit_stepper_work, strategy_buckchg_soc_limit_stepper_workfunc);
+	strategy_buckchg_parse_dt(info);
+	info->proc_data.voltage = STATEGY_CHARGE_VBUS_5V;
+	ret = strategy_buckchg_init_voter(info);
+	if (ret)
+		goto fail;
+	WRITE_ONCE(info->ready, true);
+	ret = mca_vote(info->input_voltage_voter, "batt_auth", true, 0);
+	if (ret)
+		goto fail;
+	ret = mca_vote(info->charge_limit_voter, "batt_auth", true, info->chg_batt_auth_failed);
+	if (ret)
+		goto fail;
+	ret = mca_strategy_ops_register(STRATEGY_FUNC_TYPE_BUCK_CHARGE,
+		strategy_buckchg_process_event, strategy_buckchg_get_status,
+		strategy_buckchg_set_config, info);
+	if (ret)
+		goto fail;
+	info->strategy_registered = true;
+	info->charge_if_ops = g_strategy_buckchg_if_ops;
+	info->charge_if_ops.data = info;
+	ret = mca_charge_if_ops_register(&info->charge_if_ops);
+	if (ret)
+		goto fail;
+	info->charge_if_registered = true;
+	smartchg_ops.data = info;
+	ret = mca_smartchg_if_ops_register(&smartchg_ops);
+	if (ret)
+		goto fail;
+	info->smartchg_registered = true;
+	info->thermal_board_nb.notifier_call = strategy_buckchg_thermal_notifier_cb;
+	ret = mca_event_block_notify_register(MCA_EVENT_TYPE_THERMAL_TEMP, &info->thermal_board_nb);
+	if (ret)
+		goto fail;
+	info->thermal_registered = true;
 	info->panel_nb.notifier_call = strategy_buckchg_panel_notifier_cb;
-	mca_event_block_notify_register(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
-
-	ret = platform_class_buckchg_ops_get_online(MAIN_BUCK_CHARGER, &online);
-	if (!ret && online) {
-		mca_log_info("avoid missing first usb connect event\n");
-		mca_event_block_notify(MCA_EVENT_TYPE_CHARGER_CONNECT,
-				       MCA_EVENT_USB_CONNECT, NULL);
-	}
-
-	g_buckchg_info = info;
-	mca_log_err("androidboot.mode=%d\n", mca_log_get_charge_boot_mode());
-
+	ret = mca_event_block_notify_register(MCA_EVENT_TYPE_PANEL, &info->panel_nb);
+	if (ret)
+		goto fail;
+	info->panel_registered = true;
 	info->strategy_init_done = 1;
-	mca_log_err("probe success\n");
+	ret = platform_class_buckchg_ops_get_online(MAIN_BUCK_CHARGER, &online);
+	if (!ret && online)
+		mca_event_block_notify(MCA_EVENT_TYPE_CHARGER_CONNECT, MCA_EVENT_USB_CONNECT, NULL);
 	return 0;
+fail:
+	strategy_buckchg_stop(info);
+	return ret;
 }
 
 static void strategy_buckchg_class_remove(struct platform_device *pdev)
 {
+	strategy_buckchg_stop(platform_get_drvdata(pdev));
 }
 
 static void strategy_buckchg_class_shutdown(struct platform_device *pdev)
 {
+	strategy_buckchg_stop(platform_get_drvdata(pdev));
 }
 
 static const struct of_device_id match_table[] = {

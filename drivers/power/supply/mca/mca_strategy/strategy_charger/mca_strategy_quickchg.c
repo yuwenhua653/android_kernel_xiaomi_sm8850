@@ -3682,7 +3682,7 @@ static int mca_quick_charge_process_event(int event, int value, void *data)
 	struct mca_quick_charge_info *info = data;
 	int ret;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("event: %d, value: %d\n", event, value);
@@ -3886,7 +3886,7 @@ static int mca_quick_charge_get_status(int status, void *value, void *data)
 	int *cur_val = (int *)value;
 	int last_volt_stage = -1;
 
-	if (!info)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	switch (status) {
@@ -4324,53 +4324,63 @@ static int mca_quick_charge_parse_batt_info(struct mca_quick_charge_info *info,
 					    int mode)
 {
 	struct device_node *node = info->dev->of_node;
-	int array_len, row, col, i, ret;
+	int array_len, col, i, ret;
+	struct device_node *global_node = NULL;
 	int batt_role = 0;
 	const char *tmp_string = NULL;
 	const char *main_cell_name = NULL;
 	const char *slave_cell_name = NULL;
 	const struct mca_hwid *hwid = mca_get_hwid_info();
-	char *battpara[] = { "batt_para", "base_flip_para" };
+	const char * const battpara[] = { "batt_para", "base_flip_para" };
+
+	mode = !!mode;
 
 	mca_quick_charge_diag_context(info, hwid ? hwid->country_version : -1,
 			hwid && info->has_gbl_batt_para &&
 			hwid->country_version != CountryCN, mode);
 	if (hwid && info->has_gbl_batt_para &&
-	    hwid->country_version != CountryCN)
-		node = of_find_node_by_name(NULL,
-					    "mca_quick_charge_batt_para_gbl");
+	    hwid->country_version != CountryCN) {
+		global_node = of_find_node_by_name(NULL,
+				"mca_quick_charge_batt_para_gbl");
+		node = global_node;
+	}
 
 	if (!node) {
 		mca_quick_charge_diag_note(info, "battery_node", -ENOENT);
 		mca_log_err("node in null\n");
-		return -1;
+		ret = -ENOENT;
+		goto out;
 	}
 
 	array_len = mca_parse_dts_count_strings(node, battpara[mode],
 						BATT_PARA_MAX_GROUP,
 						MCA_QUICK_CHG_BATT_PARA_MAX);
-	if (array_len < 0) {
+	if (array_len <= 0 || array_len % MCA_QUICK_CHG_BATT_PARA_MAX ||
+	    array_len > BATT_PARA_MAX_GROUP * MCA_QUICK_CHG_BATT_PARA_MAX) {
 		mca_quick_charge_diag_note(info, "battery_count", array_len);
 		mca_log_err("parse batt_para failed\n");
-		return -1;
+		ret = array_len < 0 ? array_len : -EINVAL;
+		goto out;
 	}
 
 	ret = platform_fg_ops_get_batt_cell_info(FG_IC_MASTER, &main_cell_name);
 	mca_quick_charge_diag_cell(info, main_cell_name);
-	if (!main_cell_name) {
+	if (ret || !main_cell_name) {
 		mca_quick_charge_diag_note(info, "main_cell", ret ? ret : -ENOENT);
 		mca_log_err("get main cell name fail\n");
-		return -EINVAL;
+		ret = !ret || ret == -ENODEV ? -EPROBE_DEFER : ret;
+		goto out;
 	}
 	main_cell_name = mca_quick_charge_check_model_name(main_cell_name);
 	mca_quick_charge_diag_cell(info, main_cell_name);
 	if (info->batt_type > MCA_BATTERY_TYPE_SINGLE_NUM_MAX) {
 		ret = platform_fg_ops_get_batt_cell_info(FG_IC_SLAVE,
 						       &slave_cell_name);
-		if (!slave_cell_name) {
+		if (ret || !slave_cell_name) {
 			mca_quick_charge_diag_note(info, "slave_cell", ret ? ret : -ENOENT);
 			mca_log_err("get slave cell name fail\n");
-			return -EINVAL;
+			ret = !ret || ret == -ENODEV ? -EPROBE_DEFER : ret;
+			goto out;
 		}
 		mca_log_info("slave_cell_name %s\n", slave_cell_name);
 	}
@@ -4379,17 +4389,18 @@ static int mca_quick_charge_parse_batt_info(struct mca_quick_charge_info *info,
 					       &tmp_string);
 		if (ret) {
 			mca_quick_charge_diag_note(info, "battery_string", ret);
-			return -1;
+			goto out;
 		}
 
-		row = i / MCA_QUICK_CHG_BATT_PARA_MAX;
 		col = i % MCA_QUICK_CHG_BATT_PARA_MAX;
 		switch (col) {
 		case MCA_QUICK_CHG_BATT_ROLE:
 			ret = kstrtoint(tmp_string, 10, &batt_role);
-			if (ret) {
+			if (ret || batt_role < FG_IC_MASTER) {
+				if (!ret)
+					ret = -EINVAL;
 				mca_quick_charge_diag_note(info, "battery_role", ret);
-				return -1;
+				goto out;
 			}
 			if (batt_role > FG_IC_SLAVE)
 				i += 2;
@@ -4406,27 +4417,27 @@ static int mca_quick_charge_parse_batt_info(struct mca_quick_charge_info *info,
 			break;
 		case MCA_QUICK_CHG_TEMP_PARA_NAME:
 			mca_quick_charge_diag_table(info, tmp_string);
-			if (mca_quick_charge_parse_temp_para(
-				    node, batt_role, tmp_string, info, mode))
-				return -1;
+			ret = mca_quick_charge_parse_temp_para(
+				node, batt_role, tmp_string, info, mode);
+			if (ret)
+				goto out;
 			break;
 		default:
 			break;
 		}
 	}
 
-	if (!info->batt_para[FG_IC_MASTER].temp_info) {
+	if (!(mode ? info->base_flip_para[FG_IC_MASTER].temp_info :
+		     info->batt_para[FG_IC_MASTER].temp_info)) {
 		mca_quick_charge_diag_note(info, "battery_table_match", -ENOENT);
 		mca_log_err("parse master batt para failed\n");
-		return -1;
+		ret = -ENOENT;
+		goto out;
 	}
-
-	// if (!info->batt_para[FG_IC_SLAVE].temp_info &&
-	// 	info->batt_type > MCA_BATTERY_TYPE_SINGLE_NUM_MAX) {
-	// 	mca_log_err("parse slave batt para failed\n");
-	// 	return -1;
-	// }
-	return 0;
+	ret = 0;
+out:
+	of_node_put(global_node);
+	return ret;
 }
 
 static const int batt_para_cc_thr_list[] = { 0, 50, 100, 150, 300, 800 };
@@ -4890,6 +4901,8 @@ static int mca_quick_charge_parse_dt(struct mca_quick_charge_info *info)
 	/* charge para */
 	mca_quick_charge_parse_vstep_para(info);
 	ret = mca_quick_charge_parse_batt_info(info, 0);
+	if (ret)
+		return ret;
 	if (info->support_base_flip) {
 		mca_log_err("parse mode for paraller batt\n");
 		ret = mca_quick_charge_parse_batt_info(info, info->batt_type);
@@ -5247,7 +5260,7 @@ static int mca_quick_charge_div1_single_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("target thermal effective_result :%d\n", effective_result);
@@ -5263,7 +5276,7 @@ static int mca_quick_charge_div1_multi_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("target thermal effective_result :%d\n", effective_result);
@@ -5279,7 +5292,7 @@ static int mca_quick_charge_div2_single_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("target thermal effective_result :%d\n", effective_result);
@@ -5295,7 +5308,7 @@ static int mca_quick_charge_div2_multi_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("target thermal effective_result :%d\n", effective_result);
@@ -5311,7 +5324,7 @@ static int mca_quick_charge_div4_single_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("target thermal effective_result :%d\n", effective_result);
@@ -5327,7 +5340,7 @@ static int mca_quick_charge_div4_multi_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("target thermal effective_result :%d\n", effective_result);
@@ -5343,7 +5356,7 @@ static int mca_quick_charge_chg_disable_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->force_stop = effective_result;
@@ -5361,7 +5374,7 @@ static int mca_quick_charge_chg_en_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->sysfs_data.chg_enable = effective_result;
@@ -5379,7 +5392,7 @@ mca_quick_charge_single_chg_cur_voter_cb(struct mca_votable *votable,
 	struct mca_quick_charge_info *info = data;
 	int i;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->sysfs_data.chg_limit[MCA_QUICK_CHG_CH_SINGLE] = effective_result;
@@ -5401,7 +5414,7 @@ static int mca_quick_charge_thermal_flip_voter_cb(struct mca_votable *votable,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_info("target thermal flip effective_result :%d\n",
@@ -5419,7 +5432,7 @@ static int mca_quick_charge_multi_chg_cur_voter_cb(struct mca_votable *votable,
 	struct mca_quick_charge_info *info = data;
 	int i;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->sysfs_data.chg_limit[MCA_QUICK_CHG_CH_MULTI] = effective_result;
@@ -5438,73 +5451,73 @@ static int mca_quick_charge_create_voter(struct mca_quick_charge_info *info)
 {
 	struct mca_votable *smartchg_ichg_voter = NULL;
 
-	info->voter[0] = mca_create_votable(
+	info->voter[0] = mca_create_owned_votable(
 		"div1_single", MCA_VOTE_MIN,
 		mca_quick_charge_div1_single_voter_cb, 0, info);
 	if (IS_ERR(info->voter[0]))
-		goto error;
-	info->voter[1] = mca_create_votable(
+		return PTR_ERR(info->voter[0]);
+	info->voter[1] = mca_create_owned_votable(
 		"div1_multi", MCA_VOTE_MIN,
 		mca_quick_charge_div1_multi_voter_cb, 0, info);
 	if (IS_ERR(info->voter[1]))
-		goto error;
-	info->voter[2] = mca_create_votable(
+		return PTR_ERR(info->voter[1]);
+	info->voter[2] = mca_create_owned_votable(
 		"div2_single", MCA_VOTE_MIN,
 		mca_quick_charge_div2_single_voter_cb, 0, info);
 	if (IS_ERR(info->voter[2]))
-		goto error;
-	info->voter[3] = mca_create_votable(
+		return PTR_ERR(info->voter[2]);
+	info->voter[3] = mca_create_owned_votable(
 		"div2_multi", MCA_VOTE_MIN,
 		mca_quick_charge_div2_multi_voter_cb, 0, info);
 	if (IS_ERR(info->voter[3]))
-		goto error;
-	info->voter[4] = mca_create_votable(
+		return PTR_ERR(info->voter[3]);
+	info->voter[4] = mca_create_owned_votable(
 		"div4_single", MCA_VOTE_MIN,
 		mca_quick_charge_div4_single_voter_cb, 0, info);
 	if (IS_ERR(info->voter[4]))
-		goto error;
-	info->voter[5] = mca_create_votable(
+		return PTR_ERR(info->voter[4]);
+	info->voter[5] = mca_create_owned_votable(
 		"div4_multi", MCA_VOTE_MIN,
 		mca_quick_charge_div4_multi_voter_cb, 0, info);
 	if (IS_ERR(info->voter[5]))
-		goto error;
-	info->thermal_flip_voter = mca_create_votable(
+		return PTR_ERR(info->voter[5]);
+	info->thermal_flip_voter = mca_create_owned_votable(
 		"thermal_flip", MCA_VOTE_MIN,
 		mca_quick_charge_thermal_flip_voter_cb, 0, info);
 	if (IS_ERR(info->thermal_flip_voter))
-		goto error;
+		return PTR_ERR(info->thermal_flip_voter);
 
-	info->chg_disable_voter = mca_create_votable(
+	info->chg_disable_voter = mca_create_owned_votable(
 		"quick_chg_disable", MCA_VOTE_OR,
 		mca_quick_charge_chg_disable_voter_cb, 0, info);
 	if (IS_ERR(info->chg_disable_voter))
-		goto error;
+		return PTR_ERR(info->chg_disable_voter);
 	info->chg_en_voter =
-		mca_create_votable("quick_chg_en", MCA_VOTE_AND,
+		mca_create_owned_votable("quick_chg_en", MCA_VOTE_AND,
 				   mca_quick_charge_chg_en_voter_cb, 1, info);
 	if (IS_ERR(info->chg_en_voter))
-		goto error;
-	info->single_chg_cur_voter = mca_create_votable(
+		return PTR_ERR(info->chg_en_voter);
+	info->single_chg_cur_voter = mca_create_owned_votable(
 		"single_chg_cur", MCA_VOTE_MIN,
 		mca_quick_charge_single_chg_cur_voter_cb, 0, info);
 	if (IS_ERR(info->single_chg_cur_voter))
-		goto error;
-	info->multi_chg_cur_voter = mca_create_votable(
+		return PTR_ERR(info->single_chg_cur_voter);
+	info->multi_chg_cur_voter = mca_create_owned_votable(
 		"multi_chg_cur", MCA_VOTE_MIN,
 		mca_quick_charge_multi_chg_cur_voter_cb, 0, info);
 	if (IS_ERR(info->multi_chg_cur_voter))
-		goto error;
+		return PTR_ERR(info->multi_chg_cur_voter);
 	smartchg_ichg_voter = mca_find_votable("smartchg_delta_ichg");
-	if (smartchg_ichg_voter)
-		info->smartchg_data.delta_ichg =
-			mca_get_effective_result(smartchg_ichg_voter);
+	if (smartchg_ichg_voter) {
+		int delta = mca_get_effective_result(smartchg_ichg_voter);
+
+		if (delta >= 0)
+			info->smartchg_data.delta_ichg = delta;
+	}
 	mca_log_info("create voter success\n");
 
 	return 0;
 
-error:
-	mca_log_err("init voter failed\n");
-	return -1;
 }
 
 static int strategy_quickchg_if_set_chg_cur(const char *user, char *value,
@@ -5513,7 +5526,7 @@ static int strategy_quickchg_if_set_chg_cur(const char *user, char *value,
 	int single_cur = 0, multi_cur = 0;
 	struct mca_quick_charge_info *info = data;
 
-	if (!user || !value || !data)
+	if (!user || !value || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (sscanf(value, "%d#%d", &single_cur, &multi_cur) != 2)
@@ -5532,7 +5545,7 @@ static int strategy_quickchg_if_get_chg_cur(char *buf, void *data)
 	int single_cur, multi_cur;
 	struct mca_quick_charge_info *info = data;
 
-	if (!buf || !data)
+	if (!buf || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	single_client = mca_get_effective_client(info->single_chg_cur_voter);
@@ -5557,7 +5570,7 @@ static int strategy_quickchg_if_set_chg_en(const char *user, unsigned int value,
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!user || !data)
+	if (!user || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	if (value)
@@ -5574,7 +5587,7 @@ static int strategy_quickchg_if_get_chg_en(char *buf, void *data)
 	int value;
 	struct mca_quick_charge_info *info = data;
 
-	if (!buf || !data)
+	if (!buf || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	client_str = mca_get_effective_client(info->chg_en_voter);
@@ -5612,7 +5625,7 @@ static int strategy_quickchg_if_get_input_suspend(char *buf, void *data)
 	int value;
 	struct mca_quick_charge_info *info = data;
 
-	if (!buf || !data)
+	if (!buf || !data || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	client_str = mca_get_effective_client(info->chg_en_voter);
@@ -5699,7 +5712,7 @@ static int strategy_quickchg_update_cp_fsw(struct mca_quick_charge_info *info,
 	return ret;
 }
 
-static struct mca_charge_if_ops g_strategy_quickchg_if_ops = {
+static const struct mca_charge_if_ops g_strategy_quickchg_if_ops = {
 	.type_name = "quick",
 	.set_charge_enable = strategy_quickchg_if_set_chg_en,
 	.get_charge_enable = strategy_quickchg_if_get_chg_en,
@@ -5715,7 +5728,7 @@ static int strategy_quickchg_smartchg_delta_fv_callback(void *data,
 	struct mca_quick_charge_info *info =
 		(struct mca_quick_charge_info *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_err("effective_result: %d\n", effective_result);
@@ -5729,7 +5742,7 @@ static int strategy_quickchg_smartchg_delta_ichg_callback(void *data,
 	struct mca_quick_charge_info *info =
 		(struct mca_quick_charge_info *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_err("effective_result: %d\n", effective_result);
@@ -5741,7 +5754,7 @@ static int strategy_quickchg_smartchg_set_fcc_callback(void *data, int val)
 {
 	struct mca_quick_charge_info *info = data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->smartchg_data.fcc = val;
@@ -5755,7 +5768,7 @@ static int strategy_quickchg_smartchg_soc_limit_callback(void *data,
 	struct mca_quick_charge_info *info =
 		(struct mca_quick_charge_info *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	mca_log_err("effective_result: %d\n", effective_result);
@@ -5831,7 +5844,7 @@ static int strategy_quickchg_smartchg_update_baa_para(void *data,
 		curve[MCA_QUICK_CHARGE_MAX_VOLT_STEP_SIZE] = { 0 };
 	int offset = 0;
 
-	if (!data || !baa_para) {
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping) || !baa_para) {
 		mca_log_err("data or baa_para is NULL\n");
 		return -1;
 	}
@@ -5874,7 +5887,7 @@ static int strategy_quickchg_smartchg_pwr_boost_sts_callback(void *data,
 	struct mca_quick_charge_info *info =
 		(struct mca_quick_charge_info *)data;
 
-	if (!data)
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return -1;
 
 	info->smartchg_data.pwr_boost_state = enable;
@@ -5882,7 +5895,7 @@ static int strategy_quickchg_smartchg_pwr_boost_sts_callback(void *data,
 	return 0;
 }
 
-static struct mca_smartchg_if_ops g_quickchg_smartchg_if_ops = {
+static const struct mca_smartchg_if_ops g_quickchg_smartchg_if_ops = {
 	.type = MCA_SMARTCHG_IF_CHG_TYPE_QC,
 	.data = NULL,
 	.set_delta_fv = strategy_quickchg_smartchg_delta_fv_callback,
@@ -5893,10 +5906,93 @@ static struct mca_smartchg_if_ops g_quickchg_smartchg_if_ops = {
 	.set_pwr_boost_sts = strategy_quickchg_smartchg_pwr_boost_sts_callback,
 };
 
+/* Call only before publication or after all readers/work have drained. */
+static void mca_quick_charge_free_batt_para(
+	struct mca_quick_charge_batt_para_info *para)
+{
+	int i;
+
+	for (i = 0; i < para->temp_para_size; i++) {
+		kfree(para->temp_info[i].volt_info.stage_para);
+		kfree(para->temp_info[i].volt_info.volt_para);
+		kfree(para->temp_info[i].volt_ffc_info.stage_para);
+		kfree(para->temp_info[i].volt_ffc_info.volt_para);
+	}
+	kfree(para->temp_info);
+	para->temp_info = NULL;
+	para->temp_para_size = 0;
+}
+
+static void mca_quick_charge_stop(struct mca_quick_charge_info *info)
+{
+	bool was_ready;
+	int ret;
+
+	if (!info || READ_ONCE(info->stopping))
+		return;
+	WRITE_ONCE(info->stopping, true);
+	was_ready = info->ready;
+	WRITE_ONCE(info->ready, false);
+	if (info->reboot_registered) {
+		unregister_reboot_notifier(&info->shutdown_notifier);
+		info->reboot_registered = false;
+	}
+	if (info->sysfs_created) {
+		mca_quick_charge_remove_group(info->dev);
+		info->sysfs_created = false;
+	}
+	if (info->strategy_registered) {
+		mca_strategy_ops_unregister(STRATEGY_FUNC_TYPE_QUICK_CHARGE, info);
+		info->strategy_registered = false;
+	}
+	if (info->charge_if_registered) {
+		mca_charge_if_ops_unregister(&info->charge_if_ops);
+		info->charge_if_registered = false;
+	}
+	if (info->smartchg_registered) {
+		mca_smartchg_if_ops_unregister(MCA_SMARTCHG_IF_CHG_TYPE_QC, info);
+		info->smartchg_registered = false;
+	}
+	for (int i = 0; i < ARRAY_SIZE(info->voter); i++)
+		if (!IS_ERR_OR_NULL(info->voter[i]))
+			mca_detach_owned_votable(info->voter[i], info);
+	if (!IS_ERR_OR_NULL(info->thermal_flip_voter))
+		mca_detach_owned_votable(info->thermal_flip_voter, info);
+	if (!IS_ERR_OR_NULL(info->chg_disable_voter))
+		mca_detach_owned_votable(info->chg_disable_voter, info);
+	if (!IS_ERR_OR_NULL(info->chg_en_voter))
+		mca_detach_owned_votable(info->chg_en_voter, info);
+	if (!IS_ERR_OR_NULL(info->single_chg_cur_voter))
+		mca_detach_owned_votable(info->single_chg_cur_voter, info);
+	if (!IS_ERR_OR_NULL(info->multi_chg_cur_voter))
+		mca_detach_owned_votable(info->multi_chg_cur_voter, info);
+	disable_delayed_work_sync(&info->monitor_work);
+	disable_delayed_work_sync(&info->pps_ptf_work);
+	disable_delayed_work_sync(&info->vfc_work);
+	for (int i = 0; i < ARRAY_SIZE(info->batt_para); i++)
+		mca_quick_charge_free_batt_para(&info->batt_para[i]);
+	for (int i = 0; i < ARRAY_SIZE(info->base_flip_para); i++)
+		mca_quick_charge_free_batt_para(&info->base_flip_para[i]);
+	/* Stop the charge pumps after dispatchers and workers are drained.
+	 * Do not clear borrowed thermal/JEITA limits or enable a fallback path.
+	 */
+	if (was_ready) {
+		ret = platform_class_cp_set_charging_enable(CP_ROLE_MASTER, false);
+		if (ret)
+			mca_log_err("master CP stop failed: %d\n", ret);
+		if (info->cp_type == MCA_CP_TYPE_PARALLEL) {
+			ret = platform_class_cp_set_charging_enable(CP_ROLE_SLAVE, false);
+			if (ret)
+				mca_log_err("slave CP stop failed: %d\n", ret);
+		}
+	}
+}
+
 static int mca_quick_charge_probe(struct platform_device *pdev)
 {
 	int ret = 0, master_probe, slave_probe;
 	struct mca_quick_charge_info *info;
+	struct mca_smartchg_if_ops smartchg_ops = g_quickchg_smartchg_if_ops;
 
 	mca_quick_charge_diag_begin();
 	mca_log_info("probe begin\n");
@@ -5946,54 +6042,71 @@ static int mca_quick_charge_probe(struct platform_device *pdev)
 		return mca_quick_charge_diag_finish("voter_term_volt",
 						     -EPROBE_DEFER, -ENOENT);
 	}
-	info->flip_charge_curr_voter = mca_find_votable("flip_charge_curr");
-	if (!info->flip_charge_curr_voter) {
-		mca_log_info("get flip_charge_curr voter fail, wait for it\n");
-		return mca_quick_charge_diag_finish("voter_flip_charge_curr",
-						     -EPROBE_DEFER, -ENOENT);
-	}
-
 	info->dev = &pdev->dev;
 	platform_set_drvdata(pdev, info);
-	mca_quick_charge_diag_attach(info);
-	ret = mca_quick_charge_parse_dt(info);
-	if (ret) {
-		mca_log_err("parst dts failed, ret: %d\n", ret);
-		return mca_quick_charge_diag_finish(NULL,
-				ret != -1 ? -EPROBE_DEFER : ret, ret);
-	}
-	ret = mca_quick_charge_create_voter(info);
-	if (ret)
-		return mca_quick_charge_diag_finish("create_voter", -EPROBE_DEFER, ret);
-	mca_quick_charge_init_data(info);
-	mca_quick_charge_create_group(info->dev);
 	mutex_init(&info->data_lock);
-
 	INIT_DELAYED_WORK(&info->monitor_work, mca_quick_charge_monitor_work);
 	INIT_DELAYED_WORK(&info->pps_ptf_work, mca_quick_charge_pps_ptf_work);
 	INIT_DELAYED_WORK(&info->vfc_work, mca_quick_charge_vfc_work);
-
-	(void)mca_strategy_ops_register(STRATEGY_FUNC_TYPE_QUICK_CHARGE,
-					mca_quick_charge_process_event,
-					mca_quick_charge_get_status, NULL,
-					info);
-	g_strategy_quickchg_if_ops.data = info;
-	mca_charge_if_ops_register(&g_strategy_quickchg_if_ops);
-	g_quickchg_smartchg_if_ops.data = info;
-	mca_smartchg_if_ops_register(&g_quickchg_smartchg_if_ops);
+	mca_quick_charge_diag_attach(info);
+	ret = mca_quick_charge_parse_dt(info);
+	if (ret) {
+		mca_quick_charge_diag_finish(NULL, ret, ret);
+		goto fail;
+	}
+	if (info->support_base_flip) {
+		info->flip_charge_curr_voter = mca_find_votable("flip_charge_curr");
+		if (!info->flip_charge_curr_voter) {
+			ret = mca_quick_charge_diag_finish("voter_flip_charge_curr",
+				-EPROBE_DEFER, -ENOENT);
+			goto fail;
+		}
+	}
+	mca_quick_charge_init_data(info);
+	ret = mca_quick_charge_create_voter(info);
+	if (ret)
+		goto fail;
+	WRITE_ONCE(info->ready, true);
+	ret = mca_quick_charge_create_group(info->dev);
+	if (ret)
+		goto fail;
+	info->sysfs_created = true;
+	ret = mca_strategy_ops_register(STRATEGY_FUNC_TYPE_QUICK_CHARGE,
+		mca_quick_charge_process_event, mca_quick_charge_get_status, NULL, info);
+	if (ret)
+		goto fail;
+	info->strategy_registered = true;
+	info->charge_if_ops = g_strategy_quickchg_if_ops;
+	info->charge_if_ops.data = info;
+	ret = mca_charge_if_ops_register(&info->charge_if_ops);
+	if (ret)
+		goto fail;
+	info->charge_if_registered = true;
+	smartchg_ops.data = info;
+	ret = mca_smartchg_if_ops_register(&smartchg_ops);
+	if (ret)
+		goto fail;
+	info->smartchg_registered = true;
 	info->shutdown_notifier.notifier_call = mca_quick_charge_shutdown;
 	info->shutdown_notifier.priority = 255;
 	ret = register_reboot_notifier(&info->shutdown_notifier);
-	if (ret < 0)
-		mca_log_err("register reboot notify failed\n");
-	mca_log_err("probe end\n");
-
+	if (ret)
+		goto fail;
+	info->reboot_registered = true;
 	return mca_quick_charge_diag_finish("bound", 0, 0);
+fail:
+	mca_quick_charge_stop(info);
+	return mca_quick_charge_diag_finish("publish", ret, ret);
 }
 
 static void mca_quick_charge_remove(struct platform_device *pdev)
 {
-	mca_quick_charge_remove_group(&pdev->dev);
+	mca_quick_charge_stop(platform_get_drvdata(pdev));
+}
+
+static void mca_quick_charge_platform_shutdown(struct platform_device *pdev)
+{
+	mca_quick_charge_stop(platform_get_drvdata(pdev));
 }
 
 static const struct of_device_id mca_quick_charge_info_of_match[] = {
@@ -6011,6 +6124,7 @@ static struct platform_driver mca_quick_charge_info_driver = {
 	},
 	.probe = mca_quick_charge_probe,
 	.remove = mca_quick_charge_remove,
+	.shutdown = mca_quick_charge_platform_shutdown,
 };
 
 static int __init mca_quick_charge_info_init(void)

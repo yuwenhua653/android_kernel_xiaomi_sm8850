@@ -2,6 +2,22 @@
 
 适用于国行 nezha 的 nazha 分支，底包 OS4.0.7.0.XPACNXM。以能开机、通信、拍摄、充电及正常待机为验收目标。
 
+## 2026-11-28：Buck、快充、温控提供者成组修复
+
+基于 `9561c19`，本轮连续处理三个提供者的初始化、发布、失败回退、remove/shutdown 和参数边界；不改变完整 MCA 策略的启用范围。以下条目更新上一节所列的 Buck/quickchg voter 和 thermal 生命周期缺口。
+
+- **Buck + quickchg 共 22 个自有 voter** 改为 owned API。中途创建失败会按设备身份解绑已创建对象，返回实际注册错误；旧消费者缓存的地址由公共 voter 层保留。所有自有 voter 回调拒绝未就绪/停止状态。charge interface 使用每设备 ops，smartchg 使用注册时复制的局部 ops，不再改写共享模板。
+- **成组注销与任务退出**：检查策略、charge interface、smartchg、通知链和 sysfs 的注册结果。退出先停止接入新请求、同步注销外部回调、解绑 voter，再逐一禁用并等待 Buck 的 9 个 / quickchg 的 3 个 delayed work，防止取消后被其它任务重新排队。Buck 最后尝试停充，quickchg 最后尝试关闭电荷泵；硬件失败会记录，不能据此宣称适配器已降压或硬件已停充。不清除已有 JEITA/温控限制，不主动开启替代通路。
+- **Nezha 的快充依赖**：只有 `support-base-flip` 才等待 `flip_charge_curr`，修复直板机等待折叠机 voter 的问题；缺少 smartchg_delta_ichg 时不把负错误码当电流调整量。电池表选择器将普通/折叠选择归一化，检查负角色、表长及实际所选表；FG 未就绪保留 deferred probe，I/O / 不支持 / 参数错误不再全部转为 deferred probe。普通表解析失败不会被下一张表成功覆盖，临时获取的全球 OF 节点在全部退出路径释放。当前持有的普通/折叠温度、电压、stage 表在读者和任务退出后释放，涵盖 probe 失败。
+- **thermal 全局入口** 使用 SRCU 等待访问者，重复/失败 probe 不得清除其它实例；cooling device、策略、smartchg、sysfs、日志和重试任务都有清理。移除函数内共享 static 温控状态，改为每设备状态。无线 voter 已就绪时仍继续等待缺失的有线 voter。
+- **温控参数边界**：无线档位先选值再检查，普通/折叠路径均拒绝负档位；cooling 最大档位不再多报一档，拒绝超过上限的 unsigned long 状态；有线/无线/折叠表错误会终止 probe，折叠表 max 与实际索引一致。缺少可选 `wired_sic_select` 不再阻塞不使用该功能的设备。
+
+验证：11 个 host 测试脚本通过，见 `mca-provider-validation-20261128.json`。新增实际 Buck/quickchg probe/stop 的逐阶段故障注入、22 个 voter 解绑、回调注销、迟到任务重排、重绑与参数释放计数；新增实际 thermal 全局入口的并发等待/失败 probe、cooling 和无线越界、供应者重试；新增实际快充电池表选择器的模式/角色、FG 错误、读取失败与 OF 引用释放。复测 owned voter、错误重试、JEITA、smartchg 注册层、charge interface；温控表用当前 DT pin 的 150 + 165 项检查。模型使用 host cc + ASan/UBSan，SRCU/workqueue/硬件使用桩，绝不是 ARM64 内核运行或硬件验收。显式计数验证所测参数分配的释放；不宣称通过 LeakSanitizer 或覆盖所有运行时分配。
+
+**仍阻塞完整充电策略启用的源码项**：smartchg 自有 voter / 全局对象 / cdev / mmap 生命周期；快充运行时电池表替换与 BAA 输入边界/并发；温控投票失败的完整传播与重试；JEITA、端口/电池保护、原厂事件边界和无线 SC96281 的完整执行链。quickchg 退出仍需核对适配器降压、FG fastcharge 及整条停充顺序。本轮没有把全部 MCA 提供者宣布为可卸载，也没有启用缺少保护链的快充。
+
+**其它基础功能仍待完成**：相机 OIS/actuator 私有 ABI、固件/停驻/供电协议及多摄；生产工具链的完整 ARM64/modpost、最终 DTB/DLKM/签名镜像；17U 触摸、相机、充电、基带、Wi-Fi、蓝牙及待机实测。本机没有新硬件日志，不能以 Myron/K90PM 的结果代替。此次只修改内核仓库；模块和设备树 pin 分别保持 `e1864d6`、`91998b3`。
+
 ## 2026-11-28：共享 voter 提供者解绑与 JEITA 实际退出路径
 
 基于 `5e37256`，本轮修复以下源码路径，仍不打开完整充电策略配置：

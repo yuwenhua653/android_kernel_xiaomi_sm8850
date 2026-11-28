@@ -20,6 +20,8 @@
 #ifndef __MCA_STRATEGY_BUCKCHG_H__
 #define __MCA_STRATEGY_BUCKCHG_H__
 
+#include <mca/common/mca_charge_interface.h>
+
 #define STATEGY_INPUT_DEFAULT_VALUE 100
 #define STATEGY_INPUT_5V_DEFAULT_VALUE 2000
 #define STATEGY_INPUT_9V_DEFAULT_VALUE 1600
@@ -125,6 +127,10 @@ struct mca_smartchg_data {
 };
 
 struct strategy_buckchg_dev {
+	bool ready, stopping;
+	bool strategy_registered, charge_if_registered, smartchg_registered;
+	bool panel_registered, thermal_registered;
+	struct mca_charge_if_ops charge_if_ops;
 	struct device *dev;
 	int strategy_init_done;
 	/* dt config */

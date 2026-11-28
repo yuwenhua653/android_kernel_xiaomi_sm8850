@@ -1,0 +1,173 @@
+{
+  "date": "2026-11-28",
+  "branch": "nazha",
+  "base_commit": "9561c1978cfdb7c3479347c817f8d578e608eaf4",
+  "tests": [
+    {
+      "test": "tools/test-mca-provider-batch.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "d5ed760eff5c4465541273d38110d496e07927fd1a829a8e63568fefea6e891d",
+      "output": [
+        "PASS: actual buck probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe",
+        "PASS: actual qc probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-mca-qc-battery-selection.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "21be05573505576bc0e9e41b52b2343210e0c74b3cd63624dca31ed4ed865da1",
+      "output": [
+        "PASS: actual QC battery selector, mode/role bounds, supplier errors, read failures, selected table and OF reference release"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-mca-thermal-lifetime.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "6cac23dea9b866acac535cb76865899e066d07a2b72a817f999578c2ca13cb32",
+      "output": [
+        "PASS: actual thermal SRCU drain, ownership, all probe failures, cooling/wireless bounds and wired supplier retry"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-nezha-thermal-format.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "551fe14899656ec531380cae44f05d56ee23562404b0c1ba3bc0c767d51b04af",
+      "output": [
+        "PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures, flip table bounds and unchanged error outputs"
+      ],
+      "fixture": "pinned DT 91998b30926ec6750803c45fbf25402268aa692e"
+    },
+    {
+      "test": "tools/test-mca-owned-voter.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "8e54c52530c474167ed90b9947a39fe44c034a2abc0c7ad1a12056cf4bd10117",
+      "output": [
+        "PASS: actual owned voter stable handles, callback drain, duplicate/legacy rejection, rebind, allocation failures and module cleanup"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-mca-voter-errors.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "82c30f5d837e86e7ecfc077b2b586fb965cbd60be90b9561e2cf249774c50ab8",
+      "output": [
+        "PASS: actual MCA voter callback retry, override/force error state, no-callback votes and invalid-type unlock"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-mca-jeita-lifetime.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "e50c3409b24bf7879dbf601c977b683d24a7ef20b0ba349182206a79df146d39",
+      "output": [
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe",
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-nezha-jeita-events.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "03febc0c045f941fd4fb565c13be3fd6ba92f0c9cc450b0574cf520b43de7702",
+      "output": [
+        "PASS: actual Nezha JEITA wired/wireless handover, repeated events, final disconnect and shared OSS DTPT event (no OEM ID alias)"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-nezha-jeita-parser.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "231ff8a7cb540e205ef52c6a7acf921d4b26d609d2afd66938895b5cc6e668bc",
+      "output": [
+        "PASS: JEITA table, 3 allocation failures, 28 read failures and malformed fields"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-mca-smartchg-registry.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "00846a9159c5c7845b4700da578679f9deac0efbae44b02f3b97f104808e4dc7",
+      "output": [
+        "PASS: actual smartchg copied registry, allocation failure, identity, eight dispatchers and concurrent unregister/cleanup drain model"
+      ],
+      "fixture": "built-in host models/fixtures"
+    },
+    {
+      "test": "tools/test-mca-charge-interface.py",
+      "result": "PASS",
+      "compiler": "host cc",
+      "test_sha256": "1bc8d15691fd4dc9b74b0728025152efcfea2584881caf56f69d09183c98a756",
+      "output": [
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)",
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)"
+      ],
+      "fixture": "built-in host models/fixtures"
+    }
+  ],
+  "source_files": [
+    {
+      "path": "android/nezha-native/module-gaps.md",
+      "sha256": "f12d8d53debe76e972029b1e6fa2c749caa316b2cd9d7670ccb28733952206f4"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/inc/mca_charger_thermal.h",
+      "sha256": "d0954818b2e1fa3047d73fe496d9612a20f151aa19f485f675b50b7ef4cfd24c"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/inc/mca_quick_charger.h",
+      "sha256": "f0edb3f4feb01e8c86dcc0d978d0bcb4cf1e743df86a4665016ea7c85de783ab"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/inc/mca_strategy_buckchg.h",
+      "sha256": "4f222aa747b38146214612588ee098cbfdb8e7f485260c8e2df5ec60972d6ea5"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_charger_thermal.c",
+      "sha256": "2a6464e00ec64c9d9e19fef1de9ceb59d3f273747f88ea8c670377e61dbeccc6"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_buckchg.c",
+      "sha256": "c12d0e2db0c4fcedabfe28ad94cca15b17469175e6ad68803f6c2649a8366929"
+    },
+    {
+      "path": "drivers/power/supply/mca/mca_strategy/strategy_charger/mca_strategy_quickchg.c",
+      "sha256": "650cf4420bc3a5d32c6777f20656fc8894d72cb290f91a425b423cc4d0cc3724"
+    },
+    {
+      "path": "tools/test-mca-provider-batch.py",
+      "sha256": "d5ed760eff5c4465541273d38110d496e07927fd1a829a8e63568fefea6e891d"
+    },
+    {
+      "path": "tools/test-mca-qc-battery-selection.py",
+      "sha256": "21be05573505576bc0e9e41b52b2343210e0c74b3cd63624dca31ed4ed865da1"
+    },
+    {
+      "path": "tools/test-mca-thermal-lifetime.py",
+      "sha256": "6cac23dea9b866acac535cb76865899e066d07a2b72a817f999578c2ca13cb32"
+    },
+    {
+      "path": "tools/test-nezha-thermal-format.py",
+      "sha256": "551fe14899656ec531380cae44f05d56ee23562404b0c1ba3bc0c767d51b04af"
+    }
+  ],
+  "limits": [
+    "Host cc / ASan / UBSan only; no ARM64 Kbuild or modpost in this batch.",
+    "SRCU, workqueues, OF and hardware calls are host models.",
+    "No device charging, wireless, camera or boot validation.",
+    "LeakSanitizer is not claimed; explicit allocation counters cover the tested tables/registries only.",
+    "Full charging policy remains disabled; module/DT pins unchanged."
+  ]
+}
