@@ -760,7 +760,14 @@ struct sc96281 {
 	int hall_int_irq;
 	int hall_n_gpio;
 	int hall_n_irq;
+	struct power_supply *psy;
 	bool ready;
+	bool fod_valid;
+	bool fod_fault;
+	bool tx_requested;
+	unsigned int irq_retries;
+	struct mutex stop_lock;
+	struct workqueue_struct *workqueue;
 	//pinctrl
 	struct pinctrl *sc96281_pinctrl;
 	struct pinctrl_state *pinctrl_stat;

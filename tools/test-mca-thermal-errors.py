@@ -47,10 +47,10 @@ struct device_attribute {struct {const char *name;} attr;};
 struct mca_sysfs_attr_info {int sysfs_attr_name;};
 struct mca_votable {int id;};
 ''' +h+r'''
-static int calls,fail_at,fail_at2,wireless_calls,clears,last_value[20],last_enable[20],missing_wired,missing_wls;
-static struct mca_votable voter[20],flip={.id=0};
+static int calls,fail_at,fail_at2,wireless_calls,clears,last_value[21],last_enable[21],missing_wired,missing_wls;
+static struct mca_votable voter[21],flip={.id=0};
 static int mca_vote(struct mca_votable *v,const char *client,bool en,int value) {
- (void)client;assert(v&&v->id>=0&&v->id<20);calls++;wireless_calls+=v->id>=10;clears+=!en;
+ (void)client;assert(v&&v->id>=0&&v->id<21);calls++;wireless_calls+=v->id>=10;clears+=!en;
  if(calls==fail_at)return -EIO;if(calls==fail_at2)return -ETIMEDOUT;
  last_value[v->id]=value;last_enable[v->id]=en;return 0;
 }
@@ -125,6 +125,13 @@ int main(void) {
  setup(&i);reset_calls(1);assert(mca_charger_thermal_wls_super_sts_callback(&i,1)==-EIO&&i.init_voter_work.pending);
  setup(&i);reset_calls(1);assert(mca_charger_thermal_flip_handle_limit(&i,&i.wired_ctrl_info,i.wired_flip_thermal_data,&flip)==-EIO&&i.init_voter_work.pending);
  setup(&i);i.stopping=true;assert(mca_charger_thermal_handle_limit(&i,&i.wired_ctrl_info,i.wired_thermal_data,i.wired_voter)==-ENODEV&&!calls);replay(&i);assert(!calls&&!i.init_voter_work.pending);
+ setup(&i);i.wireless_car_column=true;i.wireless_voter[10]=&voter[20];voter[20].id=20;i.wireless_thermal_data[0].wireless_xiaomi_car=440;
+ assert(!mca_wireless_charger_thermal_handle_limit(&i,&i.wireless_ctrl_info,i.wireless_thermal_data,i.wireless_voter));
+ assert(last_enable[20]&&last_value[20]==440);
+ i.wireless_ctrl_info.limit_level=0;i.wireless_ctrl_info.chg_curr=330;reset_calls(0);
+ assert(!mca_wireless_charger_thermal_handle_limit(&i,&i.wireless_ctrl_info,i.wireless_thermal_data,i.wireless_voter)&&last_value[20]==330);
+ reset_calls(11);assert(mca_charger_thermal_process_event(MCA_EVENT_WIRELESS_DISCONNECT,0,&i)==-EIO&&i.wireless_clear_pending);
+ reset_calls(0);replay(&i);assert(!i.wireless_clear_pending&&!last_enable[20]);
  puts("PASS: actual thermal 30 apply failure points, first errors, retry/new requests, release retry, independent suppliers, sysfs/cooling bounds and disconnect cleanup");
 }
 '''

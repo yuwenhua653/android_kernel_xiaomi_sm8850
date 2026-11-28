@@ -399,11 +399,13 @@ static int mca_debugfs_template_show(struct seq_file *s, void *d)
 		return -ENOMEM;
 
 	ret = pattr->attr_info->show(pattr, buf);
-	seq_write(s, buf, ret);
+	if (ret > PAGE_SIZE)
+		ret = -EOVERFLOW;
+	if (ret >= 0)
+		ret = seq_write(s, buf, ret);
 	kfree(buf);
 
-	pr_err("show:%s ret=%d\n", pattr->attr_info->file, ret);
-	return 0;
+	return ret;
 }
 
 static ssize_t mca_debugfs_template_write(struct file *file,
@@ -508,6 +510,57 @@ int mca_debugfs_create_group(const char *dir_name,
 	return 0;
 }
 EXPORT_SYMBOL(mca_debugfs_create_group);
+
+struct mca_debugfs_group {
+	struct dentry *dir;
+	struct mca_debugfs_attr_data attrs[];
+};
+
+void mca_debugfs_remove_owned_group(struct mca_debugfs_group *group)
+{
+	if (!group)
+		return;
+	debugfs_remove_recursive(group->dir);
+	kfree(group);
+}
+EXPORT_SYMBOL_GPL(mca_debugfs_remove_owned_group);
+
+int mca_debugfs_create_owned_group(const char *name, struct mca_debugfs_attr_info *attrs,
+			int count, void *data, struct mca_debugfs_group **owner)
+{
+	struct mca_debugfs_group *group;
+	struct dentry *file;
+	int i, ret;
+
+	if (!owner || !name || !attrs || count <= 0)
+		return -EINVAL;
+	*owner = NULL;
+	if (IS_ERR_OR_NULL(g_mca_dbg_dir))
+		return -ENODEV;
+	group = kzalloc(struct_size(group, attrs, count), GFP_KERNEL);
+	if (!group)
+		return -ENOMEM;
+	group->dir = debugfs_create_dir(name, g_mca_dbg_dir);
+	if (IS_ERR(group->dir)) {
+		ret = PTR_ERR(group->dir);
+		kfree(group);
+		return ret;
+	}
+	for (i = 0; i < count; i++) {
+		group->attrs[i].attr_info = &attrs[i];
+		group->attrs[i].private = data;
+		file = debugfs_create_file(attrs[i].file, attrs[i].mode, group->dir,
+					   &group->attrs[i], &mca_debugfs_template_fops);
+		if (IS_ERR(file)) {
+			ret = PTR_ERR(file);
+			mca_debugfs_remove_owned_group(group);
+			return ret;
+		}
+	}
+	*owner = group;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(mca_debugfs_create_owned_group);
 
 static int mca_debugfs_init(void)
 {

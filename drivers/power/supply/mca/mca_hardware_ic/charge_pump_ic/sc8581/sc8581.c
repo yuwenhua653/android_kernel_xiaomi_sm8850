@@ -184,12 +184,6 @@ enum cp_attr_list {
 	CP_DEBUG_PROP_DATA,
 };
 
-static struct reg_context {
-	int address;
-	int count;
-	int data;
-} reg_info;
-
 static ssize_t cp_debugfs_show(void *priv_data, char *buf)
 {
 	struct mca_debugfs_attr_data *attr_data =
@@ -200,33 +194,33 @@ static ssize_t cp_debugfs_show(void *priv_data, char *buf)
 	u8 val = 0;
 	ssize_t count = 0;
 	int ret = 0;
-	char read_buf[MAX_LENGTH_BYTE] = { '\0' };
 	int i;
 
 	if (!dev_data || !attr_info) {
 		mca_log_err("null pointer show\n");
-		return count;
+		return -EINVAL;
 	}
 
+	guard(mutex)(&dev_data->debug_lock);
 	switch (attr_info->debugfs_attr_name) {
 	case CP_DEBUG_PROP_ADDRESS:
-		count = scnprintf(buf, PAGE_SIZE, "%02x\n", reg_info.address);
+		count = scnprintf(buf, PAGE_SIZE, "%02x\n", dev_data->debug_address);
 		break;
 	case CP_DEBUG_PROP_COUNT:
-		count = scnprintf(buf, PAGE_SIZE, "%x\n", reg_info.count);
+		count = scnprintf(buf, PAGE_SIZE, "%x\n", dev_data->debug_count);
 		break;
 	case CP_DEBUG_PROP_DATA:
-		for (i = 0; i < reg_info.count; i++) {
+		for (i = 0; i < dev_data->debug_count; i++) {
 			ret = cp_read_byte(dev_data->client,
-					   (reg_info.address + i), &val);
-			count += scnprintf(read_buf, MAX_LENGTH_BYTE,
-					   "%02x: %02x\n", reg_info.address + i,
-					   val);
-			strcat(buf, read_buf);
+					   (dev_data->debug_address + i), &val);
+			if (ret)
+				return ret;
+			count += scnprintf(buf + count, PAGE_SIZE - count, "%02x: %02x\n",
+					   dev_data->debug_address + i, val);
 		}
 		break;
 	default:
-		break;
+		return -EINVAL;
 	}
 	return count;
 }
@@ -243,29 +237,33 @@ static ssize_t cp_debugfs_store(void *priv_data, const char *buf, size_t count)
 
 	if (!dev_data || !attr_info) {
 		mca_log_err("null pointer store\n");
-		return count;
+		return -EINVAL;
 	}
 
 	if (kstrtoint(buf, 16, &val))
 		return -EINVAL;
 
+	guard(mutex)(&dev_data->debug_lock);
 	switch (attr_info->debugfs_attr_name) {
 	case CP_DEBUG_PROP_ADDRESS:
-		reg_info.address = val;
+		if (val < 0 || val > U8_MAX || dev_data->debug_count > U8_MAX + 1 - val)
+			return -ERANGE;
+		dev_data->debug_address = val;
 		break;
 	case CP_DEBUG_PROP_COUNT:
-		if (val > MAX_REG_COUNT)
-			reg_info.count = MAX_REG_COUNT;
-		else if (reg_info.count < 1)
-			reg_info.count = 1;
-		else
-			reg_info.count = val;
+		if (val < 1 || val > MAX_REG_COUNT || val > U8_MAX + 1 - dev_data->debug_address)
+			return -ERANGE;
+		dev_data->debug_count = val;
 		break;
 	case CP_DEBUG_PROP_DATA:
-		ret = cp_write_byte(dev_data->client, reg_info.address, val);
+		if (val < 0 || val > U8_MAX)
+			return -ERANGE;
+		ret = cp_write_byte(dev_data->client, dev_data->debug_address, val);
+		if (ret)
+			return ret;
 		break;
 	default:
-		break;
+		return -EINVAL;
 	}
 
 	return count;
@@ -2397,7 +2395,6 @@ static void sc8581_irq_handler(struct work_struct *work)
 		container_of(work, struct sc8581_device, irq_handle_work.work);
 	bool usb_present;
 	int ret;
-	static bool last_usb_present;
 
 	if (!bq->i2c_is_working)
 		return;
@@ -2405,14 +2402,14 @@ static void sc8581_irq_handler(struct work_struct *work)
 	ret = sc8581_get_int_stat(bq, VUSB_PRESENT_STAT, &usb_present);
 	if (ret)
 		return;
-	if (usb_present != last_usb_present) {
+	if (usb_present != bq->last_usb_present) {
 		if (usb_present)
 			mca_event_block_notify(MCA_EVENT_TYPE_CP_INFO,
 					       MCA_EVENT_CP_VUSB_INSERT, NULL);
 		else
 			mca_event_block_notify(MCA_EVENT_TYPE_CP_INFO,
 					       MCA_EVENT_CP_VUSB_OUT, NULL);
-		last_usb_present = usb_present;
+		bq->last_usb_present = usb_present;
 	}
 
 	mca_log_info("%s handler\n", bq->log_tag);
@@ -2668,6 +2665,38 @@ static void sc8581_quiesce_device(void *data)
 		mca_log_err("%s failed to quiesce ADC: %d\n", bq->log_tag, ret);
 }
 
+static enum mca_charge_log_id_ele sc8581_log_id(struct sc8581_device *bq)
+{
+	return bq->cp_role == SC8581_SLAVE ? MCA_CHARGE_LOG_ID_CP_SLAVE_IC :
+					    MCA_CHARGE_LOG_ID_CP_MASTER_IC;
+}
+
+static void sc8581_stop(void *data)
+{
+	struct sc8581_device *bq = data;
+	int ret;
+
+	if (bq->stopped)
+		return;
+	bq->stopped = true;
+	disable_irq(bq->irq);
+	disable_delayed_work_sync(&bq->irq_handle_work);
+#ifdef CONFIG_DEBUG_FS
+	mca_debugfs_remove_owned_group(bq->debug_group);
+	bq->debug_group = NULL;
+#endif
+	if (bq->class_registered) {
+		mca_log_charge_log_register(sc8581_log_id(bq), NULL, NULL);
+		platform_class_cp_unregister_ops(bq->cp_role, &sc8581_chg_ops, bq);
+	}
+	sc8581_quiesce_device(bq);
+	if (bq->cp_role != SC8581_MASTER)
+		return;
+	ret = gpio_direction_output(bq->nlpm_gpio, 0);
+	if (ret)
+		dev_err(bq->dev, "CP low-power GPIO: %d\n", ret);
+}
+
 static void sc8581_disable_wakeup(void *data)
 {
 	struct sc8581_device *bq = data;
@@ -2722,26 +2751,28 @@ static int sc8581_probe(struct i2c_client *client,
 	ret = devm_add_action_or_reset(dev, sc8581_disable_wakeup, bq);
 	if (ret)
 		return ret;
-	/* No fatal setup may remain after publishing this unregistered-on-remove ABI. */
+	/* IRQ, work, readers and diagnostics all retire before GPIOs are released. */
+	ret = devm_add_action_or_reset(dev, sc8581_stop, bq);
+	if (ret)
+		return ret;
+	devm_remove_action(dev, sc8581_quiesce_device, bq);
+	bq->chip_ok = true;
+	bq->ovpgate_en = true;
+	bq->i2c_is_working = true;
 	ret = platform_class_cp_register_ops_v2(bq->cp_role, &sc8581_chg_ops,
 					      bq, sizeof(sc8581_chg_ops));
 	if (ret)
 		return ret;
+	bq->class_registered = true;
 #ifdef CONFIG_DEBUG_FS
-	reg_info.address = SC8581_REG_00;
-	reg_info.count = 1;
-	if (bq->cp_role == SC8581_SLAVE)
-		mca_debugfs_create_group("sc85xx_01", cp_debugfs_field_tbl,
-					CP_DEBUGFS_ATTRS_SIZE, bq);
-	else
-		mca_debugfs_create_group("sc85xx_00", cp_debugfs_field_tbl,
-					CP_DEBUGFS_ATTRS_SIZE, bq);
+	mutex_init(&bq->debug_lock);
+	bq->debug_count = 1;
+	ret = mca_debugfs_create_owned_group(bq->cp_role == SC8581_SLAVE ? "sc85xx_01" : "sc85xx_00",
+			cp_debugfs_field_tbl, CP_DEBUGFS_ATTRS_SIZE, bq, &bq->debug_group);
+	if (ret)
+		dev_dbg(bq->dev, "CP debugfs unavailable: %d\n", ret);
 #endif
-	mca_log_charge_log_register(MCA_CHARGE_LOG_ID_CP_MASTER_IC,
-				    &g_sc8581_log_ops, bq);
-	bq->chip_ok = true;
-	bq->ovpgate_en = true;
-	bq->i2c_is_working = true;
+	mca_log_charge_log_register(sc8581_log_id(bq), &g_sc8581_log_ops, bq);
 	schedule_delayed_work(&bq->irq_handle_work, 0);
 	return 0;
 }
@@ -2787,26 +2818,12 @@ static const struct dev_pm_ops sc8581_pm_ops = {
 
 static void sc8581_remove(struct i2c_client *client)
 {
-	struct sc8581_device *bq = i2c_get_clientdata(client);
-	int ret = 0;
-
-	ret = cp_enable_adc(bq, false);
-	if (ret)
-		mca_log_err("%s failed to disable ADC\n", bq->log_tag);
+	sc8581_stop(i2c_get_clientdata(client));
 }
 
 static void sc8581_shutdown(struct i2c_client *client)
 {
-	struct sc8581_device *bq = i2c_get_clientdata(client);
-	int ret = 0;
-
-	ret = cp_enable_adc(bq, false);
-	ret |= gpio_direction_output(bq->nlpm_gpio, 0);
-	if (ret)
-		mca_log_err("%s unable to reset adc and nlpm fail\n",
-			    bq->log_tag);
-
-	mca_log_info("%s sc8581 shutdown!\n", bq->log_tag);
+	sc8581_stop(i2c_get_clientdata(client));
 }
 
 static const struct of_device_id sc8581_of_match[] = {

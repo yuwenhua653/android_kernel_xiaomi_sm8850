@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/mutex.h>
+#include <linux/srcu.h>
 #include <linux/err.h>
 #include <mca/platform/platform_cp_class.h>
 #include <mca/common/mca_log.h>
@@ -82,31 +83,62 @@ enum platform_cp_attr_list {
 	CP_PROP_WORK_MODE,
 };
 
-static struct platform_cp_class_ops_data g_platform_cp_data[CP_ROLE_MAX];
+static DEFINE_MUTEX(cp_provider_lock);
+DEFINE_STATIC_SRCU(cp_provider_srcu);
+static struct platform_cp_class_ops_data __rcu *g_platform_cp_data[CP_ROLE_MAX];
 
 static inline struct platform_cp_class_ops_data *
 platform_cp_class_get_ic_ops(unsigned int role)
 {
-	if (role >= CP_ROLE_MAX || g_platform_cp_data[role].ops == NULL)
+	if (role >= CP_ROLE_MAX)
 		return NULL;
-
-	return &g_platform_cp_data[role];
+	return srcu_dereference(g_platform_cp_data[role], &cp_provider_srcu);
 }
 
 /* Legacy registration promises only the original 45 callbacks. */
 int platform_class_cp_register_ops_v2(unsigned int role,
 		struct platform_class_cp_ops *ops, void *data, unsigned int ops_size)
 {
+	struct platform_cp_class_ops_data *provider;
+
 	if (role >= CP_ROLE_MAX || !data || !ops ||
 	    ops_size < offsetof(struct platform_class_cp_ops, cp_get_battery_vout))
 		return -EINVAL;
-
-	g_platform_cp_data[role].data = data;
-	g_platform_cp_data[role].ops_size = ops_size;
-	g_platform_cp_data[role].ops = ops;
+	guard(mutex)(&cp_provider_lock);
+	if (rcu_access_pointer(g_platform_cp_data[role]))
+		return -EBUSY;
+	provider = kmalloc(sizeof(*provider), GFP_KERNEL);
+	if (!provider)
+		return -ENOMEM;
+	provider->data = data;
+	provider->ops_size = ops_size;
+	provider->ops = ops;
+	rcu_assign_pointer(g_platform_cp_data[role], provider);
 	return 0;
 }
 EXPORT_SYMBOL(platform_class_cp_register_ops_v2);
+
+int platform_class_cp_unregister_ops(unsigned int role,
+		struct platform_class_cp_ops *ops, void *data)
+{
+	struct platform_cp_class_ops_data *provider;
+
+	if (role >= CP_ROLE_MAX)
+		return -EINVAL;
+	mutex_lock(&cp_provider_lock);
+	provider = rcu_dereference_protected(g_platform_cp_data[role],
+					     lockdep_is_held(&cp_provider_lock));
+	if (!provider || provider->ops != ops || provider->data != data) {
+		mutex_unlock(&cp_provider_lock);
+		return -ENOENT;
+	}
+	RCU_INIT_POINTER(g_platform_cp_data[role], NULL);
+	mutex_unlock(&cp_provider_lock);
+	synchronize_srcu(&cp_provider_srcu);
+	kfree(provider);
+	return 0;
+}
+EXPORT_SYMBOL(platform_class_cp_unregister_ops);
 
 int platform_class_cp_register_ops(unsigned int role,
 		struct platform_class_cp_ops *ops, void *data)
@@ -123,6 +155,7 @@ EXPORT_SYMBOL(platform_class_cp_register_ops);
 
 int platform_class_cp_set_charging_enable(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -135,6 +168,7 @@ EXPORT_SYMBOL(platform_class_cp_set_charging_enable);
 
 int platform_class_cp_get_charging_enabled(unsigned int role, bool *en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -147,6 +181,7 @@ EXPORT_SYMBOL(platform_class_cp_get_charging_enabled);
 
 int platform_class_cp_set_present(unsigned int role, bool present)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -159,6 +194,7 @@ EXPORT_SYMBOL(platform_class_cp_set_present);
 
 int platform_class_cp_set_revchg(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data = platform_cp_class_get_ic_ops(role);
 
 	if (platform_cp_ops_invalid(temp_data, cp_set_revchg))
@@ -170,6 +206,7 @@ EXPORT_SYMBOL(platform_class_cp_set_revchg);
 
 int platform_class_cp_set_adjustadble_timeout(unsigned int role, int timeout)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data = platform_cp_class_get_ic_ops(role);
 
 	if (platform_cp_ops_invalid(temp_data, cp_set_adjustadble_timeout))
@@ -181,6 +218,7 @@ EXPORT_SYMBOL(platform_class_cp_set_adjustadble_timeout);
 
 int platform_class_cp_get_vbus_present(unsigned int role, bool *present)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -193,6 +231,7 @@ EXPORT_SYMBOL(platform_class_cp_get_vbus_present);
 
 int platform_class_cp_get_present(unsigned int role, bool *present)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -205,6 +244,7 @@ EXPORT_SYMBOL(platform_class_cp_get_present);
 
 int platform_class_cp_get_battery_present(unsigned int role, bool *present)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -217,6 +257,7 @@ EXPORT_SYMBOL(platform_class_cp_get_battery_present);
 
 int platform_class_cp_get_battery_voltage(unsigned int role, int *vbat)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -229,6 +270,7 @@ EXPORT_SYMBOL(platform_class_cp_get_battery_voltage);
 
 int platform_class_cp_get_battery_current(unsigned int role, int *ibat)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -241,6 +283,7 @@ EXPORT_SYMBOL(platform_class_cp_get_battery_current);
 
 int platform_class_cp_get_battery_temperature(unsigned int role, int *tbat)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -254,6 +297,7 @@ EXPORT_SYMBOL(platform_class_cp_get_battery_temperature);
 
 int platform_class_cp_get_bus_voltage(unsigned int role, int *vbus)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -266,6 +310,7 @@ EXPORT_SYMBOL(platform_class_cp_get_bus_voltage);
 
 int platform_class_cp_get_bus_current(unsigned int role, int *ibus)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -278,6 +323,7 @@ EXPORT_SYMBOL(platform_class_cp_get_bus_current);
 
 int platform_class_cp_get_bus_temperature(unsigned int role, int *tbus)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -290,6 +336,7 @@ EXPORT_SYMBOL(platform_class_cp_get_bus_temperature);
 
 int platform_class_cp_get_die_temperature(unsigned int role, int *tdie)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -302,6 +349,7 @@ EXPORT_SYMBOL(platform_class_cp_get_die_temperature);
 
 int platform_class_cp_get_alarm_status(unsigned int role, int *alarm_status)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -315,6 +363,7 @@ EXPORT_SYMBOL(platform_class_cp_get_alarm_status);
 
 int platform_class_cp_get_fault_status(unsigned int role, int *fault_status)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -328,6 +377,7 @@ EXPORT_SYMBOL(platform_class_cp_get_fault_status);
 
 int platform_class_cp_get_bus_error_status(unsigned int role, int *error_status)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -341,6 +391,7 @@ EXPORT_SYMBOL(platform_class_cp_get_bus_error_status);
 
 int platform_class_cp_get_reg_status(unsigned int role, int *reg_status)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -353,6 +404,7 @@ EXPORT_SYMBOL(platform_class_cp_get_reg_status);
 
 int platform_class_cp_set_mode(unsigned int role, int mode)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -365,6 +417,7 @@ EXPORT_SYMBOL(platform_class_cp_set_mode);
 
 int platform_class_cp_get_mode(unsigned int role, int *mode)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -377,6 +430,7 @@ EXPORT_SYMBOL(platform_class_cp_get_mode);
 
 int platform_class_cp_device_init(unsigned int role, int value)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -389,6 +443,7 @@ EXPORT_SYMBOL(platform_class_cp_device_init);
 
 int platform_class_cp_enable_adc(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -401,6 +456,7 @@ EXPORT_SYMBOL(platform_class_cp_enable_adc);
 
 int platform_class_cp_get_bypass_support(unsigned int role, bool *status)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -413,6 +469,7 @@ EXPORT_SYMBOL(platform_class_cp_get_bypass_support);
 
 int platform_class_cp_dump_register(unsigned int role)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -425,6 +482,7 @@ EXPORT_SYMBOL(platform_class_cp_dump_register);
 
 int platform_class_cp_get_chip_vendor(unsigned int role, int *chip_vendor)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -437,6 +495,7 @@ EXPORT_SYMBOL(platform_class_cp_get_chip_vendor);
 
 int platform_class_cp_get_probe_ok(unsigned int role)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -449,6 +508,7 @@ EXPORT_SYMBOL(platform_class_cp_get_probe_ok);
 
 int platform_class_cp_get_int_stat(unsigned int role, int channel, bool *result)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -462,6 +522,7 @@ EXPORT_SYMBOL(platform_class_cp_get_int_stat);
 
 int platform_class_cp_enable_acdrv_manual(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -474,6 +535,7 @@ EXPORT_SYMBOL(platform_class_cp_enable_acdrv_manual);
 
 int platform_class_cp_enable_wpcgate(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -486,6 +548,7 @@ EXPORT_SYMBOL(platform_class_cp_enable_wpcgate);
 
 int platform_class_cp_enable_ovpgate(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -499,6 +562,7 @@ EXPORT_SYMBOL(platform_class_cp_enable_ovpgate);
 int platform_class_cp_enable_ovpgate_with_check(unsigned int role,
 						int type_temp, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -512,6 +576,7 @@ EXPORT_SYMBOL(platform_class_cp_enable_ovpgate_with_check);
 
 int platform_class_cp_get_ovpgate_status(unsigned int role, bool *en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -524,6 +589,7 @@ EXPORT_SYMBOL(platform_class_cp_get_ovpgate_status);
 
 int platform_class_cp_get_usb_voltage(unsigned int role, int *vusb)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -574,6 +640,7 @@ EXPORT_SYMBOL(platform_class_cp_get_ibus_total);
 
 int platform_class_cp_get_errorhl_stat(unsigned int role, int *stat)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -586,6 +653,7 @@ EXPORT_SYMBOL(platform_class_cp_get_errorhl_stat);
 
 int platform_class_cp_enable_busucp(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -605,6 +673,7 @@ EXPORT_SYMBOL(platform_class_cp_enable_busucp);
 
 static int platform_cp_set_fsw_locked(unsigned int role, int fsw)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -625,6 +694,7 @@ static int platform_cp_set_fsw_locked(unsigned int role, int fsw)
 }
 int platform_class_cp_get_battery_vout(unsigned int role, u32 *val)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 	u32 value;
@@ -644,6 +714,7 @@ EXPORT_SYMBOL(platform_class_cp_get_battery_vout);
 
 int platform_class_cp_get_adc_enabled(unsigned int role, bool *en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 	bool value;
@@ -663,6 +734,7 @@ EXPORT_SYMBOL(platform_class_cp_get_adc_enabled);
 
 int platform_class_cp_set_busovp(unsigned int role, int val)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -675,6 +747,7 @@ EXPORT_SYMBOL(platform_class_cp_set_busovp);
 
 int platform_class_cp_enable_vbus_errorhi(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -687,6 +760,7 @@ EXPORT_SYMBOL(platform_class_cp_enable_vbus_errorhi);
 
 int platform_class_cp_enable_vbus_errorlo(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -699,6 +773,7 @@ EXPORT_SYMBOL(platform_class_cp_enable_vbus_errorlo);
 
 int platform_class_cp_set_manual_revchg_mode(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -711,6 +786,7 @@ EXPORT_SYMBOL(platform_class_cp_set_manual_revchg_mode);
 
 int platform_class_cp_set_cp_reverse_mode(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -723,6 +799,7 @@ EXPORT_SYMBOL(platform_class_cp_set_cp_reverse_mode);
 
 bool platform_class_cp_has_manual_revchg_mode(unsigned int role)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -732,6 +809,7 @@ EXPORT_SYMBOL(platform_class_cp_has_manual_revchg_mode);
 
 bool platform_class_cp_has_cp_reverse_mode(unsigned int role)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -752,6 +830,7 @@ EXPORT_SYMBOL(platform_class_cp_set_fsw);
 
 extern int platform_class_cp_set_default_fsw(unsigned int role)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -764,6 +843,7 @@ EXPORT_SYMBOL(platform_class_cp_set_default_fsw);
 
 int platform_class_cp_get_fsw(unsigned int role, int *fsw)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -776,6 +856,7 @@ EXPORT_SYMBOL(platform_class_cp_get_fsw);
 
 int platform_class_cp_get_fsw_step(unsigned int role, int *fsw_step)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -788,6 +869,7 @@ EXPORT_SYMBOL(platform_class_cp_get_fsw_step);
 
 int platform_class_cp_get_tdie(unsigned int role, int *tdie)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -800,6 +882,7 @@ EXPORT_SYMBOL(platform_class_cp_get_tdie);
 
 int platform_class_cp_set_qb(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -812,6 +895,7 @@ EXPORT_SYMBOL(platform_class_cp_set_qb);
 
 int platform_class_cp_set_rcp(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -824,6 +908,7 @@ EXPORT_SYMBOL(platform_class_cp_set_rcp);
 
 int platform_class_cp_set_pmid2outuvp_th(unsigned int role, int value)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 
@@ -836,6 +921,7 @@ EXPORT_SYMBOL(platform_class_cp_set_pmid2outuvp_th);
 
 int platform_class_cp_set_vout2out_uvp(unsigned int role, bool en)
 {
+	guard(srcu)(&cp_provider_srcu);
 	struct platform_cp_class_ops_data *temp_data =
 		platform_cp_class_get_ic_ops(role);
 

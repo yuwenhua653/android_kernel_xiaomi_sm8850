@@ -1,0 +1,1197 @@
+{
+  "device": "Xiaomi 17 Ultra (nezha), Chinese OS4.0.7.0.XPACNXM",
+  "date": "2026-11-28",
+  "branch": "nazha",
+  "baseline": {
+    "kernel": "5b38ff19b0e27baca714e9e90e7c228325437a6d",
+    "modules": "fb53ae9fb9a29d85d182a393c7a6f823438971e7",
+    "devicetrees": "91998b30926ec6750803c45fbf25402268aa692e"
+  },
+  "paired_revisions": {
+    "modules": "06d0e21c238e4e98dec57fb37d9c47834f55f534",
+    "devicetrees": "469c69021ebe22716c56076bc1850b53cb11376c"
+  },
+  "references": {
+    "MiCode/kernel_devicetree": "396596c6d1ec3c349402c50913f781efbf343d9c",
+    "MiCode/vendor_qcom_opensource_camera-kernel": "798f548761f381b056f2e1fe615f9db930aa5c7e",
+    "OTA": "https://bigota.d.miui.com/OS4.0.7.0.XPACNXM/nezha-ota_full-OS4.0.7.0.XPACNXM-user-17.0-5d0985edfa.zip",
+    "partition_SHA256": {
+      "dtbo": "1b78a4cc5fe5ee46fcf1ea3af0ee5a1287c0b4a2ef78a30f4b62f745d31505ac",
+      "vendor_boot": "68a80b12e8210e0683fb0f275e0df2134db591113c9d6d91acbd34f54f4409cf",
+      "vendor_dlkm": "094b779c61c8b1736025230e545838001b0d4037ff2473dcbc413af128738cb4"
+    },
+    "factory_module_SHA256": {
+      "mca_qcom_subpmic_proxy": "e841347157f247d743fe43b011f3e9cb99290da2120abb8787613ee3fee37a5b",
+      "bq27z561": "15ac782aec66b9d3dafc22c090850d8524981f45a5a1ff4fc5b4be607099c52c",
+      "sc96281_charger": "116aa08e0e4dca4074d1ebc199debfcd01679fe1aa546f6c749a8e26431287e2",
+      "mca_buckchg_jeita": "25fe746edbc37971b23debacb15eb9691590694d3ee2f92d87956b18372db609",
+      "mca_basic_wireless": "b2e11f3e956716ee5252c0418001e17f3cabf73ca6707e5867d474ff31c7adeb",
+      "mca_charger_thermal": "582f3e5cd24f7b579e44ebec14c4d472fd666109d91cace0e228037559dfc460",
+      "camera": "9c5f719297511f0e54c03dbe225acd1d179c2b83deb5fff8997dd5b7e2d39774"
+    }
+  },
+  "qualification": {
+    "device_config": {
+      "kernel_modules": 381,
+      "external_modules": 14,
+      "versioned_imports_checked": 19528,
+      "modules_with_BTF": 395,
+      "vermagic": "6.12.118-g5b38ff19b0e2-dirty SMP preempt mod_unload modversions aarch64",
+      "Image_sha256": "cddb6bd6caeb8e0aec31177bd7eb6ccc7a7a162b884ff3a05ffb7a3ac78bcf0a",
+      "Module.symvers_sha256": "1075a3ea7485b69edbde1772196e09667991e2cff637930476956e06bcb69842",
+      "selected_modules": {
+        "sc8581": {
+          "sha256": "92bcc7b91f938bfa22f6b89070bbc8fe6db990e6e68e4fbb72977bd7d691c662",
+          "direct_dependencies": [
+            "mca_event",
+            "mca_log",
+            "mca_parse_dts",
+            "mca_platform_cp_class",
+            "mca_sysfs"
+          ]
+        },
+        "sc96281_charger": {
+          "sha256": "d94953287d48d15ce5755b6e8805585c37a32dfbfbea72fa171ddedfc7bd43b3",
+          "direct_dependencies": [
+            "mca_adsp_glink",
+            "mca_event",
+            "mca_log",
+            "mca_platform_wireless_class",
+            "mca_strategy_class"
+          ]
+        },
+        "mca_qcom_subpmic_proxy": {
+          "sha256": "c6c9629a661671bc85ea66e4885d22e47ff8eac57a30fa7af6a8b2492098db2e",
+          "direct_dependencies": [
+            "mca_adsp_glink",
+            "mca_event",
+            "mca_platform_bc12_class",
+            "mca_platform_buckchg_class",
+            "mca_protocol_pd_class",
+            "mca_strategy_class"
+          ]
+        },
+        "bq27xxx_battery": {
+          "sha256": "d92205fcb58347706b4ea30335bae9ab7fe4fbf9e255442e394fae7af9a1a344",
+          "direct_dependencies": []
+        },
+        "camera": {
+          "sha256": "c5212964f4a14ad770fc0df95025b886d247a494dbdc4b8e5bdae96ec178b579",
+          "direct_dependencies": [
+            "clk_qcom",
+            "crm_v2",
+            "leds_qcom_flash",
+            "llcc_qcom",
+            "mdt_loader",
+            "mem_buf_dev",
+            "msm_mmrm",
+            "qcom_iommu_util",
+            "qcom_rpmh",
+            "qcom_scm",
+            "qcom_spmi_wled",
+            "qcom_va_minidump",
+            "smcinvoke_dlkm",
+            "smmu_proxy_dlkm",
+            "socinfo",
+            "synx_driver"
+          ]
+        }
+      }
+    },
+    "complete_MCA": {
+      "kernel_modules": 402,
+      "external_modules": 0,
+      "versioned_imports_checked": 19569,
+      "modules_with_BTF": 0,
+      "vermagic": "6.12.118-g5b38ff19b0e2-dirty SMP preempt mod_unload modversions aarch64",
+      "Image_sha256": "2cafaf6c916ec7414c8e8036affdf9196ce2bbd4461d317f6b0fc88b5c145f07",
+      "Module.symvers_sha256": "3a6ed0b51d6104d8d1648508b24a7170e3c4da7e2c355c68fee5f289983fae0b",
+      "selected_modules": {
+        "sc8581": {
+          "sha256": "4c3c7fe8283c0e4cf162900710af3f5ea129be3eb8b26c11c217eeadf72888a0",
+          "direct_dependencies": [
+            "mca_event",
+            "mca_log",
+            "mca_parse_dts",
+            "mca_platform_cp_class",
+            "mca_sysfs"
+          ]
+        },
+        "sc96281_charger": {
+          "sha256": "ae10fd4ee5d194ce7cf3bf8b992f00f54b25f78182ff6e38b3889b31adbcfa08",
+          "direct_dependencies": [
+            "mca_adsp_glink",
+            "mca_event",
+            "mca_log",
+            "mca_platform_wireless_class",
+            "mca_strategy_class"
+          ]
+        },
+        "mca_qcom_subpmic_proxy": {
+          "sha256": "127b8522e3c2c9761579765f427aff7404fe03be9e93ce55bd6fb768ddd0904c",
+          "direct_dependencies": [
+            "mca_adsp_glink",
+            "mca_event",
+            "mca_platform_bc12_class",
+            "mca_platform_buckchg_class",
+            "mca_protocol_pd_class",
+            "mca_strategy_class"
+          ]
+        },
+        "mca_buckchg_jeita": {
+          "sha256": "0f0cdf47018b3a86e1536a6ac3fa450b9990c1a28d40726b4edc37ad56df7ff6",
+          "direct_dependencies": [
+            "mca_hwid",
+            "mca_log",
+            "mca_parse_dts",
+            "mca_platform_fg_ic_ops",
+            "mca_platform_loadsw_class",
+            "mca_smart_charge",
+            "mca_strategy_class",
+            "mca_strategy_fg_class",
+            "mca_voter"
+          ]
+        },
+        "mca_basic_wireless": {
+          "sha256": "118d19809f0bd0419ef01e3fc3461812b96b246c66cd9b51697c0c35d7da1beb",
+          "direct_dependencies": [
+            "mca_charge_interface",
+            "mca_charge_mievent",
+            "mca_event",
+            "mca_hwid",
+            "mca_log",
+            "mca_parse_dts",
+            "mca_platform_buckchg_class",
+            "mca_platform_cp_class",
+            "mca_platform_loadsw_class",
+            "mca_platform_wireless_class",
+            "mca_protocol_pd_class",
+            "mca_smart_charge",
+            "mca_strategy_class",
+            "mca_strategy_fg_class",
+            "mca_sysfs",
+            "mca_voter",
+            "mca_wireless_revchg",
+            "mca_workqueue"
+          ]
+        },
+        "bq27xxx_battery": {
+          "sha256": "89e962a0eb99994252032d652236dad476cc45c938c472c035033ce6b8c20a78",
+          "direct_dependencies": []
+        }
+      }
+    }
+  },
+  "build": {
+    "toolchain": "LLVM/Clang/LLD 19.1.7, arm64",
+    "device_fragments": [
+      "gki_defconfig",
+      "vendor/canoe_GKI.config",
+      "vendor/nezha_GKI.config"
+    ],
+    "device_host": "C Binder; pahole 1.25 with host percpu BTF fix. Rust toolchain unavailable. MODULE_SIG_ALL disabled by the fragments.",
+    "complete_MCA_host": "temporary config with full MCA services plus the Nezha sub-PMIC and SC96281, CFI, MODVERSIONS, GENDWARFKSYMS and WERROR on; no BTF in this output",
+    "targets": "make ARCH=arm64 LLVM=-19 O=<out> Image modules dtbs; build the external camera dependencies and camera with M=<path> CONFIG_ARCH_CANOE=y CONFIG_TARGET_PRODUCT_NEZHA=y modules",
+    "external_device_profile": [
+      "mm-drivers/hw_fence",
+      "synx-kernel",
+      "securemsm-kernel",
+      "mmrm-driver",
+      "camera-kernel"
+    ],
+    "full_MCA_external_camera_sha256": "71df7e429f7b1267ad4cfb320ae625ae664e9cbe40433ff838f11eb430f93499",
+    "warnings": [
+      "DTC reports overlay-context warnings on Qualcomm audio/PMIC fragments. The final merged trees were checked separately.",
+      "The securemsm build prints upstream qseecom header deprecation notices."
+    ]
+  },
+  "board_validation": {
+    "method": "Match exact two-cell qcom,msm-id. Source Canoe uses HFI, hw_fence, synx and Nezha display SoC overlays before the board overlay. Factory bases already include the SoC layer. Compare corresponding stock DTBO entries.",
+    "unmatched": [
+      "canoep-tp",
+      "canoep-tp-v2"
+    ],
+    "unmatched_reason": "SoC 0x01010295 not in the factory DTBO ID sets; no reassignment.",
+    "FOD": "82 non-phandle properties, 32 ordinary profiles, 2 mode-specific profiles and default; normal, thin and thick cases. Adapter-mode provider required for the two special profiles.",
+    "JEITA": "Primary 12 normal / 7 FFC bands; secondary 12 / 7; global 11 / 6. Both factory entries agree. The source includes 21 + 21 + 18 voltage fields 10 mV below MiCode. Values from the factory image verified byte-for-byte. Policy node remains disabled.",
+    "audio_haptics": "12 Canoe merges, 1294 checked properties per merge. 8 SG/Whale merges, 127 sound/haptic properties and exact node sets under the PMIH010x and audio roots.",
+    "final_dtbs": [
+      {
+        "base": "canoe-tp-v2",
+        "family": "source",
+        "soc_id": [
+          "0x1000294",
+          "0x20000"
+        ],
+        "sha256": "5a5bc831b26af0703d4c7f3079179cb212e1b78809a2820fb74bfa95fdc20a35",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoe-tp-v2",
+        "family": "factory",
+        "soc_id": [
+          "0x1000294",
+          "0x20000"
+        ],
+        "sha256": "a69e030f2f3ff72c263825339d9ee39fc44733f6f15fcaa468214cd0ce80674b",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoe-tp",
+        "family": "source",
+        "soc_id": [
+          "0x1000294",
+          "0x10000"
+        ],
+        "sha256": "5ffe800d69d243f9ec3dc665d08b49776204c1b1bbbac162bc929d64f3e37c37",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoe-tp",
+        "family": "factory",
+        "soc_id": [
+          "0x1000294",
+          "0x10000"
+        ],
+        "sha256": "ec77887d224ea6f5b55e2d9c3b83a72ec9fa2436b6768424c1da72571a077a87",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoe-v2",
+        "family": "source",
+        "soc_id": [
+          "0x294",
+          "0x20000"
+        ],
+        "sha256": "8ace95c2a2ad8f3ab83fe63dffc0406473f0f422b16608089da44f014284eb45",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoe-v2",
+        "family": "factory",
+        "soc_id": [
+          "0x294",
+          "0x20000"
+        ],
+        "sha256": "4693f71dca0fdfe51b6f15048fe53fcd7b5663ac897de04d3cc1b118adfb1404",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoe",
+        "family": "source",
+        "soc_id": [
+          "0x294",
+          "0x10000"
+        ],
+        "sha256": "4291388e29bc92860bca60083e387a7b7c540acee5be46638859b8d865b80c09",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoe",
+        "family": "factory",
+        "soc_id": [
+          "0x294",
+          "0x10000"
+        ],
+        "sha256": "a648dd5a337eefb41f9194e66cf0309031544c8aac21e47d72088d34488d2231",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoep-sg-v2",
+        "family": "source",
+        "soc_id": [
+          "0x2e7",
+          "0x20000"
+        ],
+        "sha256": "0c228c06834fb3e0c9901e8b21e08ddee42051e2936457215abe53367cace459",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        }
+      },
+      {
+        "base": "canoep-sg-v2",
+        "family": "factory",
+        "soc_id": [
+          "0x2e7",
+          "0x20000"
+        ],
+        "sha256": "ea0b6857b14462f61eeeba38ab6511533dc5173a796f28d53ed7623d27924850",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        }
+      },
+      {
+        "base": "canoep-sg",
+        "family": "source",
+        "soc_id": [
+          "0x2e7",
+          "0x10000"
+        ],
+        "sha256": "40308a4a3b986bb8ace4681773615305ecdc0cdc1dbdfb3ea97a4a00461d89b6",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        }
+      },
+      {
+        "base": "canoep-sg",
+        "family": "factory",
+        "soc_id": [
+          "0x2e7",
+          "0x10000"
+        ],
+        "sha256": "5fbcb6037477807dfce1efef6464942f2db37de2eff0e0e7a9b8b60f2145990d",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        }
+      },
+      {
+        "base": "canoep-v2",
+        "family": "source",
+        "soc_id": [
+          "0x295",
+          "0x20000"
+        ],
+        "sha256": "7483a7eb65a947b9971129337248c24d1e3c60424965c57fe11dec08aeee45e4",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoep-v2",
+        "family": "factory",
+        "soc_id": [
+          "0x295",
+          "0x20000"
+        ],
+        "sha256": "e73d0daa26d2ea35fdb8a74821de25c3bec0611ef27b37fdfae6cfab19195212",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoep",
+        "family": "source",
+        "soc_id": [
+          "0x295",
+          "0x10000"
+        ],
+        "sha256": "b443bff37d91389b1d27ee0deb76ca32233516d3dc6c62b879eec56244a16388",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "canoep",
+        "family": "factory",
+        "soc_id": [
+          "0x295",
+          "0x10000"
+        ],
+        "sha256": "9efdb23401e5bff5af3036499c33060978a01aa237e05c407e662d7e9982f695",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": true,
+          "audio": true,
+          "haptics": true,
+          "modem": true,
+          "wifi": true,
+          "bluetooth": true
+        }
+      },
+      {
+        "base": "whale",
+        "family": "source",
+        "soc_id": [
+          "0x2d2",
+          "0x30000"
+        ],
+        "sha256": "8c9e72b04f8ce047d0a75a179b3c5fc476b20b25858bffd06f0d5c44a6a4d663",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        }
+      },
+      {
+        "base": "whale",
+        "family": "factory",
+        "soc_id": [
+          "0x2d2",
+          "0x30000"
+        ],
+        "sha256": "bf5eb8d08b09e5e8d2f0829b67499a2f999c87199d08c264ad31d6a8fdeabe61",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        }
+      },
+      {
+        "base": "whalep",
+        "family": "source",
+        "soc_id": [
+          "0x2d3",
+          "0x30000"
+        ],
+        "sha256": "add26709eabecb4417b00aa2f626322ce15bddc146c3586a32b12f7081517f4a",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        }
+      },
+      {
+        "base": "whalep",
+        "family": "factory",
+        "soc_id": [
+          "0x2d3",
+          "0x30000"
+        ],
+        "sha256": "ce5754d6e2296f8426a9b344f8556af9ef372a97097e5aa7707b1bb1da8875a4",
+        "feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        },
+        "factory_feature_presence": {
+          "charging": true,
+          "touch": true,
+          "camera": false,
+          "audio": false,
+          "haptics": false,
+          "modem": true,
+          "wifi": false,
+          "bluetooth": false
+        }
+      }
+    ]
+  },
+  "host_tests": [
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-bmd-lifetime.py",
+      "checks": [
+        "PASS: actual BMD supplier errors, managed GPIO, callback publication/unwind, stop ordering and conservative samples"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-charge-interface.py",
+      "checks": [
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)",
+        "PASS: actual dispatch, missing callbacks, failure propagation, OSS battery consumer routing, legacy event and unregister wait (SRCU host model)"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-dtpt-route.py",
+      "checks": [
+        "PASS: actual FG/business/JEITA DTPT route, failed sample preserves protection, unrelated event rejected"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-jeita-lifetime.py",
+      "checks": [
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe",
+        "PASS: actual JEITA publication/unwind, non-foldable path, stopped callbacks, retained limits and provider re-probe"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-limit-fanout.py",
+      "checks": [
+        "PASS: actual Buck/QC nested errors, all fanout destinations, first errno, retries, exact sub-1500mA limits and unsupported multi-buck"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-log-lifetime.py",
+      "checks": [
+        "PASS: log NULL/missing callbacks, invalid slot, negative/oversized returns, newline bounds and synchronized unregister"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-owned-voter.py",
+      "checks": [
+        "PASS: actual owned voter stable handles, callback drain, duplicate/legacy rejection, rebind, allocation failures and module cleanup"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-parallel-buck.py",
+      "checks": [
+        "PASS: actual Buck transitions, MIN caps, 12 enable failures, 5 cleanup failures, rollback retry, instance isolation and pthread serialization",
+        "PASS: actual complete-current samples, invalid/overflow input, single/dual CP transitions, rollback and failure state"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-protection-errors.py",
+      "checks": [
+        "PASS: ibat wired-only sampling, provider failures, fault preservation, per-instance state, topology and stop ordering",
+        "PASS: vbat wired-only sampling, provider failures, fault preservation, per-instance state, topology and stop ordering"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-provider-batch.py",
+      "checks": [
+        "PASS: actual buck probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe",
+        "PASS: actual qc probe fault injection, 11 owned voters, registry unwind, disabled work and re-probe"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-qc-battery-selection.py",
+      "checks": [
+        "PASS: actual QC battery selector, mode/role bounds, supplier errors, read failures, selected table and OF reference release"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-sic-power.py",
+      "checks": [
+        "PASS: actual SIC query errors, retained limits, both rating APIs, all rating boundaries, retry, source changes and independent wireless replay"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-smartchg-lifetime.py",
+      "checks": [
+        "PASS: actual smartchg probe faults, 3 owned voters, all global exports/SRCU drain, dual-source events, overflow/errors and 20 rebinds"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-smartchg-policy.py",
+      "checks": [
+        "PASS: actual smartchg 1/2-row DT bounds, invalid fields, gauge failures, vote retry and stopped worker",
+        "PASS: actual QC rejects unverified BAA without reading input; non-foldable events do not reparse battery tables"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-smartchg-registry.py",
+      "checks": [
+        "PASS: actual smartchg copied registry, allocation failure, identity, seven dispatchers, backend failures and concurrent unregister/cleanup drain model"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-strategy-build.py",
+      "checks": [
+        "PASS: generic registry-only, legacy SERVICES-only and COMPLETE Makefile selection; Nezha policy remains gated"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-strategy-lifetime.py",
+      "checks": [
+        "PASS: actual strategy dispatch errors, duplicate registration, allocation failure, synchronized unregister and concurrent replacement"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-thermal-errors.py",
+      "checks": [
+        "PASS: actual thermal 30 apply failure points, first errors, retry/new requests, release retry, independent suppliers, sysfs/cooling bounds and disconnect cleanup"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-thermal-lifetime.py",
+      "checks": [
+        "PASS: actual thermal SRCU drain, ownership, all probe failures, cooling/wireless bounds and wired supplier retry"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-usb-ownership.py",
+      "checks": [
+        "PASS: USB owned/borrowed lifetime, descriptor isolation, deferral, allocation/register/action failure and repeated cleanup",
+        "PASS: USB owned/borrowed lifetime, descriptor isolation, deferral, allocation/register/action failure and repeated cleanup"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-voter-errors.py",
+      "checks": [
+        "PASS: actual MCA voter callback retry, override/force error state, no-callback votes and invalid-type unlock"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wired-stop.py",
+      "checks": [
+        "PASS: actual single/dual CP and gauge read errors; dual-CP path no longer skips gauge checks",
+        "PASS: actual protection events propagate vote/stop errors, attempt both CPs and preserve the first failure",
+        "PASS: actual wired CP/FG/adapter/readback stop ordering, blocked release, retry state, detach preservation, single/dual CP, voter errors and PD/PPS/QC request failures"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-nezha-jeita-events.py",
+      "checks": [
+        "PASS: actual Nezha JEITA wired/wireless handover, repeated events, final disconnect and shared OSS DTPT event (no OEM ID alias)"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-nezha-jeita-parser.py",
+      "checks": [
+        "PASS: JEITA table, 3 allocation failures, 28 read failures and malformed fields"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-nezha-thermal-format.py",
+      "checks": [
+        "PASS: DT tables, explicit/default 10/11 columns, ambiguous 110-cell regression, malformed formats, read failures, flip table bounds and unchanged error outputs"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wired-controls.py",
+      "checks": [
+        "PASS: production-layout PPS start fault injection, timeout/abort, UCP restoration, PMIC/VTERM MIN caps and rollback, VFC writes/readback/bounds, transactional mode/path parsing"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wired-concurrency.py",
+      "checks": [
+        "PASS: actual event/worker/status entry locks, voter trylock/deferred retry, handled errno, disconnect abort before lock, 100 concurrent entries and stopping gate (pthread model)"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wired-quiesce.py",
+      "checks": [
+        "PASS: actual QC/Buck final quiesce across 14 failing operations, independent shutdown attempts, first errno, failed-pump ADC retained, single topology and Buck enable rollback"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wired-mode-samples.py",
+      "checks": [
+        "PASS: actual CP mode stop-before-open and six faults, fixed-PDO flag reset, unsupported modes, complete sample publication, INT_MIN conversion, end-stage bounds with/without skip tables"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-qc-start.py",
+      "checks": [
+        "PASS: actual QC tuning/start I/O faults, sleep errno, zero-FCC before voltage, enabled-but-no-current timeout, abort, voltage overflow and tuner read failure"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wireless-queues.py",
+      "checks": [
+        "PASS: distinct IRQ/TX queues, FIFO, 4 producers/12000 nodes, bit31, allocation failure, paused/offline TX, late enqueue and drain"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wireless-lifetime.py",
+      "checks": [
+        "PASS: basic wireless probe/unwind/reprobe, 23 failure steps, 20 work drains, stable owned handles",
+        "PASS: quick wireless probe/unwind/reprobe, 10 failure steps, 1 work drains, stable owned handles",
+        "PASS: revchg wireless probe/unwind/reprobe, 7 failure steps, 16 work drains, stable owned handles"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wireless-controls.py",
+      "checks": [
+        "PASS: 5 allocations/25 table reads faulted, transactional replacement, stage/current bounds, nine stop I/O failures and retry",
+        "PASS: checked boost start/rollback, I2C retry, firmware PMIC route, runtime OVP restore and shutdown rejection",
+        "PASS: reverse TX and all attempted boost rails, five independent failures, first-error retention, retry, idle ownership"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-mca-wireless-concurrency.py",
+      "checks": [
+        "PASS: 12000 serialized reverse entries, stopped worker/event rejection, SRCU drain of blocked global caller and NULL output"
+      ]
+    },
+    {
+      "repository": "modules",
+      "test": "qcom/opensource/camera-kernel/tools/test-nezha-actuator-voltage.py",
+      "checks": [
+        "PASS: 8-byte voltage ABI, exact descriptor bounds, buffer/allocation ownership, full prevalidation, regulator rollback and original errno"
+      ]
+    },
+    {
+      "repository": "modules",
+      "test": "qcom/opensource/camera-kernel/tools/test-nezha-camera-command-paths.py",
+      "checks": [
+        "PASS: generic/Nezha flash ABI, OIS table truncation, partial/unaligned firmware chunks, I/O/allocation errors and download cleanup",
+        "PASS: generic/Nezha flash ABI, OIS table truncation, partial/unaligned firmware chunks, I/O/allocation errors and download cleanup"
+      ]
+    },
+    {
+      "repository": "modules",
+      "test": "qcom/opensource/camera-kernel/tools/test-nezha-camera-release.py",
+      "checks": [
+        "PASS session reopen, partial user copies, power/handle retries, firmware release and separate CCI masters"
+      ]
+    },
+    {
+      "repository": "modules",
+      "test": "qcom/opensource/camera-kernel/tools/test-nezha-csi.py",
+      "checks": [
+        "PASS: parser/ranges, backup priority/clamp, retry wrap, invalid PHY, 8 concurrent PHYs x 10000 retries, allocation cleanup, CSID disjoint policy and IRQ-mask mapping"
+      ]
+    },
+    {
+      "repository": "modules",
+      "test": "qcom/opensource/camera-kernel/tools/test-nezha-ois-abi.py",
+      "checks": [
+        "PASS: actual generic/OEM OIS UAPI sizes, field offsets, park and voltage command values"
+      ]
+    },
+    {
+      "repository": "modules",
+      "test": "qcom/opensource/camera-kernel/tools/test-nezha-ois-sem1218s.py",
+      "checks": [
+        "PASS: unchanged 56-byte generic OIS ABI, 32-byte names, every truncated command rejected",
+        "PASS: 101-byte OEM OIS ABI, 64-byte names, 196 SEM1218S I/O failures, golden CRC, device/version errors, allocation and bounds"
+      ]
+    },
+    {
+      "repository": "modules",
+      "test": "qcom/opensource/camera-kernel/tools/test-nezha-parklens.py",
+      "checks": [
+        "PASS: OEM OIS/actuator park, partial parse cleanup, movement/power errors, state acknowledgment, generic park completion and retained retry resources"
+      ]
+    },
+    {
+      "repository": "modules",
+      "test": "qcom/opensource/camera-kernel/tools/test-nezha-zoom.py",
+      "checks": [
+        "PASS: generic 40-byte / Nezha 44-byte query and stock 93-byte zoom ABI",
+        "PASS: 200 firmware IO failure points, allocation failures, missing/short firmware, CRC/version errors, success and skip paths"
+      ]
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-nezha-subpmic-wire.py",
+      "checks": [
+        "PASS Nezha wire properties, error propagation, ordered notices, regional gate and stale epochs"
+      ],
+      "inputs": []
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-nezha-glink-session.py",
+      "checks": [
+        "PASS GLINK request matching, remote failure, interrupted request, stale UP and closed-link/foreign notifications"
+      ],
+      "inputs": []
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-nezha-jeita-cell.py",
+      "checks": [
+        "PASS BQ27Z561 chemistry query, cell selection, short/wrong/checksum replies, unavailable gauge and balanced references"
+      ],
+      "inputs": []
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-nezha-wireless-provider.py",
+      "checks": [
+        "PASS synchronized wireless/CP provider withdrawal and rebind, transactional authentication, FOD/CEP voltage gating and receiver telemetry"
+      ],
+      "inputs": []
+    },
+    {
+      "repository": "kernel",
+      "test": "tools/test-sc96281-fod.py",
+      "checks": [
+        "PASS: stock 32+2 FOD rows x 3 cases, default UUID, Hall mapping, bounds and provider/I2C error propagation; Myron rejects unequal cases"
+      ],
+      "inputs": [
+        "references/stock407/parts/stock-0.dtbo",
+        "references/stock407/parts/stock-1.dtbo",
+        "batch4-final-dt/source-canoe.dtb",
+        "batch4-final-dt/source-whale.dtb"
+      ]
+    }
+  ],
+  "host_scope": "Native host execution of extracted driver functions with modeled hardware and kernel services; ASan/UBSan used by the fault-injection suites and LeakSanitizer disabled under ptrace.",
+  "targeted_changes": {
+    "buck_callbacks": {
+      "before": 17,
+      "after": 63
+    },
+    "subpmic_notices": [
+      0,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "CID_not_mapped": [
+      11,
+      12
+    ],
+    "wireless_provider_calls_under_SRCU": 80,
+    "charge_pump_calls_under_SRCU": 54,
+    "authenticated_car_UUIDs": [
+      "0x01070e01",
+      "0x0e0e0205"
+    ],
+    "camera_CCI_lock_domain": "physical CCI device and master",
+    "load_lists": [
+      "modules.load.vendor_dlkm",
+      "modules.load.recovery"
+    ]
+  },
+  "not_qualified": [
+    "Full high-power MCA runtime, pack authentication/fast-charge writes and weak-charger termination policy",
+    "Android production Rust Binder, signed boot/vendor_boot and DLKM partitions, module insertion on the phone",
+    "USB attach/detach, PD/PPS/QC, thermal and protection response under load",
+    "Wireless positive battery energy, reverse charging and sustained power",
+    "Camera firmware/HAL timing, physical park, flash, switch and reopen; standby current"
+  ]
+}

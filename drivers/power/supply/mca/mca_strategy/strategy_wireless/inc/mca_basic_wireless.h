@@ -417,6 +417,7 @@ struct strategy_wireless_dev {
 	struct mca_votable *auth_80w_voter;
 	struct mca_votable *auth_voice_box_voter;
 	struct mca_votable *auth_magnet_30w_voter;
+	struct mca_votable *auth_car_voter;
 	struct mca_votable *sw_qc_ichg_voter;
 	struct mca_votable *sw_thermal_ichg_voter;
 	struct mca_votable *wls_input_suspend_voter;

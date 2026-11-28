@@ -127,6 +127,8 @@ int platform_class_cp_set_manual_revchg_mode(unsigned int role, bool en);
 int platform_class_cp_set_cp_reverse_mode(unsigned int role, bool en);
 bool platform_class_cp_has_manual_revchg_mode(unsigned int role);
 bool platform_class_cp_has_cp_reverse_mode(unsigned int role);
+int platform_class_cp_unregister_ops(unsigned int role,
+		struct platform_class_cp_ops *ops, void *data);
 int platform_class_cp_register_ops_v2(unsigned int role,
 		struct platform_class_cp_ops *ops, void *data, unsigned int ops_size);
 int platform_class_cp_register_ops(unsigned int role,

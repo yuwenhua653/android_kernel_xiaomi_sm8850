@@ -138,6 +138,15 @@ struct sc8581_device {
 	unsigned int product_cfg;
 	int cp_role;
 
+	bool last_usb_present;
+	bool stopped;
+	bool class_registered;
+#ifdef CONFIG_DEBUG_FS
+	struct mca_debugfs_group *debug_group;
+	struct mutex debug_lock;
+	int debug_address;
+	int debug_count;
+#endif
 	struct delayed_work irq_handle_work;
 	int irq_gpio;
 	int irq;

@@ -1593,7 +1593,8 @@ mca_wireless_update_fw_mainthread_work_locked(struct work_struct *work)
 	if (!READ_ONCE(info->ready) || READ_ONCE(info->stopping))
 		return;
 
-	char *fw_fail_info = NULL;
+	char fw_reason[128];
+	char *fw_fail_info = fw_reason;
 
 	/* Do not alter boost rails or start flash programming before the
 	 * separately reviewed IC firmware-programming opt-in. */
@@ -1620,10 +1621,8 @@ mca_wireless_update_fw_mainthread_work_locked(struct work_struct *work)
 	 * reads this after the update; mca_charge_mievent DFX reporting of it is
 	 * pending the charge_mievent table fix) */
 	if (info->proc_data.firmware_update_state == FIRMWARE_UPDATE_ERROR &&
-	    platform_class_wireless_get_fw_upgrade_fail_info(
-		    WIRELESS_ROLE_MASTER, &fw_fail_info) != -EOPNOTSUPP) {
-		if (!fw_fail_info)
-			fw_fail_info = "Unknown";
+	    !platform_class_wireless_copy_fw_upgrade_fail_info(
+		    WIRELESS_ROLE_MASTER, fw_reason, sizeof(fw_reason))) {
 		mca_charge_mievent_report(CHARGE_DFX_WLS_FW_UPGRADE_FAIL,
 					  &fw_fail_info, 1);
 	}

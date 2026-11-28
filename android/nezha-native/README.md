@@ -281,20 +281,20 @@ Use the actual final merged file, not an individual DTBO. Exit 1 means missing
 or disabled required node groups; exit 2 means invalid input. Exit 0 means only
 the listed DT nodes exist, including enabled ancestors. It does not validate
 drivers, firmware, HALs, regulator/GPIO values or operation on the phone.
-The current Canoe DT presence audit still reports missing charge-interface and
-wireless-receiver nodes. Camera driver/HAL gaps remain outside that node audit.
+Both charge-interface and wireless-receiver nodes are present on the matched Canoe boards.
+The OS4.0.7 integration audit also checks SC96281 calibration, both Hall inputs,
+the GLINK owner and the three battery profiles. Camera HAL behavior requires a phone.
 
 
 ## Nezha sub-PMIC and camera baseline
 
 `CONFIG_XIAOMI_MCA_NEZHA_SUBPMIC` selects the Nezha implementation under the
-existing `mca_qcom_subpmic_proxy.ko` name. It uses OS4.0.7 property IDs (not the
-legacy Myron enum), exposes read-only USB telemetry and registers BC1.2/basic
-buck callbacks. Transport failures propagate to callers. Notifications refresh
-state through bounded work; GLINK unsubscribe waits for in-flight callbacks.
-No charging limits, charge-enable or OTG commands are issued during probe.
-Charging policy, JEITA, thermal/port protection and wireless are still pending.
-A future charge-interface implementation must reuse, not duplicate, `usb`.
+existing `mca_qcom_subpmic_proxy.ko` name. Its OS4.0.7 provider exposes
+read-only USB telemetry, BC1.2 and 63 Buck callbacks. The ordered event queue
+delivers water, CC short, PPS fault and charge-pump reverse notifications
+outside the single GLINK receive worker. The EU-only sink notification follows
+the confirmed remote region setting. Notifications 11 and 12 are CID-specific.
+The complete vendor charging policy has separate prerequisites.
 
 The existing Canoe board overlay now includes the camera SoC and Nezha board
 wiring, so the documented overlay order is unchanged. Shared camera pinctrl
@@ -355,14 +355,17 @@ See module-gaps.md for the remaining source gaps and production-build limits.
 The shared charge-interface module has an independent Kconfig selector, preserves
 Myron selection, uses the verified Nezha notification event 0x13, propagates
 missing providers/callbacks and I/O errors, and supports synchronous SRCU
-unregistration. It is not enabled for Nezha until a reviewed charging policy is
-attached. This is an interface implementation, not a complete JEITA/thermal policy.
+unregistration. The target enables the interface. Charge-control writes require a bound
+policy provider.
 
 SC96281 now represents all 32 ordinary and two 2:1 FOD rows with normal/thin/thick
 calibration, using OS4.0.7's dual-Hall mapping. Selection and Hall changes are
 serialized; a failed Hall-driven FOD update disables the receiver and reports
-failure. Myron continues to reject unequal thin/thick tables. The Nezha DT and
-load-list activation still require the full wireless strategy/protection chain.
+failure. The Nezha target includes the receiver and wireless class in vendor_dlkm and
+recovery. Its read-only wireless power supply reports pad presence, verified RX
+output and current. Pack current and SOC come from the BQ27Z561. The two
+mode-specific transmitter profiles require a confirmed adapter mode before
+elevated operation. Myron retains its original thin/thick calibration contract.
 
 ```sh
 python3 tools/test-mca-charge-interface.py
@@ -373,7 +376,7 @@ These tests execute production source with host stubs, including a pthread SRCU
 model; they do not prove in-kernel callback lifetime, GPIO effects or charging.
 
 
-## Current complete host build (2026-11-26)
+## Historical full external-module build (2026-11-26)
 
 Clang 19 / ARM64 / C Binder build passed vmlinux, Image, 375 in-tree and 88
 external modules in the 32 BoardConfig external directories. Actual ELF audit

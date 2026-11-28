@@ -1078,7 +1078,7 @@ config XIAOMI_MCA_NEZHA_FG_PSY
 
 config XIAOMI_MCA_NEZHA_SUBPMIC
 	tristate "Nezha OS4 sub-PMIC basic charging provider"
-	depends on TARGET_PRODUCT_NEZHA && XIAOMI_MCA_ADSP_PD
+	depends on TARGET_PRODUCT_NEZHA && XIAOMI_MCA_ADSP_PD && XIAOMI_MCA_STRATEGY_CLASS
 	help
 	  Provide USB telemetry, BC1.2 charger type and basic buck operations
 	  using the Nezha OS4 firmware protocol. Charging policy and wireless

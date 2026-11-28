@@ -62,6 +62,8 @@ struct mca_adsp_glink_dev {
 	u32 cur_opcode;
 	u32 cur_seq;
 	int glink_state;
+	struct mutex state_notify_lock;
+	bool published;
 	struct work_struct sync_work;
 	u32 cur_property_id;
 	int retcode;
@@ -78,6 +80,8 @@ struct mca_adsp_ops_node {
 
 /* Serialize transactions with publication and withdrawal of the singleton. */
 static DEFINE_MUTEX(mca_adsp_lock);
+/* Finish withdrawing the old client before another probe can register. */
+static DEFINE_MUTEX(mca_owner_lock);
 static struct mca_adsp_glink_dev *g_mca_adsp_glink;
 static LIST_HEAD(g_mca_adsp_glink_ops_head);
 static LIST_HEAD(g_mca_adsp_glink_qbg_ops_head);
@@ -278,6 +282,8 @@ int mca_adsp_glink_qbg_write_prop(int prop_id, void *value, size_t size)
 	struct mca_adsp_glink_req_msg msg = { 0 };
 	int ret = -1;
 
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA))
+		return -EOPNOTSUPP;
 	if (!value || size >= MCA_ADSP_PROP_DATA_LEN)
 		return -EINVAL;
 
@@ -323,6 +329,8 @@ int mca_adsp_glink_qbg_read_prop(int prop_id, void *value, size_t size)
 	struct mca_adsp_glink_req_msg msg = { 0 };
 	int ret = -1;
 
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA))
+		return -EOPNOTSUPP;
 	if (!value || size >= MCA_ADSP_PROP_DATA_LEN)
 		return -EINVAL;
 
@@ -368,6 +376,8 @@ EXPORT_SYMBOL(mca_adsp_glink_qbg_read_prop);
 
 int mca_adsp_glink_qbg_resister_ops(struct mca_adsp_glink_ops *ops, void *priv)
 {
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA))
+		return -EOPNOTSUPP;
 	return mca_glink_register_ops(&g_mca_adsp_glink_qbg_ops_head, ops, priv);
 }
 EXPORT_SYMBOL(mca_adsp_glink_qbg_resister_ops);
@@ -442,12 +452,22 @@ static int mca_adsp_glink_callback(void *priv, void *data, size_t len)
 
 	memcpy(&hdr, data, sizeof(hdr));
 	if (hdr.owner != MCA_ADSP_GLINK_OWNER &&
-	    hdr.owner != MCA_ADSP_GLINK_QBG_OWNER)
+	    (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA) || hdr.owner != MCA_ADSP_GLINK_QBG_OWNER))
 		return 0;
 
 	if (hdr.type == MCA_ADSP_GLINK_MSG_NOTIFY) {
 		if (len != sizeof(struct mca_adsp_glink_notify_msg))
 			return 0;
+		/* Nezha listeners enqueue their work. Order admission with link-loss
+		 * invalidation without holding the transaction lock in the RX path.
+		 */
+		if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA)) {
+			guard(mutex)(&mca->state_notify_lock);
+			if (!READ_ONCE(mca->published) ||
+			    READ_ONCE(mca->glink_state) != PMIC_GLINK_STATE_UP)
+				return 0;
+			return mca_adsp_glink_handle_notification(mca, data);
+		}
 		/* No notification opcode value is defined by this wire contract. */
 		return mca_adsp_glink_handle_notification(mca, data);
 	}
@@ -463,7 +483,13 @@ static int mca_adsp_glink_callback(void *priv, void *data, size_t len)
 static void mca_adsp_glink_sync_work(struct work_struct *work)
 {
 	struct mca_adsp_ops_node *n;
-	int idx = srcu_read_lock(&mca_ops_srcu);
+	struct mca_adsp_glink_dev *mca = container_of(work, struct mca_adsp_glink_dev, sync_work);
+	int idx;
+
+	guard(mutex)(&mca->state_notify_lock);
+	if (!READ_ONCE(mca->published) || READ_ONCE(mca->glink_state) != PMIC_GLINK_STATE_UP)
+		return;
+	idx = srcu_read_lock(&mca_ops_srcu);
 
 	list_for_each_entry_rcu(n, &g_mca_adsp_glink_ops_head, node,
 				 srcu_read_lock_held(&mca_ops_srcu)) {
@@ -487,7 +513,7 @@ static void mca_adsp_glink_state_cb(void *priv, enum pmic_glink_state state)
 
 	/* Serialize link loss with request admission and response completion. */
 	spin_lock_irqsave(&mca->pending_lock, flags);
-	mca->glink_state = state;
+	WRITE_ONCE(mca->glink_state, state);
 	if (state != PMIC_GLINK_STATE_UP && mca->pending) {
 		mca->pending = false;
 		mca->retcode = -ENOTCONN;
@@ -497,6 +523,9 @@ static void mca_adsp_glink_state_cb(void *priv, enum pmic_glink_state state)
 	if (state == PMIC_GLINK_STATE_UP) {
 		queue_work(system_wq, &mca->sync_work);
 	} else {
+		guard(mutex)(&mca->state_notify_lock);
+		if (!READ_ONCE(mca->published))
+			return;
 		idx = srcu_read_lock(&mca_ops_srcu);
 		list_for_each_entry_rcu(n, &g_mca_adsp_glink_ops_head, node,
 				 srcu_read_lock_held(&mca_ops_srcu)) {
@@ -526,7 +555,8 @@ static int mca_adsp_glink_probe(struct platform_device *pdev)
 	mca->cur_property_id = 0xffffffff;
 	spin_lock_init(&mca->pending_lock);
 	init_completion(&mca->ack);
-	mca->glink_state = 1;
+	mutex_init(&mca->state_notify_lock);
+	mca->glink_state = PMIC_GLINK_STATE_UP;
 	INIT_WORK(&mca->sync_work, mca_adsp_glink_sync_work);
 
 	client_data.name = "mca_adap_glink";
@@ -535,6 +565,7 @@ static int mca_adsp_glink_probe(struct platform_device *pdev)
 	client_data.msg_cb = mca_adsp_glink_callback;
 	client_data.state_cb = mca_adsp_glink_state_cb;
 
+	guard(mutex)(&mca_owner_lock);
 	mca->client = pmic_glink_register_client(&pdev->dev, &client_data);
 	if (IS_ERR(mca->client)) {
 		ret = PTR_ERR(mca->client);
@@ -553,6 +584,8 @@ static int mca_adsp_glink_probe(struct platform_device *pdev)
 	}
 	platform_set_drvdata(pdev, mca);
 	g_mca_adsp_glink = mca;
+	WRITE_ONCE(mca->published, true);
+	queue_work(system_wq, &mca->sync_work);
 	mutex_unlock(&mca_adsp_lock);
 	mca_log_err("probe ok\n");
 	return 0;
@@ -562,11 +595,14 @@ static void mca_adsp_glink_remove(struct platform_device *pdev)
 {
 	struct mca_adsp_glink_dev *mca = platform_get_drvdata(pdev);
 
+	guard(mutex)(&mca_owner_lock);
 	mutex_lock(&mca_adsp_lock);
 	g_mca_adsp_glink = NULL;
 	mutex_unlock(&mca_adsp_lock);
 	pmic_glink_unregister_client_sync(mca->client);
 	cancel_work_sync(&mca->sync_work);
+	mca_adsp_glink_state_cb(mca, PMIC_GLINK_STATE_DOWN);
+	WRITE_ONCE(mca->published, false);
 }
 
 static const struct of_device_id mca_adsp_match_table[] = {

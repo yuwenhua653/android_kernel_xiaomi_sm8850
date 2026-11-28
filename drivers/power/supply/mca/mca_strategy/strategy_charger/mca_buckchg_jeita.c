@@ -28,6 +28,7 @@
 #include <linux/notifier.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/power_supply.h>
 #include <mca/common/mca_parse_dts.h>
 #include <mca/common/mca_voter.h>
 #include <mca/common/mca_event.h>
@@ -930,6 +931,38 @@ error:
 	return -EINVAL;
 }
 
+static int mca_jeita_second_cell(struct device_node *node, bool *second)
+{
+	union power_supply_propval value;
+	struct power_supply *psy;
+	const char *cell = NULL;
+	int ret;
+
+	if (!of_property_present(node, "xiaomi,cell-supply")) {
+		ret = platform_fg_ops_get_batt_cell_info(FG_IC_MASTER, &cell);
+		if (ret)
+			return ret;
+		if (!cell)
+			return -ENODATA;
+		*second = !strcmp(cell, "lwn");
+		return 0;
+	}
+	psy = power_supply_get_by_phandle(node, "xiaomi,cell-supply");
+	if (IS_ERR(psy))
+		return PTR_ERR(psy);
+	if (!psy)
+		return -EPROBE_DEFER;
+	ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_MANUFACTURER, &value);
+	if (!ret) {
+		if (value.strval)
+			*second = !strcmp(value.strval, "lwn");
+		else
+			ret = -ENODATA;
+	}
+	power_supply_put(psy);
+	return ret;
+}
+
 static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
 {
 	struct mca_buckchg_jeita_para *jeita_info = &info->jeita_para;
@@ -957,6 +990,11 @@ static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
 			  &(info->jeita_hot_termination_hyst), 0);
 	info->has_gbl_batt_para =
 		of_property_read_bool(node, "has-global-batt-para");
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA) && info->has_gbl_batt_para &&
+	    (!hwid || hwid->country_version > CountryJapan)) {
+		ret = -ENODATA;
+		goto out;
+	}
 	if (hwid && info->has_gbl_batt_para &&
 	    hwid->country_version != CountryCN) {
 		of_node_put(node);
@@ -985,6 +1023,29 @@ static int mca_buckchg_jeita_parse_dt(struct mca_buckchg_jeita_dev *info)
 				NULL, "mca_buckchg_jeita_tmp_para");
 			if (!node) {
 				mca_log_err("has-tmp-batt-para node in null\n");
+				ret = -EINVAL;
+				goto out;
+			}
+		}
+	}
+
+	if (of_property_read_bool(node, "has-second-batt-para")) {
+		bool second;
+
+		ret = mca_jeita_second_cell(node, &second);
+		if (ret) {
+			if (ret == -EAGAIN || ret == -EIO || ret == -ETIMEDOUT ||
+			    ret == -EREMOTEIO)
+				ret = -EPROBE_DEFER;
+			goto out;
+		}
+		if (second) {
+			struct device_node *parent = of_get_parent(node);
+
+			of_node_put(node);
+			node = of_get_child_by_name(parent, "mca_buckchg_jeita_second_para");
+			of_node_put(parent);
+			if (!node) {
 				ret = -EINVAL;
 				goto out;
 			}

@@ -9,4 +9,4 @@ obj-$(CONFIG_XIAOMI_MCA_CLASSES) += mca_platform_buckchg_class.o
 obj-$(CONFIG_XIAOMI_MCA_CLASSES) += mca_platform_cp_class.o
 obj-$(CONFIG_XIAOMI_MCA_CLASSES) += mca_platform_fg_ic_ops.o
 obj-$(CONFIG_XIAOMI_MCA_CLASSES) += mca_platform_loadsw_class.o
-obj-$(CONFIG_MYRON_MCA_SERVICES) += mca_platform_wireless_class.o
+obj-$(CONFIG_XIAOMI_MCA_CLASSES) += mca_platform_wireless_class.o

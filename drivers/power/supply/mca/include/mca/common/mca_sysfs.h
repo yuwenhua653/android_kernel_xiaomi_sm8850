@@ -107,6 +107,12 @@ void mca_sysfs_init_attrs(struct attribute **attrs,
 struct mca_sysfs_attr_info *
 mca_sysfs_lookup_attr(const char *name, struct mca_sysfs_attr_info *attr_info,
 		      int size);
+#ifdef CONFIG_DEBUG_FS
+struct mca_debugfs_group;
+int mca_debugfs_create_owned_group(const char *name, struct mca_debugfs_attr_info *attrs,
+			int count, void *data, struct mca_debugfs_group **owner);
+void mca_debugfs_remove_owned_group(struct mca_debugfs_group *group);
+#endif
 int mca_debugfs_create_group(const char *dir_name,
 			     struct mca_debugfs_attr_info *attr_info,
 			     const int attr_size, void *dev_data);

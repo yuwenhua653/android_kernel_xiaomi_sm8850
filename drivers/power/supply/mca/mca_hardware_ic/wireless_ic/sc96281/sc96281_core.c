@@ -18,6 +18,8 @@
  */
 
 #include <linux/i2c.h>
+#include <linux/power_supply.h>
+#include <mca/common/mca_nezha_psy.h>
 #include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/interrupt.h>
@@ -31,6 +33,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/module.h>
+#include <linux/unaligned.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/notifier.h>
 #include <linux/reboot.h>
@@ -1269,9 +1272,19 @@ static void sc96281_create_device_node(struct device *dev)
 // -------------------ops functions-------------------
 static int sc96281_enable_reverse_chg(bool enable, void *data)
 {
-	struct sc96281 *chip = (struct sc96281 *)data;
+	struct sc96281 *chip = data;
+	int ret;
 
-	return sc96281_tx_enable(chip, enable);
+	guard(mutex)(&chip->fod_lock);
+	if (!READ_ONCE(chip->ready))
+		return -ESHUTDOWN;
+	/* A failed start command may still have reached the transmitter. */
+	if (enable)
+		chip->tx_requested = true;
+	ret = sc96281_tx_enable(chip, enable);
+	if (!ret && !enable)
+		chip->tx_requested = false;
+	return ret;
 }
 
 static int sc96281_is_present(int *present, void *data)
@@ -1292,23 +1305,27 @@ static int sc96281_set_vout(int vout, void *data)
 	int8_t cep = 0;
 	struct sc96281 *chip = (struct sc96281 *)data;
 
-	if (!chip->proc_data.power_good_flag)
-		return -1;
-
+	guard(mutex)(&chip->fod_lock);
+	if (!chip->proc_data.power_good_flag || !READ_ONCE(chip->ready))
+		return -ENOTCONN;
+	vout = clamp(vout < VOUT_SET_MIN_MV ? VOUT_SET_DEFAULT_MV : vout,
+		     VOUT_SET_MIN_MV, VOUT_SET_MAX_MV);
+	if (!chip->fod_valid)
+		return -EAGAIN;
 	mutex_lock(&chip->data_transfer_lock);
 	msleep(20);
 
-	if (chip->proc_data.parallel_charge == true) {
+	if (READ_ONCE(chip->proc_data.parallel_charge)) {
 		ret = sc96281_rx_get_ce_value(chip, &cep);
+		if (ret)
+			goto exit;
 		if (ABS(cep) > ABS_CEP_VALUE &&
 		    chip->proc_data.vout_setted <= vout) {
+			ret = -EAGAIN;
 			mca_log_info("vol:%d ,cep %d, not set\n", vout, cep);
 			goto exit;
 		}
 	}
-
-	vout = (vout < VOUT_SET_MIN_MV) ? VOUT_SET_DEFAULT_MV : vout;
-	vout = (vout > VOUT_SET_MAX_MV) ? VOUT_SET_MAX_MV : vout;
 
 	ret = sc96281_rx_set_Vout(chip, (uint16_t)vout);
 	if (ret) {
@@ -1424,6 +1441,7 @@ static int sc96281_get_tx_adapter(int *adapter, void *data)
 {
 	struct sc96281 *chip = (struct sc96281 *)data;
 
+	guard(mutex)(&chip->fod_lock);
 	if (chip->proc_data.power_good_flag)
 		*adapter = chip->proc_data.adapter_type;
 	else
@@ -1436,43 +1454,45 @@ static int sc96281_get_tx_adapter(int *adapter, void *data)
 
 static int sc96281_get_tx_adapter_by_i2c(int *adapter, void *data)
 {
-	struct sc96281 *chip = (struct sc96281 *)data;
-	u8 val = 0;
+	struct sc96281 *chip = data;
+	u8 type;
 	int ret;
 
-	if (!chip->proc_data.power_good_flag) {
-		*adapter = 0;
-		return 0;
-	}
-
-	/* 0x01D8: TX adapter type register */
-	ret = sc96281_read_block(chip, 0x01D8, &val, 1);
-	if (!ret)
-		chip->proc_data.adapter_type = val;
-
-	*adapter = chip->proc_data.adapter_type;
-	mca_log_info("wls_get_adapter: %d\n", chip->proc_data.adapter_type);
-
+	guard(mutex)(&chip->fod_lock);
+	if (!chip->proc_data.power_good_flag)
+		return -ENOTCONN;
+	ret = sc96281_read_block(chip, 0x01D8, &type, sizeof(type));
+	if (ret)
+		return ret;
+	chip->proc_data.adapter_type = type;
+	*adapter = type;
 	return 0;
+}
+
+static int sc96281_drive_rx(struct sc96281 *chip, bool enable)
+{
+	int ret = gpio_direction_output(chip->enable_gpio, !enable);
+
+	if (ret)
+		return ret;
+	return gpio_get_value_cansleep(chip->enable_gpio) == !enable ? 0 : -EIO;
 }
 
 static int sc96281_set_enable_mode(bool enable, void *data)
 {
-	int ret = 0;
-	struct sc96281 *chip = (struct sc96281 *)data;
-	int en = !!enable;
-	int gpio_enable_val = 0;
+	struct sc96281 *chip = data;
+	int ret;
 
-	mca_log_info("set enable mode:%d\n", enable);
-
-	ret = gpio_direction_output(chip->enable_gpio, !en);
-	if (ret)
-		mca_log_err("set direction for enable gpio [%d] fail\n",
-			    chip->enable_gpio);
-
-	gpio_enable_val = gpio_get_value(chip->enable_gpio);
-	mca_log_info("enable gpio val is :%d\n", gpio_enable_val);
-
+	guard(mutex)(&chip->fod_lock);
+	if (!READ_ONCE(chip->ready))
+		return -ESHUTDOWN;
+	ret = sc96281_drive_rx(chip, enable);
+	if (!enable)
+		chip->fod_valid = false;
+	if (!ret && enable)
+		chip->fod_fault = false;
+	if (!ret)
+		mod_delayed_work(chip->workqueue, &chip->pg_detect_work, 0);
 	return ret;
 }
 
@@ -1548,57 +1568,60 @@ static int sc96281_get_rx_power_mode(u8 *power_mode, void *data)
 	return ret;
 }
 
-static int sc96281_get_auth_value(int *value, void *data)
+static void sc96281_fod_failure_locked(struct sc96281 *chip, int error)
 {
-	int ret = 0;
-	struct sc96281 *chip = (struct sc96281 *)data;
-	uint32_t auth_data = 0, uuid = 0;
-	uint8_t adapter_type = ADAPTER_NONE;
+	int ret = sc96281_drive_rx(chip, false);
 
-	if (!chip->proc_data.power_good_flag) {
-		*value = 0;
-		return ret;
-	}
-
-	ret = read_cust(chip, cust_rx.mi_ctx.fun_flag, &auth_data);
-	if (ret) {
-		mca_log_err("fail, ret = %d\n", ret);
-		return ret;
-	} else {
-		mca_log_info("auth_data = 0x%x\n", auth_data);
-	}
-
-	if (auth_data & PROJECT_FLAG_ADAPTER_TYPE) {
-		ret = read_cust(chip, cust_rx.mi_ctx.adapter_type,
-				&adapter_type);
-		if (!ret)
-			chip->proc_data.adapter_type =
-				(adapter_type != ADAPTER_NONE) ?
-					adapter_type :
-					ADAPTER_AUTH_FAILED;
-	}
-
-	if (auth_data & PROJECT_FLAG_UUID) {
-		ret = read_cust(chip, cust_rx.mi_ctx.tx_uuid, &uuid);
-		if (!ret) {
-			chip->proc_data.uuid[0] = (uuid >> 24) & 0xFF;
-			chip->proc_data.uuid[1] = (uuid >> 16) & 0xFF;
-			chip->proc_data.uuid[2] = (uuid >> 8) & 0xFF;
-			chip->proc_data.uuid[3] = uuid & 0xFF;
-		}
-	}
-
-	*value = auth_data;
-
-	mca_log_info("adapter type: %d\n", chip->proc_data.adapter_type);
-	mca_log_info("uuid: 0x%x, 0x%x, 0x%x, 0x%x\n", chip->proc_data.uuid[0],
-		     chip->proc_data.uuid[1], chip->proc_data.uuid[2],
-		     chip->proc_data.uuid[3]);
-
-	return 0;
+	chip->fod_valid = false;
+	chip->fod_fault = true;
+	mod_delayed_work(chip->workqueue, &chip->pg_detect_work, 0);
+	dev_err_ratelimited(chip->dev, "RX protection failed %d, sleep returned %d\n",
+			    error, ret);
 }
 
-static int sc96281_set_fod_params(int value, void *data);
+static int sc96281_read_auth_locked(struct sc96281 *chip, int *value)
+{
+	u32 flags, uuid;
+	u8 adapter;
+	int ret;
+
+	ret = read_cust(chip, cust_rx.mi_ctx.fun_flag, &flags);
+	if (ret)
+		goto fail;
+	if (flags & PROJECT_FLAG_ADAPTER_TYPE) {
+		ret = read_cust(chip, cust_rx.mi_ctx.adapter_type, &adapter);
+		if (ret)
+			goto fail;
+	}
+	if (flags & PROJECT_FLAG_UUID) {
+		ret = read_cust(chip, cust_rx.mi_ctx.tx_uuid, &uuid);
+		if (ret)
+			goto fail;
+	}
+	if (flags & PROJECT_FLAG_ADAPTER_TYPE)
+		chip->proc_data.adapter_type = adapter != ADAPTER_NONE ? adapter : ADAPTER_AUTH_FAILED;
+	if (flags & PROJECT_FLAG_UUID) {
+		put_unaligned_be32(uuid, chip->proc_data.uuid);
+		chip->fod_valid = false;
+	}
+	*value = flags;
+	return 0;
+fail:
+	sc96281_fod_failure_locked(chip, ret);
+	return ret;
+}
+
+static int sc96281_get_auth_value(int *value, void *data)
+{
+	struct sc96281 *chip = data;
+
+	guard(mutex)(&chip->fod_lock);
+	if (!chip->proc_data.power_good_flag || chip->fod_fault)
+		return -ENOTCONN;
+	return sc96281_read_auth_locked(chip, value);
+}
+
+static int sc96281_apply_fod_locked(struct sc96281 *chip);
 
 static int sc96281_set_adapter_voltage(int voltage, void *data)
 {
@@ -1608,8 +1631,13 @@ static int sc96281_set_adapter_voltage(int voltage, void *data)
 	if ((voltage < ADAPTER_VOL_MIN_MV) || (voltage > ADAPTER_VOL_MAX_MV))
 		voltage = ADAPTER_VOL_DEFAULT_MV;
 
-	ret = sc96281_set_fod_params(0, chip);
-	if (ret) return ret;
+	guard(mutex)(&chip->fod_lock);
+	if (!READ_ONCE(chip->ready) || chip->fod_fault || !chip->proc_data.power_good_flag ||
+	    gpio_get_value_cansleep(chip->enable_gpio))
+		return -ENOTCONN;
+	ret = sc96281_apply_fod_locked(chip);
+	if (ret)
+		return ret;
 	ret = write_cust(chip, cust_rx.mi_ctx.fc_volt, &voltage);
 	if (ret) {
 		mca_log_err("wls_set_adapter_voltage to %dmV fail\n", voltage);
@@ -1617,7 +1645,8 @@ static int sc96281_set_adapter_voltage(int voltage, void *data)
 	}
 	ret = sc96281_rx_set_cust_cmd(chip, CUST_CMD_RX_FAST_CHARGE);
 
-	mca_log_info("wls_set_adapter_voltage to %dmV success\n", voltage);
+	if (!ret)
+		mca_log_info("wls_set_adapter_voltage to %dmV success\n", voltage);
 
 	return ret;
 }
@@ -1626,6 +1655,7 @@ static int sc96281_get_tx_uuid(u8 *uuid, void *data)
 {
 	struct sc96281 *chip = (struct sc96281 *)data;
 
+	guard(mutex)(&chip->fod_lock);
 	if (chip->proc_data.power_good_flag)
 		memcpy(uuid, chip->proc_data.uuid,
 		       sizeof(chip->proc_data.uuid));
@@ -1671,7 +1701,8 @@ static int sc96281_program_fod(int value, void *data)
 	two_to_one = sc96281_find_fod(chip->fod_params_2_1,
 		chip->fod_params_2_1_size, uuid);
 	if (two_to_one) {
-		ret = strategy_class_wireless_ops_get_adapter_charger_mode(&mode);
+		ret = mca_strategy_func_get_status(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
+				STRATEGY_STATUS_TYPE_MODE, &mode);
 		if (ret)
 			return ret;
 		if (mode == SC96281_MCA_FORWARD_2_1)
@@ -1687,16 +1718,26 @@ static int sc96281_program_fod(int value, void *data)
 	return sc96281_set_fod(chip, &selected);
 }
 
-/* Serialize selection with Hall updates as well as the hardware transaction. */
+/* fod_lock also covers the subsequent voltage or power request. */
+static int sc96281_apply_fod_locked(struct sc96281 *chip)
+{
+	int ret = sc96281_program_fod(0, chip);
+
+	chip->fod_valid = !ret;
+	if (ret)
+		sc96281_fod_failure_locked(chip, ret);
+	return ret;
+}
+
 static int sc96281_set_fod_params(int value, void *data)
 {
 	struct sc96281 *chip = data;
-	int ret;
 
-	mutex_lock(&chip->fod_lock);
-	ret = sc96281_program_fod(value, data);
-	mutex_unlock(&chip->fod_lock);
-	return ret;
+	guard(mutex)(&chip->fod_lock);
+	if (!READ_ONCE(chip->ready) || chip->fod_fault || !chip->proc_data.power_good_flag ||
+	    gpio_get_value_cansleep(chip->enable_gpio))
+		return -ENOTCONN;
+	return sc96281_apply_fod_locked(chip);
 }
 
 static int sc96281_set_debug_fod_params(void *data)
@@ -1892,10 +1933,13 @@ static int sc96281_do_renego(uint8_t max_power, void *data)
 
 	mca_log_info("max_power = %d\n", max_power);
 
-	if (!chip->proc_data.power_good_flag)
-		return -1;
-
-	//ret = sc96281_rx_reneg(chip, max_power);
+	guard(mutex)(&chip->fod_lock);
+	if (!READ_ONCE(chip->ready) || !chip->proc_data.power_good_flag)
+		return -ENOTCONN;
+	if (!chip->fod_valid)
+		return -EAGAIN;
+	if (max_power > U8_MAX / 2)
+		return -ERANGE;
 	max_power *= 2;
 
 	ret = write_cust(chip, cust_rx.mi_ctx.reneg_param, &max_power);
@@ -1917,7 +1961,7 @@ static int sc96281_set_parallel_charge(bool parallel, void *data)
 {
 	struct sc96281 *chip = (struct sc96281 *)data;
 
-	chip->proc_data.parallel_charge = parallel;
+	WRITE_ONCE(chip->proc_data.parallel_charge, parallel);
 	mca_log_info("set_parallel_charge: %d\n", parallel);
 
 	return 0;
@@ -2669,6 +2713,71 @@ static __maybe_unused int sc96281_tx_get_int_flag(uint32_t txint)
 	return RTX_INT_UNKNOWN;
 }
 
+static enum power_supply_property sc96281_supply_props[] = {
+	POWER_SUPPLY_PROP_PRESENT,
+	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
+};
+
+static int sc96281_supply_get(struct power_supply *psy, enum power_supply_property prop,
+			      union power_supply_propval *val)
+{
+	struct sc96281 *chip = power_supply_get_drvdata(psy);
+	u16 sample;
+	u32 mode;
+	bool present;
+	int ret;
+
+	guard(mutex)(&chip->fod_lock);
+	present = READ_ONCE(chip->ready) && !chip->tx_requested &&
+		  gpio_get_value_cansleep(chip->power_good_gpio);
+	if (prop == POWER_SUPPLY_PROP_PRESENT) {
+		val->intval = present;
+		return 0;
+	}
+	if (!present || !chip->proc_data.power_good_flag || !chip->fod_valid ||
+	    gpio_get_value_cansleep(chip->enable_gpio)) {
+		if (prop != POWER_SUPPLY_PROP_ONLINE)
+			return -ENODATA;
+		val->intval = 0;
+		return 0;
+	}
+	switch (prop) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		ret = read_cust(chip, cust_rx.mode, &mode);
+		if (ret)
+			return ret;
+		if (!(mode & WORK_MODE_RX) || (mode & (WORK_MODE_SLEEP | WORK_MODE_TX))) {
+			val->intval = 0;
+			return 0;
+		}
+		ret = sc96281_rx_get_vout(chip, &sample);
+		if (!ret)
+			val->intval = sample != 0;
+		return ret;
+	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+		ret = sc96281_rx_get_vout(chip, &sample);
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		ret = sc96281_rx_get_iout(chip, &sample);
+		break;
+	default:
+		return -EINVAL;
+	}
+	if (!ret)
+		val->intval = sample * 1000;
+	return ret;
+}
+
+static const struct power_supply_desc sc96281_supply_desc = {
+	.name = "wireless",
+	.type = POWER_SUPPLY_TYPE_WIRELESS,
+	.properties = sc96281_supply_props,
+	.num_properties = ARRAY_SIZE(sc96281_supply_props),
+	.get_property = sc96281_supply_get,
+};
+
 static void sc96281_hall_interrupt_work(struct work_struct *work);
 
 static void sc96281_init_detect_work(struct work_struct *work)
@@ -2676,44 +2785,47 @@ static void sc96281_init_detect_work(struct work_struct *work)
 	struct sc96281 *chip = container_of(work, struct sc96281, init_detect_work.work);
 	if (!READ_ONCE(chip->ready)) return;
 	sc96281_hall_interrupt_work(&chip->hall_interrupt_work.work);
-	schedule_delayed_work(&chip->pg_detect_work, 0);
+	queue_delayed_work(chip->workqueue, &chip->pg_detect_work, 0);
 	if (!gpio_get_value(chip->irq_gpio))
-		schedule_delayed_work(&chip->interrupt_work, 0);
+		queue_delayed_work(chip->workqueue, &chip->interrupt_work, 0);
 }
 
 static void sc96281_pg_det_work(struct work_struct *work)
 {
 	struct sc96281 *chip =
 		container_of(work, struct sc96281, pg_detect_work.work);
-	int ret = 0;
+	bool online, changed;
+	int flags;
 
-	if (!READ_ONCE(chip->ready)) return;
-	if (gpio_is_valid(chip->power_good_gpio)) {
-		ret = gpio_get_value(chip->power_good_gpio);
-		if (ret) {
-			if (chip->proc_data.power_good_flag) {
-				mca_log_info("wireless is already attached\n");
-				return;
-			}
-			ret = sc96281_set_fod_params(0, chip);
-			if (ret) {
-				mca_log_err("Initial FOD write failed: %d\n", ret);
-				return;
-			}
-			mca_log_info("power_good high, wireless attached\n");
-			chip->proc_data.power_good_flag = true;
-			mca_event_block_notify(MCA_EVENT_TYPE_CHARGER_CONNECT,
-					       MCA_EVENT_WIRELESS_CONNECT,
-					       NULL);
-		} else {
-			mca_log_info("power_good low, wireless detached\n");
-			chip->proc_data.power_good_flag = false;
-			mca_event_block_notify(MCA_EVENT_TYPE_CHARGER_CONNECT,
-					       MCA_EVENT_WIRELESS_DISCONNECT,
-					       NULL);
-			memset(&chip->proc_data, 0, sizeof(chip->proc_data));
-		}
+	if (!READ_ONCE(chip->ready))
+		return;
+	mutex_lock(&chip->fod_lock);
+	online = !chip->fod_fault && gpio_get_value_cansleep(chip->power_good_gpio) &&
+		 !gpio_get_value_cansleep(chip->enable_gpio);
+	if (online && chip->psy && !chip->proc_data.power_good_flag &&
+	    sc96281_read_auth_locked(chip, &flags))
+		online = false;
+	if (online && !chip->fod_valid && sc96281_apply_fod_locked(chip))
+		online = false;
+	changed = online != chip->proc_data.power_good_flag;
+	WRITE_ONCE(chip->proc_data.power_good_flag, online);
+	if (!online) {
+		chip->fod_valid = false;
+		memset(chip->proc_data.uuid, 0, sizeof(chip->proc_data.uuid));
+		chip->proc_data.adapter_type = ADAPTER_NONE;
+		chip->proc_data.vout_setted = 0;
+		WRITE_ONCE(chip->proc_data.parallel_charge, false);
+		WRITE_ONCE(chip->proc_data.is_car_tx, false);
+		WRITE_ONCE(chip->proc_data.fc_flag, 0);
+		WRITE_ONCE(chip->proc_data.tx_speed, 0);
+		WRITE_ONCE(chip->proc_data.ss_voltage, 0);
 	}
+	mutex_unlock(&chip->fod_lock);
+	if (chip->psy && changed)
+		power_supply_changed(chip->psy);
+	if (changed)
+		mca_event_block_notify(MCA_EVENT_TYPE_CHARGER_CONNECT,
+			online ? MCA_EVENT_WIRELESS_CONNECT : MCA_EVENT_WIRELESS_DISCONNECT, NULL);
 }
 
 static irqreturn_t sc96281_power_good_handler(int irq, void *dev_id)
@@ -2722,7 +2834,8 @@ static irqreturn_t sc96281_power_good_handler(int irq, void *dev_id)
 
 	mca_log_info("power_good detected\n");
 
-	schedule_delayed_work(&chip->pg_detect_work, msecs_to_jiffies(0));
+	if (READ_ONCE(chip->ready))
+		queue_delayed_work(chip->workqueue, &chip->pg_detect_work, msecs_to_jiffies(0));
 
 	return IRQ_HANDLED;
 }
@@ -2767,6 +2880,17 @@ static void sc96281_interrupt_work(struct work_struct *work)
 		}
 		ret = sc96281_rx_clr_int(chip, regval);
 		if (ret) goto exit;
+		if (chip->psy && (regval & WP_IRQ_RX_AUTH)) {
+			int flags;
+
+			mutex_lock(&chip->fod_lock);
+			if (chip->proc_data.power_good_flag && !chip->fod_fault &&
+			    !sc96281_read_auth_locked(chip, &flags) && !chip->fod_valid)
+				sc96281_apply_fod_locked(chip);
+			mutex_unlock(&chip->fod_lock);
+		}
+		if (chip->psy && (regval & (WP_IRQ_RX_LDO_ON | WP_IRQ_RX_LDO_OFF | WP_IRQ_RX_AUTH)))
+			power_supply_changed(chip->psy);
 		for (i = 0; i < ARRAY_SIZE(rx_irq_map); i++) {
 			if (!(rx_irq_map[i].irq_regval & regval)) continue;
 			chip->proc_data.int_flag = rx_irq_map[i].irq_flag;
@@ -2777,13 +2901,21 @@ static void sc96281_interrupt_work(struct work_struct *work)
 exit:
 	chip->proc_data.int_flag = 0;
 	mutex_unlock(&chip->wireless_chg_int_lock);
-	mca_log_info("already clear int and unlock mutex\n");
+	/* An uncleared level-low IRQ will not generate a second falling edge. */
+	if (ret && READ_ONCE(chip->ready) && !gpio_get_value_cansleep(chip->irq_gpio) &&
+	    chip->irq_retries < 3) {
+		chip->irq_retries++;
+		mod_delayed_work(chip->workqueue, &chip->interrupt_work, msecs_to_jiffies(20));
+	} else {
+		chip->irq_retries = 0;
+	}
 }
 
 static irqreturn_t sc96281_interrupt_handler(int irq, void *dev_id)
 {
 	struct sc96281 *chip = dev_id;
-	schedule_delayed_work(&chip->interrupt_work, msecs_to_jiffies(0));
+	if (READ_ONCE(chip->ready))
+		queue_delayed_work(chip->workqueue, &chip->interrupt_work, msecs_to_jiffies(0));
 	return IRQ_HANDLED;
 }
 
@@ -2803,16 +2935,10 @@ static void sc96281_hall_interrupt_work(struct work_struct *work)
 	chip->hall_gpio_status = !attached;
 	WRITE_ONCE(chip->magnetic_case_flag, attached);
 	mca_log_info("Hall s=%d n=%d magnetic=%d\n", s, n, attached);
-	if (chip->proc_data.power_good_flag) {
-		int ret = sc96281_program_fod(0, chip);
-
-		if (ret) {
-			int stop_ret = sc96281_set_enable_mode(false, chip);
-
-			mca_log_err("Hall FOD programming failed %d; RX disable %d\n", ret, stop_ret);
-			mutex_unlock(&chip->fod_lock);
-			return;
-		}
+	if (chip->proc_data.power_good_flag && sc96281_apply_fod_locked(chip)) {
+		mutex_unlock(&chip->fod_lock);
+		mod_delayed_work(chip->workqueue, &chip->pg_detect_work, 0);
+		return;
 	}
 	mutex_unlock(&chip->fod_lock);
 	mca_strategy_func_process(STRATEGY_FUNC_TYPE_BASIC_WIRELESS,
@@ -2828,12 +2954,22 @@ static irqreturn_t sc96281_hall_interrupt_handler(int irq, void *dev_id)
 
 	mca_log_info("hall_int detected\n");
 
-	schedule_delayed_work(&chip->hall_interrupt_work, msecs_to_jiffies(0));
+	if (READ_ONCE(chip->ready))
+		queue_delayed_work(chip->workqueue, &chip->hall_interrupt_work, msecs_to_jiffies(0));
 
 	return IRQ_HANDLED;
 }
 
 #include "inc/sc96281_myron_dt.h"
+
+static void sc96281_sleep_rx(void *data)
+{
+	struct sc96281 *chip = data;
+	int ret = sc96281_drive_rx(chip, false);
+
+	if (ret)
+		dev_err(chip->dev, "failed to sleep receiver on release: %d\n", ret);
+}
 
 static int sc96281_parse_dt(struct sc96281 *chip)
 {
@@ -2847,8 +2983,16 @@ static int sc96281_parse_dt(struct sc96281 *chip)
 	if (ret || chip->rx_role != WIRELESS_ROLE_MASTER) return -EINVAL;
 	ret = of_property_read_u32(node, "support-hall", &chip->support_hall);
 	if (ret || chip->support_hall != 1) return -EINVAL;
-	fod = of_find_node_by_name(NULL, "mca_sc96281_fod_data");
-	if (!fod) return -ENODEV;
+	if (of_property_present(node, "mca,fod-data"))
+		fod = of_parse_phandle(node, "mca,fod-data", 0);
+	else
+		fod = of_find_node_by_name(NULL, "mca_sc96281_fod_data");
+	if (!fod)
+		return -ENODEV;
+	if (!of_device_is_compatible(fod, "mca_sc96281_fod_data")) {
+		of_node_put(fod);
+		return -EINVAL;
+	}
 	ret = sc96281_myron_parse_table(fod, "fod_params", chip->fod_params,
 			ARRAY_SIZE(chip->fod_params));
 	if (ret > 0) {
@@ -2869,7 +3013,11 @@ static int sc96281_parse_dt(struct sc96281 *chip)
 	if (chip->enable_gpio < 0) return chip->enable_gpio;
 	ret = devm_gpio_request_one(chip->dev, chip->enable_gpio,
 			GPIOF_OUT_INIT_LOW, "sc96281-enable");
-	if (ret) return ret;
+	if (ret)
+		return ret;
+	ret = devm_add_action_or_reset(chip->dev, sc96281_sleep_rx, chip);
+	if (ret)
+		return ret;
 	chip->irq_gpio = of_get_named_gpio(node, "rx-int", 0);
 	chip->power_good_gpio = of_get_named_gpio(node, "pwr-det-int", 0);
 	chip->hall_int_gpio = of_get_named_gpio(node, "hall-s-int", 0);
@@ -2896,6 +3044,7 @@ static void sc96281_cancel_works(void *data)
 	cancel_delayed_work_sync(&chip->init_detect_work);
 	cancel_delayed_work_sync(&chip->pg_detect_work);
 	cancel_delayed_work_sync(&chip->interrupt_work);
+	destroy_workqueue(chip->workqueue);
 }
 
 static void sc96281_destroy_mutexes(void *data)
@@ -2905,6 +3054,8 @@ static void sc96281_destroy_mutexes(void *data)
 	mutex_destroy(&chip->i2c_rw_lock);
 	mutex_destroy(&chip->data_transfer_lock);
 	mutex_destroy(&chip->wireless_chg_int_lock);
+	mutex_destroy(&chip->fod_lock);
+	mutex_destroy(&chip->stop_lock);
 }
 
 static void sc96281_disable_wakeup(void *data)
@@ -2971,22 +3122,47 @@ static int sc96281_irq_init(struct sc96281 *chip)
 		"sc96281_hall_n_int_irq");
 }
 
-static int sc96281_shutdown_cb(struct notifier_block *nb, unsigned long code,
-			       void *unused)
+static void sc96281_stop(void *data)
 {
-	struct sc96281 *bcdev =
-		container_of(nb, struct sc96281, shutdown_notifier);
+	struct sc96281 *chip = data;
+	int ret;
 
-	if (code == SYS_POWER_OFF || code == SYS_RESTART) {
-		mca_log_info("start adsp shutdown\n");
-		if (bcdev->proc_data.power_good_flag) {
-			sc96281_set_enable_mode(false, bcdev);
-			msleep(150);
-			//TODO:set wls_iin = 0
-			sc96281_set_enable_mode(true, bcdev);
-		}
+	guard(mutex)(&chip->stop_lock);
+	if (READ_ONCE(chip->ready)) {
+		WRITE_ONCE(chip->ready, false);
+		platform_class_wireless_unregister_ops(chip->rx_role, chip, &sc96281_wls_ops);
+		disable_delayed_work_sync(&chip->init_detect_work);
+		disable_delayed_work_sync(&chip->hall_interrupt_work);
+		disable_delayed_work_sync(&chip->pg_detect_work);
+		disable_delayed_work_sync(&chip->interrupt_work);
 	}
+	mutex_lock(&chip->fod_lock);
+	if (chip->tx_requested) {
+		ret = sc96281_tx_enable(chip, false);
+		if (ret)
+			dev_err(chip->dev, "TX stop failed: %d\n", ret);
+		else
+			chip->tx_requested = false;
+	}
+	ret = sc96281_drive_rx(chip, false);
+	if (ret)
+		dev_err(chip->dev, "RX sleep failed: %d\n", ret);
+	chip->fod_valid = false;
+	if (chip->proc_data.power_good_flag) {
+		WRITE_ONCE(chip->proc_data.power_good_flag, false);
+		mutex_unlock(&chip->fod_lock);
+		if (chip->psy)
+			power_supply_changed(chip->psy);
+		mca_event_block_notify(MCA_EVENT_TYPE_CHARGER_CONNECT, MCA_EVENT_WIRELESS_DISCONNECT, NULL);
+	} else {
+		mutex_unlock(&chip->fod_lock);
+	}
+}
 
+static int sc96281_shutdown_cb(struct notifier_block *nb, unsigned long code, void *unused)
+{
+	if (code == SYS_POWER_OFF || code == SYS_RESTART || code == SYS_HALT)
+		sc96281_stop(container_of(nb, struct sc96281, shutdown_notifier));
 	return NOTIFY_DONE;
 }
 
@@ -3032,6 +3208,7 @@ static int sc96281_charger_probe(struct i2c_client *client,
 	mutex_init(&chip->i2c_rw_lock);
 	mutex_init(&chip->data_transfer_lock);
 	mutex_init(&chip->fod_lock);
+	mutex_init(&chip->stop_lock);
 	mutex_init(&chip->wireless_chg_int_lock);
 	ret = devm_add_action_or_reset(chip->dev, sc96281_destroy_mutexes,
 					chip);
@@ -3050,7 +3227,10 @@ static int sc96281_charger_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&chip->hall_interrupt_work,
 			  sc96281_hall_interrupt_work);
 
-	/* Register this before IRQ resources, so they stop before work is drained. */
+	chip->workqueue = alloc_ordered_workqueue("sc96281-%s", 0, dev_name(chip->dev));
+	if (!chip->workqueue)
+		return -ENOMEM;
+	/* IRQ resources unwind before the ordered device workqueue. */
 	ret = devm_add_action_or_reset(chip->dev, sc96281_cancel_works, chip);
 	if (ret)
 		return ret;
@@ -3060,6 +3240,30 @@ static int sc96281_charger_probe(struct i2c_client *client,
 	if (ret)
 		return ret;
 
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA) && !nezha_business_owns_supplies()) {
+		static char *consumers[] = { "battery" };
+		struct power_supply_config cfg = {
+			.drv_data = chip,
+			.of_node = chip->dev->of_node,
+			.supplied_to = consumers,
+			.num_supplicants = ARRAY_SIZE(consumers),
+		};
+
+		chip->psy = devm_power_supply_register(chip->dev, &sc96281_supply_desc, &cfg);
+		if (IS_ERR(chip->psy))
+			return dev_err_probe(chip->dev, PTR_ERR(chip->psy), "register wireless supply\n");
+	}
+	WRITE_ONCE(chip->fod_case, sc96281_fod_case(
+		gpio_get_value(chip->hall_n_gpio), gpio_get_value(chip->hall_int_gpio)));
+	WRITE_ONCE(chip->magnetic_case_flag, !!chip->fod_case);
+	chip->hall_gpio_status = !chip->magnetic_case_flag;
+	ret = platform_class_wireless_register_ops(chip->rx_role, chip, &sc96281_wls_ops);
+	if (ret)
+		return ret;
+	WRITE_ONCE(chip->ready, true);
+	ret = devm_add_action_or_reset(chip->dev, sc96281_stop, chip);
+	if (ret)
+		return ret;
 	chip->shutdown_notifier.notifier_call = sc96281_shutdown_cb;
 	chip->shutdown_notifier.priority = 255;
 	ret = register_reboot_notifier(&chip->shutdown_notifier);
@@ -3070,40 +3274,21 @@ static int sc96281_charger_probe(struct i2c_client *client,
 	if (ret)
 		return ret;
 
-	ret = platform_class_wireless_register_ops(chip->rx_role, chip,
-						   &sc96281_wls_ops);
-	if (ret) {
-		mca_log_err("register ops fail\n");
-		goto err_dev;
-	}
-
-	WRITE_ONCE(chip->fod_case, sc96281_fod_case(
-		gpio_get_value(chip->hall_n_gpio), gpio_get_value(chip->hall_int_gpio)));
-	WRITE_ONCE(chip->magnetic_case_flag, !!chip->fod_case);
-	chip->hall_gpio_status = !chip->magnetic_case_flag;
-	WRITE_ONCE(chip->ready, true);
-	schedule_delayed_work(&chip->init_detect_work, msecs_to_jiffies(1000));
-	if (chip->support_hall)
-		schedule_delayed_work(&chip->hall_interrupt_work,
-				      msecs_to_jiffies(1200));
+	queue_delayed_work(chip->workqueue, &chip->init_detect_work, 0);
 
 	mca_log_err("sc96281 probe success!\n");
 	return ret;
 
-err_dev:
-	mca_log_err("sc96281 probe failed!\n");
-	return ret;
 }
 
 static void sc96281_charger_remove(struct i2c_client *client)
 {
-	/* Managed actions release the notifier, IRQs, work and owned GPIO. */
+	sc96281_stop(i2c_get_clientdata(client));
 }
 
 static void sc96281_charger_shutdown(struct i2c_client *client)
 {
-	//struct sc96281 *sc = i2c_get_clientdata(client);
-	return;
+	sc96281_stop(i2c_get_clientdata(client));
 }
 
 static struct of_device_id sc96281_charger_match_table[] = {
@@ -3133,12 +3318,7 @@ static struct i2c_driver sc96281_wireless_charger_driver = {
     .id_table	= sc96281_id,
 };
 
-static int __init sc96281_myron_init(void)
-{
-	return i2c_add_driver(&sc96281_wireless_charger_driver);
-}
-module_init(sc96281_myron_init);
-/* No module_exit: MCA retains callbacks and has no synchronized unregister API. */
+module_i2c_driver(sc96281_wireless_charger_driver);
 
 MODULE_DESCRIPTION("SC SC96281 Wireless Charge Driver");
 MODULE_AUTHOR("tianye9@xiaomi.com");

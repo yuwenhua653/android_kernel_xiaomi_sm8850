@@ -115,6 +115,21 @@ static int bq27xxx_battery_i2c_bulk_read(struct bq27xxx_device_info *di, u8 reg,
 	if (!client->adapter)
 		return -ENODEV;
 
+	/* The BQ27Z561 MAC response is 36 bytes including checksum and
+	 * length. Read it in one transfer on raw I2C-capable controllers.
+	 */
+	if (len > I2C_SMBUS_BLOCK_MAX) {
+		struct i2c_msg msgs[] = {
+			{ .addr = client->addr, .len = 1, .buf = &reg },
+			{ .addr = client->addr, .flags = I2C_M_RD, .len = len, .buf = data },
+		};
+
+		if (len > U16_MAX || !i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
+			return -EOPNOTSUPP;
+		ret = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
+		return ret == ARRAY_SIZE(msgs) ? 0 : (ret < 0 ? ret : -EIO);
+	}
+
 	ret = i2c_smbus_read_i2c_block_data(client, reg, len, data);
 	if (ret < 0)
 		return ret;

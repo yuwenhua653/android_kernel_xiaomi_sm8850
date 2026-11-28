@@ -2058,6 +2058,43 @@ static int bq27xxx_simple_value(int value,
 	return 0;
 }
 
+/* BQ27Z561 DeviceChemistry (0x004b) encodes the Nezha cell manufacturer
+ * in payload byte 1. Send only the query, then verify its echo and checksum.
+ */
+static int bq27z561_cell_manufacturer(struct bq27xxx_device_info *di, const char **name)
+{
+	static const char *const vendors[] = {
+		['A' - 'A'] = "samsung", ['B' - 'A'] = "sony", ['C' - 'A'] = "sanyo",
+		['D' - 'A'] = "lg", ['E' - 'A'] = "panasonic", ['F' - 'A'] = "atl",
+		['G' - 'A'] = "byd", ['H' - 'A'] = "tws", ['I' - 'A'] = "lishen",
+		['J' - 'A'] = "coslight", ['L' - 'A'] = "lwn",
+	};
+	u8 frame[36], sum = 0;
+	int ret, i, index;
+
+	if (!di->bus.write || !di->bus.read_bulk)
+		return -EOPNOTSUPP;
+	guard(mutex)(&di->lock);
+	ret = di->bus.write(di, 0x3e, 0x004b, false);
+	if (ret)
+		return ret;
+	usleep_range(4000, 4100);
+	ret = di->bus.read_bulk(di, 0x3e, frame, sizeof(frame));
+	if (ret)
+		return ret;
+	if (frame[0] != 0x4b || frame[1] || frame[35] < 8 || frame[35] > sizeof(frame))
+		return -EPROTO;
+	for (i = 0; i < frame[35] - 2; i++)
+		sum += frame[i];
+	if (frame[34] != (u8)~sum)
+		return -EBADMSG;
+	index = (int)frame[3] - 'A';
+	if (index < 0 || index >= ARRAY_SIZE(vendors) || !vendors[index])
+		return -ENODATA;
+	*name = vendors[index];
+	return 0;
+}
+
 static int bq27xxx_battery_get_property(struct power_supply *psy,
 					enum power_supply_property psp,
 					union power_supply_propval *val)
@@ -2150,6 +2187,9 @@ static int bq27xxx_battery_get_property(struct power_supply *psy,
 		ret = bq27xxx_battery_read_health(di, val);
 		break;
 	case POWER_SUPPLY_PROP_MANUFACTURER:
+		if (di->chip == BQ27Z561 &&
+		    of_property_read_bool(di->dev->of_node, "xiaomi,report-cell-manufacturer"))
+			return bq27z561_cell_manufacturer(di, &val->strval);
 		val->strval = BQ27XXX_MANUFACTURER;
 		break;
 	default:

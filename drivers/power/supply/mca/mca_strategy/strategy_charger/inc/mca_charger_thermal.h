@@ -133,6 +133,7 @@ struct mca_thermal_info {
 	struct thermal_cooling_device *tcd;
 	struct delayed_work init_voter_work;
 	int support_wireless;
+	bool wireless_car_column;
 	int wireless_phone_level;
 	struct mca_thermal_data wired_thermal_data[MAX_THERMAL_LEVEL];
 	struct mca_wireless_thermal_data

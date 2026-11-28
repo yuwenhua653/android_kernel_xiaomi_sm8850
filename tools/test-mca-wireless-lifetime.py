@@ -47,7 +47,9 @@ pre=r'''
 #define PMIC_REV_BOOST 0
 #define CHARGER_ADAPTER 3
 #define POWER_ON_UPDATE_TIMER 10000
-#define IS_ENABLED(x) 0
+#define CONFIG_TARGET_PRODUCT_NEZHA 1
+#define CONFIG_MYRON_IC_FIRMWARE_PROGRAMMING 0
+#define IS_ENABLED(x) (x)
 #define msecs_to_jiffies(x) (x)
 #define mca_log_info(...) ((void)0)
 #define mca_log_err(...) ((void)0)
@@ -101,6 +103,7 @@ static struct mca_votable *mca_create_owned_votable(const char *name,int t,void 
 }
 static int mca_detach_owned_votable(struct mca_votable *v,void *owner) {assert(v->owner==owner);v->owner=NULL;return 0;}
 static struct mca_votable borrowed;static struct mca_votable *mca_find_votable(const char *name) {(void)name;return &borrowed;}
+static int mca_vote(struct mca_votable *v,const char *client,bool enable,int limit){(void)v;(void)client;(void)enable;(void)limit;return 0;}
 static int mca_get_effective_result(struct mca_votable *v) {(void)v;return 0;}
 static int platform_class_cp_get_chip_vendor(int r,int *v) {(void)r;*v=1;return 0;}
 static int platform_class_cp_get_probe_ok(int r) {(void)r;return 0;}
@@ -116,7 +119,7 @@ for kind,typ,prefix,probe,stop,init in [
  setup='';body='';fields='struct device *dev;bool ready,stopping,strategy_registered,charge_if_registered,smartchg_registered,hardware_ready,sysfs_created,wakeup_enabled,notifier_registered;struct mca_charge_if_ops charge_if_ops;struct mutex data_lock;'+''.join('struct delayed_work '+w+';' for w in worknames)
  if kind=='basic':
   owned=re.findall(r'&info->(\w+)',fn(s,'strategy_wireless_destroy_voters'))
-  fields+=''.join('struct mca_votable *'+v+';' for v in owned)+'struct list_head header,irq_header;int list_lock,wait_que,strategy_init_done,support_multi_buck;bool wl_irq_running;void *batt_psy;'
+  fields+=''.join('struct mca_votable *'+v+';' for v in owned)+'struct mca_votable *charge_limit_voter;struct list_head header,irq_header;int list_lock,wait_que,strategy_init_done,support_multi_buck;bool wl_irq_running;void *batt_psy;'
   setup+='static struct '+typ+' *g_basic_wls_info;static struct mutex basic_wls_publish_lock;static int basic_wls_srcu;\n'
   setup+='static int strategy_wireless_parse_dt(struct '+typ+' *i) {(void)i;tables++;return step();}\n'
   setup+='static void strategy_wireless_free_cmd_tables(struct '+typ+' *i) {(void)i;assert(tables);tables--;}\n'

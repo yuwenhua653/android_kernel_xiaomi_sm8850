@@ -104,6 +104,7 @@ static int mca_wireless_charger_thermal_handle_limit(struct mca_thermal_info *in
 	int phone_flag = 0;
 	int i;
 	int thermal_level = 0;
+	int columns;
 	int ret = 0;
 
 	if (!info || READ_ONCE(info->stopping))
@@ -114,6 +115,7 @@ static int mca_wireless_charger_thermal_handle_limit(struct mca_thermal_info *in
 	if (!ctrl->voter_ok)
 		return mca_thermal_retry(info, -EAGAIN);
 
+	columns = info->wireless_car_column ? THERMAL_MODE_WIRELESS_MAX : THERMAL_MODE_WIRELESS_LEGACY_MAX;
 	thermal_level = info->smartchg_data.wls_super_sts ?
 				ctrl->quickchg_limit_level :
 				ctrl->limit_level;
@@ -135,6 +137,7 @@ static int mca_wireless_charger_thermal_handle_limit(struct mca_thermal_info *in
 		return 0;
 
 	if (!thermal_level) {
+		chg_curr[THERMAL_MODE_WIRELESS_XIAOMI_CAR] = ctrl->chg_curr;
 		chg_curr[THERMAL_MODE_WIRELESS_AUTHEN_20W] = ctrl->chg_curr;
 		chg_curr[THERMAL_MODE_WIRELESS_AUTHEN_30W] = ctrl->chg_curr;
 		chg_curr[THERMAL_MODE_WIRELESS_AUTHEN_50W] = ctrl->chg_curr;
@@ -145,7 +148,7 @@ static int mca_wireless_charger_thermal_handle_limit(struct mca_thermal_info *in
 			ctrl->chg_curr;
 	} else {
 		th_data = &data[thermal_level - 1].wireless_bpp_in;
-		for (i = 0; i < THERMAL_MODE_WIRELESS_LEGACY_MAX; i++) {
+		for (i = 0; i < columns; i++) {
 			if (!th_data[i]) {
 				if (i > THERMAL_MODE_WIRELESS_INLIMIT)
 					chg_curr[i] = ctrl->chg_curr;
@@ -159,7 +162,7 @@ static int mca_wireless_charger_thermal_handle_limit(struct mca_thermal_info *in
 
 	if (ctrl->wls_thermal_remove) {
 		if (!info->wireless_thermal_removed) {
-			for (i = 0; i < THERMAL_MODE_WIRELESS_LEGACY_MAX; i++)
+			for (i = 0; i < columns; i++)
 				mca_thermal_record_error(&ret, mca_vote(voter[i], "mca_wireless_thermal",
 					 false, chg_curr[i]));
 			info->wireless_thermal_removed = !ret;
@@ -168,7 +171,7 @@ static int mca_wireless_charger_thermal_handle_limit(struct mca_thermal_info *in
 	} else {
 		info->wireless_thermal_removed = 0;
 		mca_log_err("set disable vote %d\n", info->wireless_thermal_removed);
-		for (i = 0; i < THERMAL_MODE_WIRELESS_LEGACY_MAX; i++) {
+		for (i = 0; i < columns; i++) {
 			if (chg_curr[i])
 				mca_thermal_record_error(&ret, mca_vote(voter[i], "mca_wireless_thermal", true,
 					 chg_curr[i]));
@@ -798,6 +801,11 @@ static int mca_charger_thermal_parse_dt(struct mca_thermal_info *info)
 		if (ret)
 			return ret;
 		if (info->support_wireless) {
+			u32 columns;
+
+			info->wireless_car_column =
+				!of_property_read_u32(node, "xiaomi,wireless-thermal-columns", &columns) &&
+				columns == THERMAL_MODE_WIRELESS_MAX;
 			ret = mca_wireless_charger_thermal_parse_data("wireless_thermal", node,
 				info->wireless_thermal_data, &info->wireless_ctrl_info.max_level);
 			if (ret)
@@ -918,6 +926,13 @@ mca_charger_thermal_init_wireless_voter(struct mca_thermal_info *info)
 		mca_find_votable("wireless_auth_magnet_30w");
 	if (!info->wireless_voter[THERMAL_MODE_WIRELESS_AUTHEN_MAGNET_30W])
 		goto out;
+
+	if (info->wireless_car_column) {
+		info->wireless_voter[THERMAL_MODE_WIRELESS_XIAOMI_CAR] =
+			mca_find_votable("wireless_auth_xiaomi_car");
+		if (!info->wireless_voter[THERMAL_MODE_WIRELESS_XIAOMI_CAR])
+			goto out;
+	}
 
 	info->wireless_ctrl_info.voter_ok = 1;
 
@@ -1201,7 +1216,8 @@ mca_wireless_charger_thermal_poweroff_clear_voter(struct mca_thermal_info *info)
 		return mca_thermal_retry(info, ret);
 	}
 
-	for (i = 0; i < THERMAL_MODE_WIRELESS_LEGACY_MAX; i++)
+	for (i = 0; i < (info->wireless_car_column ? THERMAL_MODE_WIRELESS_MAX :
+						     THERMAL_MODE_WIRELESS_LEGACY_MAX); i++)
 		mca_thermal_record_error(&ret, mca_vote(info->wireless_voter[i], "mca_wireless_thermal", false,
 			 0));
 	info->wireless_clear_pending = !!ret;

@@ -20,6 +20,7 @@
 #include <linux/srcu.h>
 #include <linux/slab.h>
 #include <linux/module.h>
+#include <linux/unaligned.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <linux/delay.h>
@@ -1034,6 +1035,31 @@ strategy_wireless_set_auth_voice_box_ichg(struct mca_votable *votable,
 			 false, 0);
 
 	return 0;
+}
+
+/* Factory wireless_auth_xiaomi_car applies to these two authenticated pads. */
+static int strategy_wireless_set_auth_car(struct mca_votable *votable, void *data,
+					 int current_ma, const char *client)
+{
+	struct strategy_wireless_dev *info = data;
+	u32 uuid;
+	bool enabled;
+	int ret, second;
+
+	if (!info || !READ_ONCE(info->ready) || READ_ONCE(info->stopping))
+		return -ENODEV;
+	uuid = READ_ONCE(info->proc_data.uuid_value);
+	enabled = client && current_ma > 0 &&
+		READ_ONCE(info->proc_data.auth_data) >= AUTH_STATUS_UUID_OK &&
+		(uuid == 0x01070e01 || uuid == 0x0e0e0205);
+	if (!info->charge_limit_voter || !info->sw_thermal_ichg_voter)
+		return -EAGAIN;
+	/* Separate client IDs keep another adapter's thermal limit intact. */
+	ret = mca_vote(info->charge_limit_voter, "wireless_thermal_xiaomi_car",
+		       enabled, enabled ? current_ma : 0);
+	second = mca_vote(info->sw_thermal_ichg_voter, "wireless_thermal_xiaomi_car",
+			  enabled, enabled ? current_ma : 0);
+	return ret ? ret : second;
 }
 
 static int
@@ -2505,6 +2531,10 @@ strategy_wireless_reset_charge_para(struct strategy_wireless_dev *info)
 	mca_log_info("stop charging\n");
 	info->sw_cv_running = false;
 	memset(&info->proc_data, 0, sizeof(info->proc_data));
+	if (info->auth_car_voter && info->charge_limit_voter) {
+		mca_vote(info->charge_limit_voter, "wireless_thermal_xiaomi_car", false, 0);
+		mca_vote(info->sw_thermal_ichg_voter, "wireless_thermal_xiaomi_car", false, 0);
+	}
 	memset(&info->wls_node, 0, sizeof(info->wls_node));
 
 	mca_vote(info->chg_enable_voter, "online", true, 0);
@@ -2589,7 +2619,7 @@ static void strategy_wireless_chg_handler(struct strategy_wireless_dev *info)
 	u8 rcv_value[128];
 	u8 rcv_val = 0;
 	u8 err_code = 0;
-	int ret = 0;
+	int ret = 0, stop_ret;
 	static int num = 10;
 	int tx_q2 = 0;
 	int len = 0;
@@ -2663,31 +2693,50 @@ static void strategy_wireless_chg_handler(struct strategy_wireless_dev *info)
 		}
 		break;
 	case RX_INT_AUTHEN_FINISH:
-		mca_log_err("RX_INT_AUTHEN_FINISH\n");
-		platform_class_wireless_get_auth_value(
-			WIRELESS_ROLE_MASTER, &info->proc_data.auth_data);
-		platform_class_wireless_get_tx_uuid(WIRELESS_ROLE_MASTER,
-						    info->proc_data.uuid);
-		info->proc_data.uuid_value |= (info->proc_data.uuid[0] << 24 |
-					       info->proc_data.uuid[1] << 16 |
-					       info->proc_data.uuid[2] << 8 |
-					       info->proc_data.uuid[3]);
-		mca_log_err("uuid_value is 0x%08x\n",
-			    info->proc_data.uuid_value);
-		platform_class_wireless_get_tx_adapter(
-			WIRELESS_ROLE_MASTER, &info->proc_data.adapter_type);
-
+		ret = platform_class_wireless_get_auth_value(WIRELESS_ROLE_MASTER,
+							    &info->proc_data.auth_data);
+		if (!ret)
+			ret = platform_class_wireless_get_tx_uuid(WIRELESS_ROLE_MASTER,
+								  info->proc_data.uuid);
+		if (!ret)
+			ret = platform_class_wireless_get_tx_adapter(WIRELESS_ROLE_MASTER,
+								     &info->proc_data.adapter_type);
+		if (ret) {
+			info->proc_data.auth_data = AUTH_STATUS_FAILED;
+			info->proc_data.uuid_value = 0;
+			info->proc_data.adapter_type = ADAPTER_AUTH_FAILED;
+			stop_ret = platform_class_wireless_set_enable_mode(WIRELESS_ROLE_MASTER, false);
+			mca_log_err("wireless authentication read failed %d, RX sleep returned %d\n",
+				    ret, stop_ret);
+			break;
+		}
+		WRITE_ONCE(info->proc_data.uuid_value, get_unaligned_be32(info->proc_data.uuid));
+		if (info->auth_car_voter) {
+			ret = mca_rerun_election(info->auth_car_voter);
+			if (ret) {
+				info->proc_data.auth_data = AUTH_STATUS_FAILED;
+				info->proc_data.adapter_type = ADAPTER_AUTH_FAILED;
+				stop_ret = platform_class_wireless_set_enable_mode(WIRELESS_ROLE_MASTER, false);
+				mca_log_err("car thermal vote failed %d, RX sleep returned %d\n", ret, stop_ret);
+				break;
+			}
+		}
 		if (info->proc_data.auth_data != AUTH_STATUS_FAILED) {
 			if (info->proc_data.auth_data >= AUTH_STATUS_UUID_OK) {
-				platform_class_wireless_get_debug_fod_type(
-					WIRELESS_ROLE_MASTER, &type);
-				if (type != WLS_DEBUG_SET_FOD_NONE)
-					platform_class_wireless_set_debug_fod_params(
-						WIRELESS_ROLE_MASTER);
-				else
-					platform_class_wireless_set_fod_params(
-						WIRELESS_ROLE_MASTER,
-						info->proc_data.auth_data);
+				ret = platform_class_wireless_get_debug_fod_type(WIRELESS_ROLE_MASTER, &type);
+				if (!ret && type != WLS_DEBUG_SET_FOD_NONE)
+					ret = platform_class_wireless_set_debug_fod_params(WIRELESS_ROLE_MASTER);
+				else if (!ret || ret == -EOPNOTSUPP)
+					ret = platform_class_wireless_set_fod_params(WIRELESS_ROLE_MASTER,
+										info->proc_data.auth_data);
+				if (ret) {
+					info->proc_data.auth_data = AUTH_STATUS_FAILED;
+					info->proc_data.adapter_type = ADAPTER_AUTH_FAILED;
+					stop_ret = platform_class_wireless_set_enable_mode(WIRELESS_ROLE_MASTER, false);
+					mca_log_err("authenticated FOD failed %d, RX sleep returned %d\n",
+						    ret, stop_ret);
+					break;
+				}
 			}
 
 			if (!info->proc_data.epp)
@@ -4475,6 +4524,8 @@ static int strategy_wireless_get_status(int status, void *value, void *data)
 		return -1;
 
 	switch (status) {
+	case STRATEGY_STATUS_TYPE_MODE:
+		return strategy_class_wireless_ops_get_adapter_charger_mode_held(info, cur_val);
 	case STRATEGY_STATUS_TYPE_ONLINE:
 		return platform_class_wireless_is_present(WIRELESS_ROLE_MASTER,
 							  cur_val);
@@ -4933,6 +4984,7 @@ static void strategy_wireless_destroy_voters(struct strategy_wireless_dev *info)
 		&info->auth_80w_voter,
 		&info->auth_voice_box_voter,
 		&info->auth_magnet_30w_voter,
+		&info->auth_car_voter,
 		&info->sw_qc_ichg_voter,
 		&info->sw_thermal_ichg_voter,
 		&info->wls_input_suspend_voter,
@@ -5014,6 +5066,13 @@ static int strategy_wireless_init_voter(struct strategy_wireless_dev *info)
 		strategy_wireless_set_auth_magnet_30w_ichg, 15600, info);
 	if (IS_ERR(info->auth_magnet_30w_voter))
 		return PTR_ERR(info->auth_magnet_30w_voter);
+	if (IS_ENABLED(CONFIG_TARGET_PRODUCT_NEZHA)) {
+		info->auth_car_voter = strategy_wireless_create_voter(
+			"wireless_auth_xiaomi_car", MCA_VOTE_MIN, strategy_wireless_set_auth_car,
+			15600, info);
+		if (IS_ERR(info->auth_car_voter))
+			return PTR_ERR(info->auth_car_voter);
+	}
 	info->sw_qc_ichg_voter = strategy_wireless_create_voter(
 		"wireless_sw_qc_ich", MCA_VOTE_MIN,
 		strategy_wireless_sw_set_qc_ichg, 15600, info);
@@ -5153,6 +5212,8 @@ static void basic_wireless_stop(struct strategy_wireless_dev *info)
 					       info);
 		info->smartchg_registered = false;
 	}
+	if (!IS_ERR_OR_NULL(info->auth_car_voter) && info->charge_limit_voter)
+		mca_vote(info->charge_limit_voter, "wireless_thermal_xiaomi_car", false, 0);
 	strategy_wireless_destroy_voters(info);
 	disable_delayed_work_sync(&info->trans_data_work);
 	disable_delayed_work_sync(&info->monitor_work);

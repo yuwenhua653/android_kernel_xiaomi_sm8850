@@ -18,6 +18,7 @@
  */
 #include <linux/kernel.h>
 #include <linux/string.h>
+#include <linux/srcu.h>
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -40,8 +41,9 @@ struct platform_wireless_class_ops_data {
 	void *data;
 };
 
-static struct platform_wireless_class_ops_data
-	platform_wireless_data[WIRELESS_ROLE_MAX];
+static DEFINE_MUTEX(wireless_provider_lock);
+DEFINE_STATIC_SRCU(wireless_provider_srcu);
+static struct platform_wireless_class_ops_data __rcu *platform_wireless_data[WIRELESS_ROLE_MAX];
 
 struct platform_wireless_dev {
 	struct device *dev;
@@ -50,8 +52,6 @@ struct platform_wireless_dev {
 	struct device *sysfs_dev[MCA_WIRELESS_MAX_NUM];
 	int wireless_dev_index[MCA_WIRELESS_MAX_NUM];
 };
-
-static struct platform_wireless_dev *g_platform_wireless_dev;
 
 union platform_wireless_propval {
 	unsigned int uintval;
@@ -84,28 +84,57 @@ enum wireless_attr_list {
 static inline struct platform_wireless_class_ops_data *
 platform_wireless_class_get_ic_ops(unsigned int role)
 {
-	if (role >= WIRELESS_ROLE_MAX ||
-	    platform_wireless_data[role].ops == NULL)
+	if (role >= WIRELESS_ROLE_MAX)
 		return NULL;
 
-	return &platform_wireless_data[role];
+	return srcu_dereference(platform_wireless_data[role], &wireless_provider_srcu);
 }
 
 int platform_class_wireless_register_ops(
 	unsigned int role, void *data, struct platform_class_wireless_ops *ops)
 {
+	struct platform_wireless_class_ops_data *provider;
+
 	if (role >= WIRELESS_ROLE_MAX || !data || !ops)
-		return -EOPNOTSUPP;
-
-	platform_wireless_data[role].data = data;
-	platform_wireless_data[role].ops = ops;
-
+		return -EINVAL;
+	guard(mutex)(&wireless_provider_lock);
+	if (rcu_access_pointer(platform_wireless_data[role]))
+		return -EBUSY;
+	provider = kmalloc(sizeof(*provider), GFP_KERNEL);
+	if (!provider)
+		return -ENOMEM;
+	provider->data = data;
+	provider->ops = ops;
+	rcu_assign_pointer(platform_wireless_data[role], provider);
 	return 0;
 }
 EXPORT_SYMBOL(platform_class_wireless_register_ops);
 
+int platform_class_wireless_unregister_ops(
+	unsigned int role, void *data, struct platform_class_wireless_ops *ops)
+{
+	struct platform_wireless_class_ops_data *provider;
+
+	if (role >= WIRELESS_ROLE_MAX)
+		return -EINVAL;
+	mutex_lock(&wireless_provider_lock);
+	provider = rcu_dereference_protected(platform_wireless_data[role],
+					     lockdep_is_held(&wireless_provider_lock));
+	if (!provider || provider->data != data || provider->ops != ops) {
+		mutex_unlock(&wireless_provider_lock);
+		return -ENOENT;
+	}
+	RCU_INIT_POINTER(platform_wireless_data[role], NULL);
+	mutex_unlock(&wireless_provider_lock);
+	synchronize_srcu(&wireless_provider_srcu);
+	kfree(provider);
+	return 0;
+}
+EXPORT_SYMBOL(platform_class_wireless_unregister_ops);
+
 int platform_class_wireless_enable_reverse_chg(unsigned int role, bool enable)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -118,6 +147,7 @@ EXPORT_SYMBOL(platform_class_wireless_enable_reverse_chg);
 
 int platform_class_wireless_is_present(unsigned int role, int *present)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -131,6 +161,7 @@ EXPORT_SYMBOL(platform_class_wireless_is_present);
 int platform_class_wireless_get_fw_upgrade_fail_info(unsigned int role,
 						     char **info)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -143,8 +174,28 @@ int platform_class_wireless_get_fw_upgrade_fail_info(unsigned int role,
 }
 EXPORT_SYMBOL(platform_class_wireless_get_fw_upgrade_fail_info);
 
+int platform_class_wireless_copy_fw_upgrade_fail_info(unsigned int role, char *buf, size_t size)
+{
+	struct platform_wireless_class_ops_data *provider;
+	char *info = NULL;
+	int ret;
+
+	if (!buf || !size)
+		return -EINVAL;
+	guard(srcu)(&wireless_provider_srcu);
+	provider = platform_wireless_class_get_ic_ops(role);
+	if (platform_wireless_ops_invalid(provider, wls_get_fw_upgrade_fail_info))
+		return -EOPNOTSUPP;
+	ret = provider->ops->wls_get_fw_upgrade_fail_info(&info, provider->data);
+	if (ret)
+		return ret;
+	return strscpy(buf, info ?: "Unknown", size) < 0 ? -E2BIG : 0;
+}
+EXPORT_SYMBOL(platform_class_wireless_copy_fw_upgrade_fail_info);
+
 int platform_class_wireless_get_rsv_eppmode_fail(unsigned int role, int *fail)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -157,6 +208,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_rsv_eppmode_fail);
 
 int platform_class_wireless_set_vout(unsigned int role, int vout)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -169,6 +221,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_vout);
 
 int platform_class_wireless_get_vout(unsigned int role, int *vout)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -181,6 +234,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_vout);
 
 int platform_class_wireless_get_iout(unsigned int role, int *iout)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -193,6 +247,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_iout);
 
 int platform_class_wireless_get_vrect(unsigned int role, int *vrect)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -205,6 +260,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_vrect);
 
 int platform_class_wireless_get_tx_adapter(unsigned int role, int *adapter)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -218,6 +274,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_tx_adapter);
 extern int platform_class_wireless_get_tx_adapter_by_i2c(unsigned int role,
 							 int *adapter)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -231,6 +288,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_tx_adapter_by_i2c);
 
 int platform_class_wireless_get_temp(unsigned int role, int *temp)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -243,6 +301,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_temp);
 
 int platform_class_wireless_set_enable_mode(unsigned int role, bool enable)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -255,6 +314,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_enable_mode);
 
 int platform_class_wireless_is_car_adapter(unsigned int role, bool *enable)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -267,6 +327,7 @@ EXPORT_SYMBOL(platform_class_wireless_is_car_adapter);
 
 int platform_class_wireless_get_fw_version(unsigned int role, char *buf)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -279,6 +340,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_fw_version);
 
 int platform_class_wireless_get_rx_rtx_mode(unsigned int role, int *mode)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -292,6 +354,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_rx_rtx_mode);
 int platform_class_wireless_set_fw_bin(unsigned int role, const char *buf,
 				       int count)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -305,6 +368,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_fw_bin);
 int platform_class_wireless_set_input_current_limit(unsigned int role,
 						    int value)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -319,6 +383,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_input_current_limit);
 
 int platform_class_wireless_get_rx_int_flag(unsigned int role, int *int_flag)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -331,6 +396,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_rx_int_flag);
 
 int platform_class_wireless_get_rx_power_mode(unsigned int role, u8 *power_mode)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -344,6 +410,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_rx_power_mode);
 
 int platform_class_wireless_get_tx_max_power(unsigned int role, u8 *max_power)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -356,6 +423,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_tx_max_power);
 
 int platform_class_wireless_get_auth_value(unsigned int role, int *value)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -368,6 +436,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_auth_value);
 
 int platform_class_wireless_set_adapter_voltage(unsigned int role, int voltage)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -381,6 +450,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_adapter_voltage);
 
 int platform_class_wireless_get_tx_uuid(unsigned int role, u8 *uuid)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -393,6 +463,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_tx_uuid);
 
 int platform_class_wireless_set_fod_params(unsigned int role, int value)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -406,6 +477,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_fod_params);
 int platform_class_wireless_get_rx_fastcharge_status(unsigned int role,
 						     u8 *fc_flag)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -422,6 +494,7 @@ int platform_class_wireless_receive_transparent_data(unsigned int role,
 						     u8 *rcv_value,
 						     int buff_len, int *rcv_len)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -437,6 +510,7 @@ EXPORT_SYMBOL(platform_class_wireless_receive_transparent_data);
 int platform_class_wireless_send_transparent_data(unsigned int role,
 						  u8 *send_data, u8 length)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -450,6 +524,7 @@ EXPORT_SYMBOL(platform_class_wireless_send_transparent_data);
 
 int platform_class_wireless_get_ss_voltage(unsigned int role, int *ss_voltage)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -462,6 +537,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_ss_voltage);
 
 int platform_class_wireless_do_renego(unsigned int role, u8 max_power)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -475,6 +551,7 @@ EXPORT_SYMBOL(platform_class_wireless_do_renego);
 int platform_class_wireless_set_parallel_charge(unsigned int role,
 						bool parallel)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -488,6 +565,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_parallel_charge);
 
 int platform_class_wireless_get_vout_setted(unsigned int role, int *vout_setted)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -502,6 +580,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_vout_setted);
 int platform_class_wireless_get_poweroff_err_code(unsigned int role,
 						  u8 *err_code)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -515,6 +594,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_poweroff_err_code);
 
 int platform_class_wireless_get_rx_err_code(unsigned int role, u8 *err_code)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -527,6 +607,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_rx_err_code);
 
 int platform_class_wireless_get_tx_err_code(unsigned int role, u8 *err_code)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -540,6 +621,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_tx_err_code);
 int platform_class_wireless_get_project_vendor(unsigned int role,
 					       int *project_vendor)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -553,6 +635,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_project_vendor);
 
 int platform_class_wireless_check_i2c_is_ok(unsigned int role)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -565,6 +648,7 @@ EXPORT_SYMBOL(platform_class_wireless_check_i2c_is_ok);
 
 int platform_class_wireless_enable_rev_fod(unsigned int role, bool enable)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -577,6 +661,7 @@ EXPORT_SYMBOL(platform_class_wireless_enable_rev_fod);
 
 int platform_class_wireless_send_tx_q_value(unsigned int role, u8 value)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -589,6 +674,7 @@ EXPORT_SYMBOL(platform_class_wireless_send_tx_q_value);
 
 int platform_class_wireless_set_tx_fan_speed(unsigned int role, int value)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -601,6 +687,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_tx_fan_speed);
 
 int platform_class_wireless_get_tx_fan_speed(unsigned int role, int *value)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -613,6 +700,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_tx_fan_speed);
 
 int platform_class_wireless_set_rx_offset(unsigned int role, int rx_offset)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -625,6 +713,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_rx_offset);
 
 int platform_class_wireless_get_rx_offset(unsigned int role, int *rx_offset)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -638,6 +727,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_rx_offset);
 int platform_class_wireless_set_rx_sleep_mode(unsigned int role,
 					      int sleep_for_dam)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -651,6 +741,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_rx_sleep_mode);
 
 int platform_class_wireless_download_fw_from_bin(unsigned int role)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -663,6 +754,7 @@ EXPORT_SYMBOL(platform_class_wireless_download_fw_from_bin);
 
 int platform_class_wireless_erase_fw(unsigned int role)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -676,6 +768,7 @@ EXPORT_SYMBOL(platform_class_wireless_erase_fw);
 int platform_class_wireless_get_fw_version_check(unsigned int role,
 						 u8 *check_result)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -689,6 +782,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_fw_version_check);
 
 int platform_class_wireless_download_fw(unsigned int role)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -701,6 +795,7 @@ EXPORT_SYMBOL(platform_class_wireless_download_fw);
 
 int platform_class_wireless_set_confirm_data(unsigned int role, u8 confirm_data)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -715,6 +810,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_confirm_data);
 int platform_class_wireless_receive_test_cmd(unsigned int role, u8 *rev_data,
 					     int *length)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -728,6 +824,7 @@ EXPORT_SYMBOL(platform_class_wireless_receive_test_cmd);
 
 int platform_class_wireless_process_factory_cmd(unsigned int role, u8 cmd)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -741,6 +838,7 @@ EXPORT_SYMBOL(platform_class_wireless_process_factory_cmd);
 int platform_class_wireless_get_hall_gpio_status(unsigned int role,
 						 bool *status)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -755,6 +853,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_hall_gpio_status);
 int platform_class_wireless_get_magnetic_case_flag(unsigned int role,
 						   bool *status)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -770,6 +869,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_magnetic_case_flag);
 int platform_class_wireless_check_firmware_state(unsigned int role,
 						 bool *update)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -784,6 +884,7 @@ EXPORT_SYMBOL(platform_class_wireless_check_firmware_state);
 int platform_class_wireless_set_debug_fod(unsigned int role, int *args,
 					  int count)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -797,6 +898,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_debug_fod);
 int platform_class_wireless_get_debug_fod_type(unsigned int role,
 					       WLS_DEBUG_SET_FOD_TYPE *type)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -809,6 +911,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_debug_fod_type);
 
 int platform_class_wireless_set_debug_fod_params(unsigned int role)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -821,6 +924,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_debug_fod_params);
 
 int platform_class_wireless_enable_vsys_ctrl(unsigned int role, bool enable)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -833,6 +937,7 @@ EXPORT_SYMBOL(platform_class_wireless_enable_vsys_ctrl);
 
 int platform_class_wireless_get_trx_isense(unsigned int role, int *isense)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -845,6 +950,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_trx_isense);
 
 int platform_class_wireless_get_trx_vrect(unsigned int role, int *vrect)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -857,6 +963,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_trx_vrect);
 
 int platform_class_wireless_get_phone_case_category(unsigned int role, int *category)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data = platform_wireless_class_get_ic_ops(role);
 
 	if (platform_wireless_ops_invalid(temp_data, wls_get_phone_case_category))
@@ -868,6 +975,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_phone_case_category);
 
 int platform_class_wireless_set_phone_case_category(unsigned int role, int category)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data = platform_wireless_class_get_ic_ops(role);
 
 	if (platform_wireless_ops_invalid(temp_data, wls_set_phone_case_category))
@@ -879,6 +987,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_phone_case_category);
 
 int platform_class_wireless_switch_bridge(unsigned int role, bool full)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -891,6 +1000,7 @@ EXPORT_SYMBOL(platform_class_wireless_switch_bridge);
 
 int platform_class_wireless_get_pen_hall3(unsigned int role, int *val)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -903,6 +1013,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_hall3);
 
 int platform_class_wireless_get_pen_hall3_s(unsigned int role, int *val)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -915,6 +1026,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_hall3_s);
 
 int platform_class_wireless_get_pen_hall4(unsigned int role, int *val)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -927,6 +1039,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_hall4);
 
 int platform_class_wireless_get_pen_hall4_s(unsigned int role, int *val)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -939,6 +1052,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_hall4_s);
 
 int platform_class_wireless_get_pen_hall_ppe_n(unsigned int role, int *val)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -951,6 +1065,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_hall_ppe_n);
 
 int platform_class_wireless_get_pen_hall_ppe_s(unsigned int role, int *val)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -963,6 +1078,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_hall_ppe_s);
 
 int platform_class_wireless_get_pen_full_flag(unsigned int role, bool *flag)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -975,6 +1091,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_full_flag);
 
 int platform_class_wireless_get_pen_place_err(unsigned int role, int *err)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -987,6 +1104,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_place_err);
 
 int platform_class_wireless_set_pen_place_err(unsigned int role, int err)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -999,6 +1117,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_pen_place_err);
 
 int platform_class_wireless_get_pen_mac(unsigned int role, u8 *mac)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1011,6 +1130,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_mac);
 
 int platform_class_wireless_get_pen_soc(unsigned int role, int *soc)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1023,6 +1143,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_pen_soc);
 
 int platform_class_wireless_get_reverse_chg_en(unsigned int role, bool *en)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1035,6 +1156,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_reverse_chg_en);
 
 int platform_class_wireless_set_hboost_enable(unsigned int role, bool en)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1047,6 +1169,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_hboost_enable);
 
 int platform_class_wireless_set_charge_type(unsigned int role, int type)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1059,6 +1182,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_charge_type);
 
 int platform_class_wireless_set_external_boost_enable(unsigned int role, bool en)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1071,6 +1195,7 @@ EXPORT_SYMBOL(platform_class_wireless_set_external_boost_enable);
 
 int platform_class_wireless_get_tx_iout(unsigned int role, int *iout)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1083,6 +1208,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_tx_iout);
 
 int platform_class_wireless_get_tx_vout(unsigned int role, int *vout)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1095,6 +1221,7 @@ EXPORT_SYMBOL(platform_class_wireless_get_tx_vout);
 
 int platform_class_wireless_get_rx_brg_status(unsigned int role, int *status)
 {
+	guard(srcu)(&wireless_provider_srcu);
 	struct platform_wireless_class_ops_data *temp_data =
 		platform_wireless_class_get_ic_ops(role);
 
@@ -1126,12 +1253,8 @@ platform_wireless_dev_parse_dt(struct platform_wireless_dev *wireless)
 
 	count = mca_parse_dts_count_strings(node, "wireless-dir-list",
 					    MCA_WIRELESS_MAX_NUM, 1);
-	mca_log_err("wireless dir list max count: %d, %d\n", count,
-		    wireless->wireless_num);
-
-	if (count != wireless->wireless_num)
-		mca_log_err(
-			"wireless_num can't match wireless_dir_list count\n");
+	if (count <= 0 || count > MCA_WIRELESS_MAX_NUM || count != wireless->wireless_num)
+		return -EINVAL;
 
 	for (i = 0; i < count; i++) {
 		ret = mca_parse_dts_string_index(
@@ -1194,7 +1317,8 @@ static ssize_t wireless_sysfs_show(struct device *dev,
 {
 	struct mca_sysfs_attr_info *attr_info;
 	int *wireless_index;
-	union platform_wireless_propval val;
+	union platform_wireless_propval val = {};
+	int ret;
 	ssize_t count = 0;
 	u8 uuid[4] = { 0 };
 
@@ -1202,76 +1326,92 @@ static ssize_t wireless_sysfs_show(struct device *dev,
 					  wireless_sysfs_field_tbl,
 					  WIRELESS_SYSFS_ATTRS_SIZE);
 	if (!attr_info)
-		return -1;
+		return -ENODEV;
 
 	wireless_index = (int *)dev_get_drvdata(dev);
 	if (!wireless_index) {
 		mca_log_err("%s dev_driverdata is null\n", __func__);
-		return -1;
+		return -ENODEV;
 	}
-	mca_log_err("%s dev_driverdata is %d\n", __func__, *wireless_index);
 
 	switch (attr_info->sysfs_attr_name) {
 	case RX_SYSFS_RX_VOUT:
-		platform_class_wireless_get_vout(*wireless_index,
+		ret = platform_class_wireless_get_vout(*wireless_index,
 						 &(val.intval));
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val.intval);
 		break;
 	case RX_SYSFS_RX_VRECT:
-		platform_class_wireless_get_vrect(*wireless_index,
+		ret = platform_class_wireless_get_vrect(*wireless_index,
 						  &(val.intval));
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val.intval);
 		break;
 	case RX_SYSFS_RX_IOUT:
-		platform_class_wireless_get_iout(*wireless_index,
+		ret = platform_class_wireless_get_iout(*wireless_index,
 						 &(val.intval));
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val.intval);
 		break;
 	case RX_SYSFS_FW_VERSION:
-		platform_class_wireless_get_fw_version(*wireless_index,
+		ret = platform_class_wireless_get_fw_version(*wireless_index,
 						       val.strval);
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%s\n", val.strval);
 		break;
 	case RX_SYSFS_TX_ADAPTER:
-		platform_class_wireless_get_tx_adapter(*wireless_index,
+		ret = platform_class_wireless_get_tx_adapter(*wireless_index,
 						       &(val.intval));
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val.intval);
 		break;
 	case RX_SYSFS_BT_STATE:
-		break;
 	case RX_SYSFS_RX_CEP:
-		break;
 	case RX_SYSFS_RX_CR:
-		break;
 	case RX_SYSFS_TX_MAC:
-		break;
+		return -EOPNOTSUPP;
 	case RX_SYSFS_WLS_DIE_TEMP:
-		platform_class_wireless_get_temp(*wireless_index,
+		ret = platform_class_wireless_get_temp(*wireless_index,
 						 &(val.intval));
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val.intval);
 		break;
 	case RX_SYSFS_WLS_TX_SPEED:
-		platform_class_wireless_get_tx_fan_speed(*wireless_index,
+		ret = platform_class_wireless_get_tx_fan_speed(*wireless_index,
 							 &(val.intval));
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val.intval);
 		break;
 	case RX_SYSFS_RX_SS:
-		platform_class_wireless_get_ss_voltage(*wireless_index,
+		ret = platform_class_wireless_get_ss_voltage(*wireless_index,
 						       &(val.intval));
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val.intval);
 		break;
 	case RX_SYSFS_RX_OFFSET:
-		platform_class_wireless_get_rx_offset(*wireless_index,
+		ret = platform_class_wireless_get_rx_offset(*wireless_index,
 						      &(val.intval));
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%d\n", val.intval);
 		break;
 	case RX_SYSFS_TX_UUID:
-		platform_class_wireless_get_tx_uuid(*wireless_index, uuid);
+		ret = platform_class_wireless_get_tx_uuid(*wireless_index, uuid);
+		if (ret)
+			return ret;
 		count = scnprintf(buf, PAGE_SIZE, "%02x.%02x.%02x.%02x\n",
 				  uuid[0], uuid[1], uuid[2], uuid[3]);
 		break;
 	default:
-		break;
+		return -EOPNOTSUPP;
 	}
 
 	return count;
@@ -1283,144 +1423,120 @@ static ssize_t wireless_sysfs_store(struct device *dev,
 {
 	struct mca_sysfs_attr_info *attr_info;
 	int *wireless_index;
-	union platform_wireless_propval val;
+	union platform_wireless_propval val = {};
+	int ret;
 
 	attr_info = mca_sysfs_lookup_attr(attr->attr.name,
 					  wireless_sysfs_field_tbl,
 					  WIRELESS_SYSFS_ATTRS_SIZE);
 	if (!attr_info)
-		return -1;
+		return -ENODEV;
 
 	wireless_index = (int *)dev_get_drvdata(dev);
 	if (!wireless_index) {
 		mca_log_err("%s dev_driverdata is null\n", __func__);
-		return -1;
+		return -ENODEV;
 	}
-	mca_log_err("%s dev_driverdata is %d\n", __func__, *wireless_index);
 
 	switch (attr_info->sysfs_attr_name) {
 	case RX_SYSFS_FW_VERSION:
-		break;
+		return -EOPNOTSUPP;
 	case RX_SYSFS_FW_BIN:
-		platform_class_wireless_set_fw_bin(*wireless_index, buf,
+		ret = platform_class_wireless_set_fw_bin(*wireless_index, buf,
 						   (int)count);
+		if (ret)
+			return ret;
 		break;
 	case RX_SYSFS_SLEEP_RX:
 		if (kstrtoint(buf, 10, &val.intval))
 			return -EINVAL;
-		platform_class_wireless_set_enable_mode(*wireless_index,
+		if (val.intval != 0 && val.intval != 1)
+			return -EINVAL;
+		ret = platform_class_wireless_set_enable_mode(*wireless_index,
 							val.intval);
+		if (ret)
+			return ret;
 		break;
 	case RX_SYSFS_WLS_TX_SPEED:
 		if (kstrtoint(buf, 10, &val.intval))
 			return -EINVAL;
-		platform_class_wireless_set_tx_fan_speed(*wireless_index,
+		ret = platform_class_wireless_set_tx_fan_speed(*wireless_index,
 							 val.intval);
+		if (ret)
+			return ret;
 		break;
 	case RX_SYSFS_RX_OFFSET:
 		if (kstrtoint(buf, 10, &val.intval))
 			return -EINVAL;
-		platform_class_wireless_set_rx_offset(*wireless_index,
+		ret = platform_class_wireless_set_rx_offset(*wireless_index,
 						      val.intval);
+		if (ret)
+			return ret;
 		break;
 	case RX_SYSFS_RX_SLEEP_MODE:
 		if (kstrtoint(buf, 10, &val.intval))
 			return -EINVAL;
-		platform_class_wireless_set_rx_sleep_mode(*wireless_index,
+		ret = platform_class_wireless_set_rx_sleep_mode(*wireless_index,
 							  val.intval);
+		if (ret)
+			return ret;
 		break;
 	default:
-		break;
+		return -EOPNOTSUPP;
 	}
 
 	return count;
 }
 
-static const char *const wireless_dev_list[MCA_WIRELESS_MAX_NUM] = {
-	[WIRELESS_ROLE_MASTER] = "master",
-	[WIRELESS_ROLE_SLAVE] = "slave",
+static const char *const wireless_dev_list[] = {
+	[WIRELESS_ROLE_MASTER] = "wireless_master",
+	[WIRELESS_ROLE_SLAVE] = "wireless_slave",
 };
 
-static void wireless_sysfs_create_group(struct platform_wireless_dev *wireless)
+static void wireless_sysfs_remove_groups(void *data)
 {
-	const char *wireless_dev_name;
+	struct platform_wireless_dev *wireless = data;
 	int i;
 
-	mca_sysfs_init_attrs(wireless_sysfs_attrs, wireless_sysfs_field_tbl,
-			     WIRELESS_SYSFS_ATTRS_SIZE);
-	for (i = 0; i < wireless->wireless_num; i++) {
-		if (i > MCA_WIRELESS_MAX_NUM) {
-			mca_log_err("wireless sysfsdev out of limit\n");
-			return;
-		}
-		wireless->sysfs_dev[i] = mca_sysfs_create_group(
-			"xm_power", wireless->wireless_dir_list[i],
-			&wireless_sysfs_attr_group);
-		if (!wireless->sysfs_dev[i])
-			mca_log_err("creat wireless[%d] sysfs fail\n", i);
-	}
-
-	for (i = 0; i < wireless->wireless_num; i++) {
-		int j;
-
-		wireless_dev_name = dev_name(wireless->sysfs_dev[i]);
-		for (j = 0; j < MCA_WIRELESS_MAX_NUM; j++) {
-			if (strstr(wireless_dev_name, wireless_dev_list[j])) {
-				wireless->wireless_dev_index[j] = j;
-				dev_set_drvdata(
-					wireless->sysfs_dev[i],
-					&wireless->wireless_dev_index[j]);
-				mca_log_err(
-					"success match wireless_dev_name = %s, wireless_dev_list[%d]=%s\n",
-					wireless_dev_name, j,
-					wireless_dev_list[j]);
-				break;
-			}
-		}
-
-		if (j >= MCA_WIRELESS_MAX_NUM) {
-			dev_set_drvdata(wireless->sysfs_dev[j], NULL);
-			mca_log_err("fail match wireless_dev_name =%s\n",
-				    wireless_dev_name);
-		}
-	}
+	for (i = wireless->wireless_num - 1; i >= 0; i--)
+		if (wireless->sysfs_dev[i])
+			mca_sysfs_remove_group("xm_power", wireless->sysfs_dev[i],
+					       &wireless_sysfs_attr_group);
 }
 
 static int platform_wireless_class_probe(struct platform_device *pdev)
 {
-	struct platform_wireless_dev *l_dev;
-	static int probe_cnt;
-	int rc = 0;
+	struct platform_wireless_dev *wireless;
+	unsigned long roles = 0;
+	int i, role, ret;
 
-	mca_log_err("begin cnt %d\n", ++probe_cnt);
-	l_dev = devm_kzalloc(&pdev->dev, sizeof(*l_dev), GFP_KERNEL);
-	if (!l_dev)
+	wireless = devm_kzalloc(&pdev->dev, sizeof(*wireless), GFP_KERNEL);
+	if (!wireless)
 		return -ENOMEM;
-	l_dev->dev = &pdev->dev;
-	platform_set_drvdata(pdev, l_dev);
-	rc = platform_wireless_dev_parse_dt(l_dev);
-	if (rc < 0) {
-		mca_log_err("%s Couldn't parse device tree rc=%d\n", __func__,
-			    rc);
-		return rc;
+	wireless->dev = &pdev->dev;
+	ret = platform_wireless_dev_parse_dt(wireless);
+	if (ret)
+		return ret;
+	for (i = 0; i < wireless->wireless_num; i++) {
+		role = match_string(wireless_dev_list, ARRAY_SIZE(wireless_dev_list),
+				    wireless->wireless_dir_list[i]);
+		if (role < 0 || test_and_set_bit(role, &roles))
+			return -EINVAL;
+		wireless->wireless_dev_index[i] = role;
 	}
-
-	g_platform_wireless_dev = l_dev;
-
-	wireless_sysfs_create_group(l_dev);
-
-	mca_log_err("success %d\n", ++probe_cnt);
-
+	ret = devm_add_action_or_reset(&pdev->dev, wireless_sysfs_remove_groups, wireless);
+	if (ret)
+		return ret;
+	mca_sysfs_init_attrs(wireless_sysfs_attrs, wireless_sysfs_field_tbl,
+			     WIRELESS_SYSFS_ATTRS_SIZE);
+	for (i = 0; i < wireless->wireless_num; i++) {
+		wireless->sysfs_dev[i] = mca_sysfs_create_group("xm_power",
+				wireless->wireless_dir_list[i], &wireless_sysfs_attr_group);
+		if (!wireless->sysfs_dev[i])
+			return -ENODEV;
+		dev_set_drvdata(wireless->sysfs_dev[i], &wireless->wireless_dev_index[i]);
+	}
 	return 0;
-}
-
-static void platform_wireless_class_remove(struct platform_device *pdev)
-{
-	return;
-}
-
-static void platform_wireless_class_shutdown(struct platform_device *pdev)
-{
 }
 
 static const struct of_device_id match_table[] = {
@@ -1434,8 +1550,6 @@ static struct platform_driver platform_wireless_class_driver = {
 		.of_match_table = match_table,
 	},
 	.probe = platform_wireless_class_probe,
-	.shutdown = platform_wireless_class_shutdown,
-	.remove  = platform_wireless_class_remove,
 };
 
 module_platform_driver(platform_wireless_class_driver);

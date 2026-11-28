@@ -10,7 +10,7 @@ p=argparse.ArgumentParser(description=__doc__);p.add_argument('dtbo',type=Path);
 h=runpy.run_path(str(a.devicetrees/'tools/prepare-nezha-display.py'));nodes=h['read_nodes'](a.dtbo.read_bytes())
 props=next(v for v in nodes.values() if v.get('compatible')==b'mca_sc96281_fod_data\0')
 root=Path(__file__).resolve().parents[1]/'drivers/power/supply/mca/mca_hardware_ic/wireless_ic/sc96281'
-s=(root/'sc96281_core.c').read_text();start=s.index('static u8 sc96281_fod_case');end=s.index('static int sc96281_set_debug_fod_params',start);functions=s[start:end]
+s=(root/'sc96281_core.c').read_text();start=s.index('static u8 sc96281_fod_case');end=s.index('static int sc96281_set_debug_fod_params',start);failure=s[s.index('static void sc96281_fod_failure_locked'):s.index('static int sc96281_read_auth_locked')];functions=failure+s[start:end]
 header=(root/'inc/sc96281_reg.h').read_text();start=header.index('typedef struct fod_type_t');end=header.index('typedef struct fw_params_t',start);types=header[start:end]
 pre=r'''
 #include <stdint.h>
@@ -58,17 +58,27 @@ static int kstrtou32(const char *s,int base,u32 *v) {
  if(errno || !*s || *e || *s=='-' || n>UINT32_MAX)return -EINVAL;*v=n;return 0;
 }
 static int kstrtou8(const char *s,int base,u8 *v){u32 n;if(kstrtou32(s,base,&n)||n>255)return -EINVAL;*v=n;return 0;}
-struct sc96281 {int fod_lock;struct {u8 uuid[4];}proc_data;fod_params_t fod_params[35],fod_params_2_1[35],fod_params_default;int fod_params_size,fod_params_2_1_size;u8 fod_case;};
+#define STRATEGY_FUNC_TYPE_BASIC_WIRELESS 1
+#define STRATEGY_STATUS_TYPE_MODE 2
+#define guard(x) __attribute__((cleanup(mock_unlock))) int *scope = mock_lock
+#define dev_err_ratelimited(...) ((void)0)
+struct sc96281 {int fod_lock;bool ready,fod_valid,fod_fault;int enable_gpio,workqueue,pg_detect_work;struct {bool power_good_flag;u8 uuid[4];}proc_data;fod_params_t fod_params[35],fod_params_2_1[35],fod_params_default;int fod_params_size,fod_params_2_1_size;u8 fod_case;};
 static void mutex_lock(int *m){assert(!*m);*m=1;}
 static void mutex_unlock(int *m){assert(*m);*m=0;}
+static int *mock_lock(int *m){mutex_lock(m);return m;}
+static void mock_unlock(int **m){mutex_unlock(*m);}
+static int rx_sleep,pg_pending;
+static int gpio_get_value_cansleep(int gpio){return rx_sleep;}
+static int sc96281_drive_rx(struct sc96281 *chip,bool en){assert(chip->fod_lock);rx_sleep=!en;return 0;}
+#define mod_delayed_work(w,q,t) (++pg_pending)
 static int mode=2,mode_ret,write_ret;static fod_params_t written;
-static int strategy_class_wireless_ops_get_adapter_charger_mode(int *out){*out=mode;return mode_ret;}
+static int mca_strategy_func_get_status(int st,int prop,int *out){assert(st==1&&prop==2);*out=mode;return mode_ret;}
 static int sc96281_set_fod(struct sc96281 *chip,fod_params_t *row){assert(chip->fod_lock);written=*row;return write_ret;}
 static void uuid(struct sc96281 *c,u32 n){for(int i=0;i<4;i++)c->proc_data.uuid[i]=n>>(24-8*i);}
 '''
 test=r'''
 int main(void) {
- struct sc96281 c={0};struct device_node node;int ret;
+ struct sc96281 c={.ready=true,.proc_data.power_good_flag=true};struct device_node node;int ret;
  c.fod_params_size=sc96281_myron_parse_table(&node,"fod_params",c.fod_params,35);assert(c.fod_params_size==32);
  c.fod_params_2_1_size=sc96281_myron_parse_table(&node,"fod_params_2_1",c.fod_params_2_1,35);assert(c.fod_params_2_1_size==2);
  assert(sc96281_myron_parse_table(&node,"fod_params_default",&c.fod_params_default,1)==1);
@@ -82,9 +92,11 @@ int main(void) {
   }
  }
  uuid(&c,0xfedcba98);c.fod_case=0;assert(!sc96281_set_fod_params(0,&c));assert(!memcmp(written.params,c.fod_params_default.params,sizeof(written.params)));
- c.fod_case=3;assert(sc96281_set_fod_params(0,&c)==-EINVAL);c.fod_case=0;
- uuid(&c,c.fod_params_2_1[1].uuid);mode_ret=-EIO;assert(sc96281_set_fod_params(0,&c)==-EIO);mode_ret=0;
- write_ret=-EREMOTEIO;assert(sc96281_set_fod_params(0,&c)==-EREMOTEIO);write_ret=0;
+ c.fod_case=3;assert(sc96281_set_fod_params(0,&c)==-EINVAL);c.fod_case=0;assert(rx_sleep&&c.fod_fault);rx_sleep=0;c.fod_fault=false;pg_pending=0;
+ uuid(&c,c.fod_params_2_1[1].uuid);mode_ret=-EIO;assert(sc96281_set_fod_params(0,&c)==-EIO);assert(rx_sleep&&pg_pending==1&&!c.fod_valid&&c.fod_fault);
+ assert(sc96281_set_fod_params(0,&c)==-ENOTCONN);
+ rx_sleep=0;c.fod_fault=false;mode_ret=0;
+ write_ret=-EREMOTEIO;assert(sc96281_set_fod_params(0,&c)==-EREMOTEIO);assert(rx_sleep&&!c.fod_valid&&c.fod_fault);write_ret=0;rx_sleep=0;c.fod_fault=false;
  assert(sc96281_myron_parse_table(&node,"fod_params",c.fod_params,31)==-EINVAL);
  bad_prop="fod_params";assert(sc96281_myron_parse_table(&node,"fod_params",c.fod_params,35)==-EINVAL);bad_prop=NULL;
  fail_read=1;assert(sc96281_myron_parse_table(&node,"fod_params",c.fod_params,35)==-EIO);fail_read=0;
